@@ -8,7 +8,7 @@
 ## Installation
 1. Clone the repository
 ```bash
-    git clone https://github.com/anandaramr/reach.git
+git clone https://github.com/anandaramr/reach.git
 ```
 2. Open in [Android Studio](https://developer.android.com/studio)
 3. Build and run on emulator or device (preferably on a device)
