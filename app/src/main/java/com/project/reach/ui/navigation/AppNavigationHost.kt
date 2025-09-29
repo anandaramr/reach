@@ -5,6 +5,8 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.project.reach.ui.screens.chat.ChatScreen
+import com.project.reach.ui.screens.chat.ChatScreenRoute
 import com.project.reach.ui.screens.home.HomeScreen
 import com.project.reach.ui.screens.home.HomeScreenDestination
 
@@ -17,7 +19,14 @@ fun AppNavigationHost(
         startDestination = HomeScreenDestination.route,
     ) {
         composable (route = HomeScreenDestination.route) {
-            HomeScreen()
+            HomeScreen(
+                navigateToChat = { navController.navigate(route = ChatScreenRoute.route)  }
+            )
+        }
+        composable (route = ChatScreenRoute.route) {
+            ChatScreen (
+                navigateBack = { navController.popBackStack( )}
+            )
         }
     }
 }
