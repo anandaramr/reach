@@ -9,29 +9,38 @@ import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 
 private val DarkColorScheme = darkColorScheme(
-    primary = Purple80,
-    secondary = PurpleGrey80,
-    tertiary = Pink80
+    primary = Color(0xFFFFCBF2),
+    onPrimary = Color.Black,
+    secondary = Color(0xFFD8BBFF),
+    onSecondary = Color.Black,
+    background = Color(0xFF111111),
+    onBackground = Color(0xFFC0FDFF),
+    outline = Color(0xFFD0D0D0),
+    surface = Color.Transparent,
+    onSurface = Color(0xFFE2AFFF),
+    error = Color(0xFFFF5555),
+    onError = Color.Black
 )
-
 private val LightColorScheme = lightColorScheme(
-    primary = Purple40,
-    secondary = PurpleGrey40,
-    tertiary = Pink40
-
-    /* Other default colors to override
-    background = Color(0xFFFFFBFE),
-    surface = Color(0xFFFFFBFE),
-    onPrimary = Color.White,
-    onSecondary = Color.White,
-    onTertiary = Color.White,
-    onBackground = Color(0xFF1C1B1F),
-    onSurface = Color(0xFF1C1B1F),
-    */
+    primary = Color(0xFF2D0065),
+    onPrimary = Color(0xFFFFFFFF),
+    secondary = Color(0xFF360153),
+    onSecondary = Color(0xFFFFFFFF),
+    background = Color(0xFFFFFFFF),
+    onBackground = Color(0xFF121212),
+    outline = Color(0xFF151414),
+    surface = Color.Transparent,
+    onSurface = Color(0xFF121212),
+    error = Color(0xFF600028),
+    onError = Color(0xFFFFFFFF)
 )
+
+
+
 
 @Composable
 fun REACHTheme(
@@ -52,7 +61,7 @@ fun REACHTheme(
 
     MaterialTheme(
         colorScheme = colorScheme,
-        typography = Typography,
+        typography = MultiFontTypography,
         content = content
     )
 }

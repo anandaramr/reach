@@ -38,11 +38,7 @@ fun HomeScreen(
             ),
         ){
             Text(
-                text = "Well, I will call you darlin'\n" + " and everything will be okay\n" +
-                        "'Cause I know that I am yours \n and you are mine\n" +
-                        "Doesn't matter anyway\n" +
-                        "In the night, we'll take a walk, \n it's nothing funny\n" +
-                        "Just to talk",
+                text = "Chat",
                 modifier = Modifier.padding(10.dp),
 
                 )
@@ -50,8 +46,7 @@ fun HomeScreen(
                 onClick = { navigateToChat() }
             ) {
                 Text(
-                    text = "Put your hand in mine.",
-                    fontFamily = FontFamily.Cursive,
+                    text = "Click me",
                     fontSize = 20.sp,
                 )
             }

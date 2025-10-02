@@ -23,7 +23,7 @@ class ChatScreenViewModel() : ViewModel() {
         _uiState.update { currentState ->
             currentState.copy(
                 messageText = "",
-                messageList = listOf(Message(text,true)) + currentState.messageList
+                messageList = currentState.messageList + listOf(Message(text,true))
             )
         }
     }
