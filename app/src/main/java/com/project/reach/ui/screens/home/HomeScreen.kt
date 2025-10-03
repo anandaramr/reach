@@ -10,7 +10,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -24,7 +24,7 @@ object HomeScreenDestination: NavigationDestination {
 @Composable
 fun HomeScreen(
     viewModel: HomeScreenViewModel = hiltViewModel(),
-    navigateToChat: ()-> Unit
+    navigateToChat: ()-> Unit,
 ) {
     Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
         Column (
@@ -38,26 +38,21 @@ fun HomeScreen(
             ),
         ){
             Text(
-                text = "Chat",
-                modifier = Modifier.padding(10.dp),
-
+                text = "Welcome",
+                fontSize = 40.sp,
+                fontWeight = FontWeight.SemiBold,
+                modifier = Modifier
+                    .padding(10.dp),
                 )
+//
             Button(
                 onClick = { navigateToChat() }
             ) {
                 Text(
-                    text = "Click me",
-                    fontSize = 20.sp,
+                    text = "Begin",
+                    fontSize = 15.sp,
                 )
             }
         }
     }
-}
-
-@Composable
-fun Greeting(name: String, modifier: Modifier = Modifier) {
-    Text(
-        text = "Hello $name!",
-        modifier = modifier
-    )
 }

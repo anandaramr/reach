@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -25,7 +24,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
 import com.project.reach.ui.navigation.NavigationDestination
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -36,15 +34,14 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
-import androidx.compose.material3.TextFieldDefaults
+import androidx.compose.material3.Surface
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 
 
-object ChatScreenRoute : NavigationDestination {
+object ChatScreenDestination : NavigationDestination {
     override val route: String = "chat"
 }
 
@@ -56,8 +53,10 @@ fun ChatScreen(
     navigateBack: () -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val scrollState = rememberLazyListState()
     Scaffold(
-        modifier = modifier.imePadding(),
+        modifier = modifier
+            .imePadding(),
         topBar = {
             Column {
                 CenterAlignedTopAppBar(
@@ -79,7 +78,7 @@ fun ChatScreen(
                         }
                     },
                 )
-                HorizontalDivider(thickness = 1.dp, color = MaterialTheme.colorScheme.onSurface)
+                HorizontalDivider(thickness = 0.5.dp, color = MaterialTheme.colorScheme.outline)
             }
         }
     ) { innerPadding ->
@@ -87,16 +86,17 @@ fun ChatScreen(
             modifier = Modifier
                 .padding(start = 20.dp, end = 20.dp)
                 .padding(innerPadding)
+                .imePadding()
                 .fillMaxSize(),
             verticalArrangement = Arrangement.SpaceBetween
         ) {
-//            MessageList
             LazyColumn(
+                reverseLayout = true,
                 modifier = Modifier
                     .padding(top = 25.dp)
                     .weight(1f),
             ) {
-                items(uiState.messageList) { message ->
+                items(uiState.messageList.reversed()) { message ->
                     Row(
                         modifier = Modifier
                             .fillMaxWidth(),
@@ -109,7 +109,7 @@ fun ChatScreen(
                             shape = RoundedCornerShape(30.dp),
                             border = BorderStroke(
                                 2.dp,
-                                if (message.isFromSelf) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
+                                if (message.isFromSelf) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onBackground
                             ),
                             modifier = Modifier
                                 .padding(vertical = 4.dp)
@@ -117,7 +117,7 @@ fun ChatScreen(
                             colors = CardDefaults.cardColors(
                                 containerColor = Color.Transparent,
                                 contentColor =
-                                    if (message.isFromSelf) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
+                                    if (message.isFromSelf) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onBackground
                             ),
                         ) {
                             Text(
@@ -130,36 +130,38 @@ fun ChatScreen(
                     }
                 }
             }
-            // TODO Scroll to bottom of LazyColumn when Keyboard opens.
-            OutlinedTextField(
-                value = uiState.messageText,
-                onValueChange = { viewModel.onInputChange(it) },
-                placeholder = { Text("Enter the message") },
-                shape = RoundedCornerShape(50.dp),
-                modifier = modifier
-                    .fillMaxWidth()
-                    .padding(0.dp, 10.dp),
-                trailingIcon = {
-                    IconButton(
-                        onClick = { viewModel.sendMessage(uiState.messageText) }
-                    ) {
-                        Icon(
-                            imageVector = Icons.Filled.Send,
-                            contentDescription = "Send",
-                        )
+            Surface (modifier = Modifier.padding(vertical = 10.dp)) {
+                OutlinedTextField(
+                    value = uiState.messageText,
+                    onValueChange = { viewModel.onInputChange(it) },
+                    placeholder = { Text("Enter the message") },
+                    shape = RoundedCornerShape(50.dp),
+                    modifier = modifier
+                        .fillMaxWidth()
+                        .padding(0.dp, 10.dp),
+                    trailingIcon = {
+                        IconButton(
+                            onClick = { viewModel.sendMessage(uiState.messageText) },
+                            enabled = !uiState.messageText.isEmpty(),
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.Send,
+                                contentDescription = "Send",
+                            )
+                        }
+                    },
+                    leadingIcon = {
+                        IconButton(
+                            onClick = {}
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.Add,
+                                contentDescription = "Add",
+                            )
+                        }
                     }
-                },
-                leadingIcon = {
-                    IconButton(
-                        onClick = {}
-                    ) {
-                        Icon(
-                            imageVector = Icons.Filled.Add,
-                            contentDescription = "Add",
-                        )
-                    }
-                }
-            )
+                )
+            }
         }
     }
 }
