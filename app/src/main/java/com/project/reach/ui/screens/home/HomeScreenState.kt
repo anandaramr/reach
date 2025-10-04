@@ -3,5 +3,7 @@ package com.project.reach.ui.screens.home
 import com.project.reach.ui.screens.chat.UserPreview
 
 data class HomeScreenState(
-    val user : UserPreview = UserPreview("User")
-)
+    val username : String = "",
+    val userId : String = "",
+    val connectionMode: ConnectionMode = ConnectionMode.WIFI,
+    )
