@@ -4,7 +4,7 @@ plugins {
     alias(libs.plugins.kotlin.compose)
 
     id("com.google.devtools.ksp") version "2.2.20-2.0.3"
-    id("com.google.dagger.hilt.android") version "2.57.1"
+    id("com.google.dagger.hilt.android") version "2.57.2"
 }
 
 android {
@@ -36,6 +36,7 @@ android {
     }
     kotlinOptions {
         jvmTarget = "11"
+        freeCompilerArgs += "-opt-in=androidx.compose.material3.ExperimentalMaterial3Api"
     }
     buildFeatures {
         compose = true
@@ -51,11 +52,11 @@ dependencies {
     implementation("androidx.room:room-ktx:2.8.1")
     ksp("androidx.room:room-compiler:2.8.1")
 
-    implementation("com.google.dagger:hilt-android:2.57.1")
+    implementation("com.google.dagger:hilt-android:2.57.2")
     implementation("androidx.hilt:hilt-navigation-compose:1.3.0")
-    ksp("com.google.dagger:hilt-android-compiler:2.57.1")
+    ksp("com.google.dagger:hilt-android-compiler:2.57.2")
 
-    implementation("androidx.compose.material:material-icons-extended:1.6.4")
+    implementation("androidx.compose.material:material-icons-extended:1.7.8")
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
