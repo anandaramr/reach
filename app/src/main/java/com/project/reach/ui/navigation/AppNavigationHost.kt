@@ -29,7 +29,6 @@ fun AppNavigationHost(
             HomeScreen(
                 navigateToChat = { navController.navigate(route = ChatScreenDestination.route)},
                 navigateToDiscovery = { navController.navigate(route = DiscoverScreenDestination.route)},
-                navigateToHome = { navController.navigate(route = HomeScreenDestination.route) }
             )
         }
         composable (route = ChatScreenDestination.route) {

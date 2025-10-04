@@ -1,36 +1,22 @@
 package com.project.reach.ui.screens.home
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Bluetooth
-import androidx.compose.material.icons.filled.Wifi
-import androidx.compose.material3.Button
 import androidx.compose.material3.CenterAlignedTopAppBar
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExposedDropdownMenuBox
-import androidx.compose.material3.Icon
-import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.lifecycle.viewmodel.compose.viewModel
-import com.project.reach.ui.components.BottomBar
-import com.project.reach.ui.components.LoginScreen
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.project.reach.ui.navigation.NavigationDestination
+import com.project.reach.ui.screens.home.components.Home
+import com.project.reach.ui.screens.home.components.Onboarding
+import com.project.reach.ui.utils.UIEvent
 
 object HomeScreenDestination: NavigationDestination {
     override val route: String
@@ -39,105 +25,47 @@ object HomeScreenDestination: NavigationDestination {
 
 @Composable
 fun HomeScreen(
-    viewModel: HomeScreenViewModel = viewModel(),
-    navigateToChat: ()-> Unit,
-    navigateToHome: ()-> Unit,
-    navigateToDiscovery: ()-> Unit,
+    viewModel: HomeScreenViewModel = hiltViewModel(),
+    navigateToChat: () -> Unit,
+    navigateToDiscovery: () -> Unit,
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    if(!uiState.userId.isEmpty()) Home(viewModel, navigateToDiscovery, uiState, navigateToChat)
-    else LoginScreen(viewModel, navigateToHome = navigateToHome)
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    LaunchedEffect(Unit) {
+        viewModel.uiEvent.collect { event ->
+            when (event) {
+                is UIEvent.Error -> snackbarHostState.showSnackbar(
+                    message = event.message,
+                    duration = SnackbarDuration.Short
+                )
+            }
+        }
+    }
+
+    when {
+        uiState.needsOnboarding -> {
+            Onboarding(
+                username = uiState.username,
+                onInputChange = viewModel::onInputChange,
+                onSubmit = viewModel::completeOnboarding,
+                snackbarHostState = snackbarHostState
+            )
+        }
+
+        else -> {
+            Home(
+                username = uiState.username,
+                navigateToDiscovery, uiState, navigateToChat
+            )
+        }
+    }
 }
 
 @Composable
-fun Home(viewModel: HomeScreenViewModel, navigateToDiscovery: ()->Unit , uiState: HomeScreenState, navigateToChat: () -> Unit) {
-    Scaffold(
-        topBar = { com.project.reach.ui.screens.home.TopBar(viewModel) },
-        bottomBar = { BottomBar(currentScreen = "home", navigate = navigateToDiscovery) },
-        modifier = Modifier.fillMaxSize()
-    ) { innerPadding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(
-                40.dp,
-                alignment = Alignment.CenterVertically
-            ),
-        ) {
-            Text(
-                text = "Hi ${uiState.username}",
-                fontSize = 40.sp,
-                fontWeight = FontWeight.SemiBold,
-                modifier = Modifier
-                    .padding(10.dp),
-            )
-            Text(
-                text = uiState.connectionMode.name,
-                fontSize = 20.sp,
-//                fontWeight = FontWeight.SemiBold,
-                modifier = Modifier
-                    .padding(10.dp),
-            )
-            Button(
-                onClick = { navigateToChat() }
-            ) {
-                Text(
-                    text = "Begin",
-                    fontSize = 15.sp,
-                )
-            }
-        }
-    }
-}
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun TopBar(viewModel: HomeScreenViewModel) {
+fun TopBar() {
     CenterAlignedTopAppBar(
         modifier = Modifier.padding(horizontal = 20.dp),
-        title = { Text(text = "REACH") },
-        actions = {
-            DropDownMenu(viewModel)
-        }
+        title = { Text(text = "REACH") }
     )
-}
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun DropDownMenu(viewModel: HomeScreenViewModel) {
-    var expanded by remember { mutableStateOf(false) }
-    var selectedOption by remember { mutableStateOf(ConnectionMode.WIFI) }
-    val connectionMode = ConnectionMode.entries
-    val trailingIconList = mapOf(
-        ConnectionMode.WIFI to Icons.Default.Wifi,
-        ConnectionMode.BLUETOOTH to Icons.Filled.Bluetooth,
-        ConnectionMode.WIFI_DIRECT to Icons.Filled.Wifi,
-    )
-    ExposedDropdownMenuBox(
-        expanded = expanded,
-        onExpandedChange = { expanded = !expanded }
-    ) {
-        Icon(
-            imageVector = trailingIconList[selectedOption]!!,
-            contentDescription = selectedOption.name,
-            modifier = Modifier
-                .menuAnchor()
-        )
-        ExposedDropdownMenu(
-            expanded = expanded,
-            modifier = Modifier.fillMaxWidth(0.3f),
-            onDismissRequest = { expanded = false }
-        ) {
-            connectionMode.forEach { option ->
-                DropdownMenuItem(
-                    text = { Text(option.name,) },
-                    onClick = {
-                        viewModel.changeConnectionMode(option)
-                        selectedOption = option
-                        expanded = false
-                    }
-                )
-            }
-        }
-    }
 }

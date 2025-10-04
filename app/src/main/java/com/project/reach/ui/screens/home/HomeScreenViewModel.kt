@@ -1,41 +1,61 @@
 package com.project.reach.ui.screens.home
 
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.project.reach.data.respository.IIdentityRepository
+import com.project.reach.ui.utils.UIEvent
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 
-class HomeScreenViewModel : ViewModel() {
+@HiltViewModel
+class HomeScreenViewModel @Inject constructor(
+    private val identityRepository: IIdentityRepository
+) : ViewModel() {
     private val _uiState = MutableStateFlow(HomeScreenState())
     val uiState = _uiState.asStateFlow()
 
-    private fun changeConnection(text: ConnectionMode) {
-        _uiState.update { currentState ->
-            currentState.copy(connectionMode = text)
+    private val _uiEvent = MutableSharedFlow<UIEvent>()
+    val uiEvent = _uiEvent.asSharedFlow()
+
+    init {
+        viewModelScope.launch {
+            val username = identityRepository.getUsername()
+            if (username?.isBlank() != false) {
+                _uiState.update { it.copy(needsOnboarding = true) }
+                return@launch
+            }
+
+            _uiState.update { it.copy(
+                userId = identityRepository.getIdentity(),
+                username = username
+            ) }
         }
     }
 
-    fun changeConnectionMode(text: ConnectionMode) {
-        changeConnection(text)
-    }
-    private fun updateUsername (text: String) {
+    fun onInputChange (text: String) {
         _uiState.update { currentState ->
-            currentState.copy( username = text)
-        }
-    }
-    private fun onBoard () {
-        _uiState.update { currentState ->
-            currentState.copy( userId = "123")
+            currentState.copy(username = text)
         }
     }
 
-    fun onInputChange(text: String) {
-        updateUsername(text)
-    }
+    fun completeOnboarding(): Boolean {
+        val username = _uiState.value.username
 
-    fun completeOnboarding() {
-        onBoard()
+        if (username.isBlank()) {
+            viewModelScope.launch {
+                _uiEvent.emit(UIEvent.Error("Username cannot be empty"))
+            }
+            return false
+        }
+
+        identityRepository.updateUsername(username)
+        _uiState.update { it.copy(username = username, needsOnboarding = false) }
+        return true
     }
 }

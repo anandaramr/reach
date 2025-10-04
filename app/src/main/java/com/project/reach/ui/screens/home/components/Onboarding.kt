@@ -1,4 +1,4 @@
-package com.project.reach.ui.components
+package com.project.reach.ui.screens.home.components
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -15,38 +15,31 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import com.project.reach.ui.navigation.NavigationDestination
-import com.project.reach.ui.screens.home.HomeScreenViewModel
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 
-object LoginScreenDestination: NavigationDestination {
-    override val route: String
-        get() = "login"
-}
-
 @Composable
-fun LoginScreen(
-    viewModel: HomeScreenViewModel,
-    navigateToHome: ()-> Unit
+fun Onboarding(
+    username: String,
+    onInputChange: (text: String) -> Unit,
+    onSubmit: () -> Boolean,
+    snackbarHostState: SnackbarHostState
 ) {
     val keyboard = LocalSoftwareKeyboardController.current
-    val scope = rememberCoroutineScope()
-    val uiState by viewModel.uiState.collectAsState()
-    val snackBarHostState = remember { SnackbarHostState() }
+
     Scaffold(
-        modifier = Modifier.fillMaxSize(),
-        snackbarHost = { SnackbarHost(hostState = snackBarHostState) }
+        modifier = Modifier.fillMaxSize().imePadding(),
+        snackbarHost = { SnackbarHost(hostState = snackbarHostState) }
     ) { innerPadding ->
         Column (
             modifier = Modifier
@@ -67,8 +60,8 @@ fun LoginScreen(
                     .padding(10.dp),
             )
             OutlinedTextField(
-                value = uiState.username,
-                onValueChange = { viewModel.onInputChange(it) },
+                value = username,
+                onValueChange = onInputChange,
                 textStyle = LocalTextStyle.current.copy(
                     textAlign = TextAlign.Center
                 ),
@@ -86,16 +79,7 @@ fun LoginScreen(
             )
             Button(
                 onClick = {
-                    if(uiState.username == "")
-                        scope.launch {
-                        snackBarHostState.showSnackbar("Username field empty !!!")
-                    }
-                    else
-                    {
-                        keyboard?.hide()
-                        viewModel.completeOnboarding()
-                    }
-
+                    if (onSubmit()) keyboard?.hide()
                 }
             ) {
                 Text(

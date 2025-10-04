@@ -26,6 +26,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import com.project.reach.ui.navigation.NavigationDestination
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBackIosNew
 import androidx.compose.material.icons.filled.Send
@@ -45,7 +46,6 @@ object ChatScreenDestination : NavigationDestination {
     override val route: String = "chat"
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ChatScreen(
     modifier: Modifier = Modifier,
@@ -142,10 +142,10 @@ fun ChatScreen(
                     trailingIcon = {
                         IconButton(
                             onClick = { viewModel.sendMessage(uiState.messageText) },
-                            enabled = !uiState.messageText.isEmpty(),
+                            enabled = uiState.messageText.isNotBlank(),
                         ) {
                             Icon(
-                                imageVector = Icons.Filled.Send,
+                                imageVector = Icons.AutoMirrored.Filled.Send,
                                 contentDescription = "Send",
                             )
                         }
