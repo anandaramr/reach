@@ -27,7 +27,7 @@ fun BottomBar(
             onClick = { navigate() },
             colors = NavigationBarItemDefaults.colors(
                 indicatorColor = Color.Transparent,
-                selectedIconColor = MaterialTheme.colorScheme.primary,
+                disabledIconColor = MaterialTheme.colorScheme.primary,
             )
         )
         NavigationBarItem(
@@ -38,7 +38,8 @@ fun BottomBar(
             onClick = { navigate() },
             colors = NavigationBarItemDefaults.colors(
                 indicatorColor = Color.Transparent,
-                selectedIconColor = MaterialTheme.colorScheme.primary,
+                disabledIconColor = MaterialTheme.colorScheme.primary,
+
             )
         )
     }
