@@ -4,16 +4,25 @@ import android.content.Context
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import com.project.reach.domain.contracts.IWifiController
+import com.project.reach.network.model.DeviceInfo
+import com.project.reach.network.model.Packet
 import com.project.reach.network.monitor.NetworkCallback
+import com.project.reach.util.debug
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import java.net.InetAddress
+import java.util.UUID
+import javax.inject.Inject
 
 class WifiController (
-    private val context: Context
+    private val context: Context,
+    private val discoveryController: DiscoveryController
 ): IWifiController {
 
     private val _isActive = MutableStateFlow(false)
     override val isActive = _isActive.asStateFlow()
+
 
     private val connectivityManager by lazy {
         context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
@@ -24,8 +33,30 @@ class WifiController (
         onConnectionLost = { _isActive.value = false }
     )
 
+    override var foundDevices: StateFlow<List<DeviceInfo>>
+
     init {
         connectivityManager.registerDefaultNetworkCallback(networkCallback)
+        foundDevices = discoveryController.foundServices
+    }
+
+    override fun startDiscovery() {
+        discoveryController.startDiscovery()
+    }
+
+    override fun send(uuid: UUID, packet: Packet): Boolean {
+        return discoveryController.getServiceInfo(uuid) { ip, port ->
+            sendPacket(ip, port, packet)
+        }
+    }
+
+    private fun sendPacket(ip: InetAddress, port: Int, packet: Packet) {
+        val bytes = packet.serialize()
+        debug("Sending message ${bytes.decodeToString()} to $ip:$port")
+    }
+
+    override fun stopDiscovery() {
+        discoveryController.stopDiscovery()
     }
 
     private fun isConnectedToWifiAP(): Boolean {
@@ -36,5 +67,6 @@ class WifiController (
 
     override fun close() {
         connectivityManager.unregisterNetworkCallback(networkCallback)
+        discoveryController.close()
     }
 }

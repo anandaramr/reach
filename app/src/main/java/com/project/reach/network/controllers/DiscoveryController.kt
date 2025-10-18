@@ -3,6 +3,7 @@ package com.project.reach.network.controllers
 import android.content.Context
 import android.net.nsd.NsdManager
 import android.net.nsd.NsdServiceInfo
+import com.project.reach.network.model.DeviceInfo
 import com.project.reach.network.monitor.NsdDiscoveryListener
 import com.project.reach.network.monitor.NsdRegistrationListener
 import com.project.reach.network.monitor.NsdResolveListener
@@ -12,6 +13,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import java.net.DatagramSocket
 import java.net.InetAddress
+import java.util.UUID
 
 /**
  * Manages discovery and resolution of available REACH services
@@ -21,7 +23,7 @@ import java.net.InetAddress
  */
 class DiscoveryController(
     private val context: Context,
-    private val uuid: String,
+    private val uuid: UUID,
     private val username: String,
 ) {
 
@@ -29,20 +31,21 @@ class DiscoveryController(
         context.getSystemService(Context.NSD_SERVICE) as NsdManager
     }
 
-    private val _foundServices = MutableStateFlow<List<Pair<String, String>>>(emptyList())
+    private val _foundServices = MutableStateFlow<List<DeviceInfo>>(emptyList())
 
     /**
      * Exposes a read-only [StateFlow] of discovered services.
      *
      * Each entry is a [Pair] where the first value is the service `uuid` and the second is the `username`
      */
-    val foundServices: StateFlow<List<Pair<String, String>>> = _foundServices.asStateFlow()
+    val foundServices: StateFlow<List<DeviceInfo>> = _foundServices.asStateFlow()
+
+    private val registrationListener = NsdRegistrationListener()
 
     init {
         registerService()
     }
 
-    private val registrationListener = NsdRegistrationListener()
 
     private fun registerService() {
         // TODO limit username chars to <=26 chars and validate username format
@@ -92,12 +95,15 @@ class DiscoveryController(
      * }
      * ```
      */
-    fun getServiceInfo(uuid: String, onResolved: (host: InetAddress, port: Int) -> Unit) {
+    fun getServiceInfo(uuid: UUID, onResolved: (host: InetAddress, port: Int) -> Unit): Boolean {
         resolveCallback = onResolved
+        if (!serviceInfoMap.contains(uuid)) return false
+
         nsdManager.resolveService(serviceInfoMap[uuid], resolveListener)
+        return true
     }
 
-    private val serviceInfoMap: MutableMap<String, NsdServiceInfo> = mutableMapOf()
+    private val serviceInfoMap: MutableMap<UUID, NsdServiceInfo> = mutableMapOf()
     private var resolveCallback: ((InetAddress, Int) -> Unit)? = null
     private val resolveListener = NsdResolveListener { ip, port ->
         resolveCallback?.invoke(ip, port)
@@ -116,13 +122,13 @@ class DiscoveryController(
         val parts = parseServiceName(serviceInfo)
         if (parts.size != 2) return
 
-        val uuid = parts[0]
+        val uuid = UUID.fromString(parts[0])
         val username = parts[1]
 
         if (uuid == this.uuid) return
 
         _foundServices.update {
-            it + Pair(uuid, username)
+            it + DeviceInfo(uuid, username)
         }
 
         serviceInfoMap.put(uuid, serviceInfo)
@@ -132,11 +138,11 @@ class DiscoveryController(
         val parts = parseServiceName(serviceInfo)
         if (parts.size != 2) return
 
-        val foundUuid = parts[0]
+        val foundUuid = UUID.fromString(parts[0])
 
         _foundServices.update {
-            it.filter { (uuid, _) ->
-                uuid != foundUuid
+            it.filter { uuid ->
+                uuid == foundUuid
             }
         }
 

@@ -9,18 +9,22 @@ import kotlinx.coroutines.flow.asSharedFlow
 
 class AppRepository(
     private val wifiController: IWifiController,
-    private val udpTransport: NetworkTransport
 ): IAppRepository {
     private val _notifications = MutableSharedFlow<NotificationEvent>()
     override val notifications = _notifications.asSharedFlow()
 
     override val isWifiActive = wifiController.isActive
+    override val foundDevices = wifiController.foundDevices
 
-    override fun startUDPServer() {
-        udpTransport.listen {  }
+    override fun startDiscovery() {
+        wifiController.startDiscovery()
     }
 
-    override fun stopUDPServer() {
-        udpTransport.close()
+    override fun stopDiscovery() {
+        wifiController.stopDiscovery()
+    }
+
+    override fun release() {
+        wifiController.close()
     }
 }

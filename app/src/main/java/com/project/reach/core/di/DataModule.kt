@@ -30,8 +30,7 @@ object DataModule {
     @Singleton
     fun provideAppRepository(
         wifiController: IWifiController,
-        @UDP udpTransport: NetworkTransport
     ): IAppRepository {
-        return AppRepository(wifiController, udpTransport)
+        return AppRepository(wifiController)
     }
 }

@@ -38,11 +38,12 @@ class ForegroundService: Service() {
         val notification = getForegroundNotification()
         startForeground(FOREGROUND_NOTIFICATION_ID, notification)
 
-        appRepository.startUDPServer()
+        appRepository.startDiscovery()
     }
 
     private fun stop() {
-        appRepository.stopUDPServer()
+        appRepository.stopDiscovery()
+        appRepository.release()
         stopSelf()
     }
 

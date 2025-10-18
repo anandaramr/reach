@@ -11,6 +11,7 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
+import java.util.UUID
 import javax.inject.Singleton
 
 @Module
@@ -20,9 +21,10 @@ object NetworkModule {
     @Provides
     @Singleton
     fun provideWifiController(
-        @ApplicationContext context: Context
+        @ApplicationContext context: Context,
+        discoveryController: DiscoveryController
     ): IWifiController {
-        return WifiController(context)
+        return WifiController(context, discoveryController)
     }
 
     @Provides
@@ -35,6 +37,6 @@ object NetworkModule {
     fun provideDiscoveryController(
         @ApplicationContext context: Context
     ): DiscoveryController {
-        return DiscoveryController(context, Math.random().toString(), "blah")
+        return DiscoveryController(context, UUID.randomUUID(), "blah")
     }
 }
