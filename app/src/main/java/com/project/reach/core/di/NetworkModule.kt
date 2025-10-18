@@ -22,9 +22,10 @@ object NetworkModule {
     @Singleton
     fun provideWifiController(
         @ApplicationContext context: Context,
-        discoveryController: DiscoveryController
+        discoveryController: DiscoveryController,
+        @UDP udpTransport: NetworkTransport
     ): IWifiController {
-        return WifiController(context, discoveryController)
+        return WifiController(context, discoveryController, udpTransport)
     }
 
     @Provides

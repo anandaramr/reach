@@ -7,10 +7,26 @@ sealed class Packet {
     fun serialize(): ByteArray {
         return when (this) {
             is Message -> {
-                "m:$message".toByteArray()
+                "m:$message"
             }
             TypingMessage -> {
-                "t:".toByteArray()
+                "t:"
+            }
+        }.toByteArray()
+    }
+
+    companion object {
+        fun deserialize(bytes: ByteArray): Packet? {
+            val parts = bytes.decodeToString().split(':')
+            val header = parts.getOrNull(0)
+
+            return when (header) {
+                "t" -> TypingMessage
+                "m" -> {
+                    val message = parts.getOrNull(1)
+                    if (message?.isNotBlank() == true) Message(message) else null
+                }
+                else -> null
             }
         }
     }

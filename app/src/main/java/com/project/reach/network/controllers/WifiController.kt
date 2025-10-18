@@ -7,17 +7,21 @@ import com.project.reach.domain.contracts.IWifiController
 import com.project.reach.network.model.DeviceInfo
 import com.project.reach.network.model.Packet
 import com.project.reach.network.monitor.NetworkCallback
+import com.project.reach.network.transport.NetworkTransport
 import com.project.reach.util.debug
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 import java.net.InetAddress
 import java.util.UUID
-import javax.inject.Inject
 
 class WifiController (
     private val context: Context,
-    private val discoveryController: DiscoveryController
+    private val discoveryController: DiscoveryController,
+    private val udpTransport: NetworkTransport
 ): IWifiController {
 
     private val _isActive = MutableStateFlow(false)
@@ -41,6 +45,12 @@ class WifiController (
     }
 
     override fun startDiscovery() {
+        udpTransport.listen {
+            debug("Received message ${it.decodeToString()}")
+        }
+        CoroutineScope(Dispatchers.IO).launch {
+            udpTransport.send("ping".toByteArray(), InetAddress.getByName("255.255.255.255"), 3000)
+        }
         discoveryController.startDiscovery()
     }
 
@@ -68,5 +78,6 @@ class WifiController (
     override fun close() {
         connectivityManager.unregisterNetworkCallback(networkCallback)
         discoveryController.close()
+        udpTransport.close()
     }
 }
