@@ -2,6 +2,7 @@ package com.project.reach.data.respository
 
 import android.content.Context
 import com.project.reach.data.local.IdentityManager
+import com.project.reach.domain.contracts.IIdentityRepository
 import javax.inject.Inject
 
 class IdentityRepository @Inject constructor(
@@ -28,29 +29,4 @@ class IdentityRepository @Inject constructor(
     override fun updateUsername(username: String) {
         preferences.updateUsernameIdentity(username)
     }
-}
-
-/**
- * Handles user identity creation and retrieval
- */
-interface IIdentityRepository {
-
-    /**
-     * Retrieves identity key from `DataStore` if it exists
-     *
-     * Return new identity key if it doesn't already exist
-     */
-    fun getIdentity(): String
-
-    /**
-     * Retrieves username. Return `null` if it doesn't exist
-     *
-     * Can be used to check if user hasn't onboarded
-     */
-    fun getUsername(): String?
-
-    /**
-     * Updates username
-     */
-    fun updateUsername(username: String)
 }
