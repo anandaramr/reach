@@ -6,8 +6,16 @@ import android.app.Service
 import android.content.Intent
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
+import com.project.reach.domain.contracts.IAppRepository
+import dagger.hilt.android.AndroidEntryPoint
+import javax.inject.Inject
 
+@AndroidEntryPoint
 class ForegroundService: Service() {
+
+    @Inject
+    lateinit var appRepository: IAppRepository
+
     override fun onBind(intent: Intent?): IBinder? {
         return null
     }
@@ -21,12 +29,20 @@ class ForegroundService: Service() {
         return START_STICKY
     }
 
+    private var isStarted = false
+
     private fun start() {
+        if (isStarted) return
+        isStarted = true
+
         val notification = getForegroundNotification()
         startForeground(FOREGROUND_NOTIFICATION_ID, notification)
+
+        appRepository.startUDPServer()
     }
 
     private fun stop() {
+        appRepository.stopUDPServer()
         stopSelf()
     }
 

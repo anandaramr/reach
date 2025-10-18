@@ -2,11 +2,11 @@ package com.project.reach.core.di
 
 import android.content.Context
 import com.project.reach.data.respository.AppRepository
-import com.project.reach.network.controllers.WifiController
-import com.project.reach.data.respository.IIdentityRepository
+import com.project.reach.domain.contracts.IIdentityRepository
 import com.project.reach.data.respository.IdentityRepository
 import com.project.reach.domain.contracts.IAppRepository
 import com.project.reach.domain.contracts.IWifiController
+import com.project.reach.network.transport.NetworkTransport
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -16,7 +16,7 @@ import javax.inject.Singleton
 
 @Module
 @InstallIn(SingletonComponent::class)
-object AppModule {
+object DataModule {
 
     @Provides
     @Singleton
@@ -28,17 +28,10 @@ object AppModule {
 
     @Provides
     @Singleton
-    fun provideWifiController(
-        @ApplicationContext context: Context
-    ): IWifiController {
-        return WifiController(context)
-    }
-
-    @Provides
-    @Singleton
-    fun provideMessageRepository(
+    fun provideAppRepository(
         wifiController: IWifiController,
+        @UDP udpTransport: NetworkTransport
     ): IAppRepository {
-        return AppRepository(wifiController)
+        return AppRepository(wifiController, udpTransport)
     }
 }
