@@ -48,9 +48,6 @@ class WifiController (
         udpTransport.listen {
             debug("Received message ${it.decodeToString()}")
         }
-        CoroutineScope(Dispatchers.IO).launch {
-            udpTransport.send("ping".toByteArray(), InetAddress.getByName("255.255.255.255"), 3000)
-        }
         discoveryController.startDiscovery()
     }
 
@@ -62,7 +59,9 @@ class WifiController (
 
     private fun sendPacket(ip: InetAddress, port: Int, packet: Packet) {
         val bytes = packet.serialize()
-        debug("Sending message ${bytes.decodeToString()} to $ip:$port")
+        CoroutineScope(Dispatchers.IO).launch {
+            udpTransport.send(bytes, InetAddress.getByName("255.255.255.255"), 3000)
+        }
     }
 
     override fun stopDiscovery() {

@@ -6,7 +6,7 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 
 /**
- * Repository for managing main app operations and data
+ * Repository for managing app-level operations
  */
 interface IAppRepository {
     /**
