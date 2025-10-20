@@ -1,7 +1,8 @@
 package com.project.reach.core.di
 
 import android.content.Context
-import com.project.reach.data.local.ReachDatabase
+import com.project.reach.data.local.IdentityManager
+import com.project.reach.data.local.database.ReachDatabase
 import com.project.reach.data.respository.NetworkRepository
 import com.project.reach.domain.contracts.IIdentityRepository
 import com.project.reach.data.respository.IdentityRepository
@@ -22,10 +23,19 @@ object DataModule {
 
     @Provides
     @Singleton
-    fun provideIdentityRepository(
+    fun provideIdentityManager(
         @ApplicationContext context: Context
+    ): IdentityManager {
+        return IdentityManager(context)
+    }
+
+    @Provides
+    @Singleton
+    fun provideIdentityRepository(
+        @ApplicationContext context: Context,
+        identityManager: IdentityManager
     ): IIdentityRepository {
-        return IdentityRepository(context)
+        return IdentityRepository(identityManager)
     }
 
     @Provides

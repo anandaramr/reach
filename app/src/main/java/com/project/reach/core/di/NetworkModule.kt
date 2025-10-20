@@ -1,6 +1,7 @@
 package com.project.reach.core.di
 
 import android.content.Context
+import com.project.reach.data.local.IdentityManager
 import com.project.reach.domain.contracts.IWifiController
 import com.project.reach.network.controllers.DiscoveryController
 import com.project.reach.network.controllers.WifiController
@@ -36,8 +37,9 @@ object NetworkModule {
     @Provides
     @Singleton
     fun provideDiscoveryController(
-        @ApplicationContext context: Context
+        @ApplicationContext context: Context,
+        identityManager: IdentityManager
     ): DiscoveryController {
-        return DiscoveryController(context, UUID.randomUUID(), "blah")
+        return DiscoveryController(context, identityManager)
     }
 }

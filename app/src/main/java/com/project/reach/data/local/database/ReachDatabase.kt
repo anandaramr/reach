@@ -1,4 +1,4 @@
-package com.project.reach.data.local
+package com.project.reach.data.local.database
 
 import android.content.Context
 import androidx.room.Database

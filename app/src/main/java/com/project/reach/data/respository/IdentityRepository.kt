@@ -1,33 +1,28 @@
 package com.project.reach.data.respository
 
-import android.content.Context
 import com.project.reach.data.local.IdentityManager
 import com.project.reach.domain.contracts.IIdentityRepository
 import javax.inject.Inject
 
 class IdentityRepository @Inject constructor(
-    private val context: Context
+    private val identityManager: IdentityManager
 ): IIdentityRepository {
 
-    private val preferences by lazy {
-        IdentityManager(context)
-    }
-
     override fun isOnboardingRequired(): Boolean {
-        return preferences.getUserUUID()?.isBlank() != false
+        return identityManager.getUserUUID()?.isBlank() != false
     }
 
     override fun getUserId(): String {
-        val uuid = preferences.getUserUUID()
+        val uuid = identityManager.getUserUUID()
         return if (uuid?.isBlank() == false) {
             uuid
         } else {
-            preferences.createUserUUID()
+            identityManager.createUserUUID()
         }
     }
 
     override fun getUsername(): String? {
-        return preferences.getUsernameIdentity()
+        return identityManager.getUsernameIdentity()
     }
 
     override fun updateUsername(username: String) {
@@ -39,7 +34,10 @@ class IdentityRepository @Inject constructor(
             throw IllegalArgumentException("Username should have at most 24 characters")
         }
 
-        preferences.updateUsernameIdentity(username)
+        identityManager.updateUsernameIdentity(username)
+
+        // create UUID if it doesn't exist
+        getUserId()
     }
 
     companion object {
