@@ -1,4 +1,4 @@
-package com.project.reach.ui.components
+package com.project.reach.ui.components.bottomBar
 
 import androidx.compose.ui.graphics.vector.ImageVector
 
