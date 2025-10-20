@@ -24,7 +24,6 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.project.reach.ui.components.BottomBar
 import com.project.reach.ui.screens.chat.components.ChatBubble
 import com.project.reach.ui.screens.home.ChatItem
 import com.project.reach.ui.screens.home.HomeScreenState
@@ -40,7 +39,7 @@ fun Home(
 ) {
     Scaffold(
         topBar = { TopBar() },
-        bottomBar = { BottomBar(currentScreen = "home", navigate = navigateToDiscovery) },
+//        bottomBar = { BottomBar(currentScreen = "home", navigate = navigateToDiscovery) },
         modifier = Modifier.fillMaxSize()
     ) { innerPadding ->
         Column(
