@@ -24,7 +24,6 @@ object SettingsScreenDestination : NavigationDestination {
 @Composable
 fun SettingsScreen(
 //    viewModel: DiscoverViewModel = viewModel<DiscoverViewModel>(),
-    navigateToHome: () -> Unit,
 ) {
 //    val uiState by viewModel.uiState.collectAsState()
     Scaffold(

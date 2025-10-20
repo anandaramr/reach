@@ -17,12 +17,11 @@ fun ReachApp() {
     REACHTheme {
         Surface(
             modifier = Modifier.Companion.fillMaxSize(),
-            color = Color.Transparent
+            color = MaterialTheme.colorScheme.background
         ) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(brush = grad)
             ){
                 AppNavigationHost()
             }

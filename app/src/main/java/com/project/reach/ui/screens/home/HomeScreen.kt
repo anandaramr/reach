@@ -27,7 +27,6 @@ object HomeScreenDestination: NavigationDestination {
 fun HomeScreen(
     viewModel: HomeScreenViewModel = hiltViewModel(),
     navigateToChat: () -> Unit,
-    navigateToDiscovery: () -> Unit,
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -57,7 +56,7 @@ fun HomeScreen(
             Home(
                 username = uiState.username,
                 chatList = uiState.chatList,
-                navigateToDiscovery, navigateToChat
+                navigateToChat = navigateToChat
             )
         }
     }

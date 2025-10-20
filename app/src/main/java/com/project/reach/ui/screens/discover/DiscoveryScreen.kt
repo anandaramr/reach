@@ -27,12 +27,10 @@ object DiscoverScreenDestination : NavigationDestination {
 @Composable
 fun DiscoveryScreen(
     viewModel: DiscoverViewModel = viewModel<DiscoverViewModel>(),
-    navigateToHome: () -> Unit,
 ) {
     val uiState by viewModel.uiState.collectAsState()
     Scaffold(
         topBar = { TopBar() },
-//        bottomBar = { BottomBar(currentScreen = "discovery", navigate = navigateToHome) },
         modifier = Modifier.fillMaxSize()
     ) { innerPadding ->
         Text(

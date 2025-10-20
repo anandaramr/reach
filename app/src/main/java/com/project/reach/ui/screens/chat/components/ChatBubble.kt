@@ -50,7 +50,7 @@ fun ChatBubble(
                 text = message.text,
                 modifier = Modifier
                     .padding(15.dp, 8.dp),
-                fontSize = 17.sp
+                fontSize = 14.sp
             )
         }
     }
