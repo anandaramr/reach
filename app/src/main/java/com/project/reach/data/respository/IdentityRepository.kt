@@ -13,7 +13,11 @@ class IdentityRepository @Inject constructor(
         IdentityManager(context)
     }
 
-    override fun getIdentity(): String {
+    override fun isOnboardingRequired(): Boolean {
+        return preferences.getUserUUID()?.isBlank() != false
+    }
+
+    override fun getUserId(): String {
         val uuid = preferences.getUserUUID()
         return if (uuid?.isBlank() == false) {
             uuid
@@ -27,6 +31,18 @@ class IdentityRepository @Inject constructor(
     }
 
     override fun updateUsername(username: String) {
+        if (!username.matches(Regex(USERNAME_REGEX))) {
+            throw IllegalArgumentException("Username should only contain alphabets, numbers, underscores or dots")
+        }
+
+        if (username.length > 24) {
+            throw IllegalArgumentException("Username should have at most 24 characters")
+        }
+
         preferences.updateUsernameIdentity(username)
+    }
+
+    companion object {
+        private const val USERNAME_REGEX = "^[0-9a-zA-Z_.]+$"
     }
 }
