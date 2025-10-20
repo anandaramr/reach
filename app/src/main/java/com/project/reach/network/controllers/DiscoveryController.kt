@@ -59,7 +59,7 @@ class DiscoveryController(
     }
 
     private fun unregisterService() {
-        nsdManager.unregisterService(registrationListener)
+        runCatching { nsdManager.unregisterService(registrationListener) }
     }
 
     /**

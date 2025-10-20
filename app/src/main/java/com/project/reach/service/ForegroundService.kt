@@ -6,7 +6,7 @@ import android.app.Service
 import android.content.Intent
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
-import com.project.reach.domain.contracts.IAppRepository
+import com.project.reach.domain.contracts.INetworkRepository
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 
@@ -14,7 +14,7 @@ import javax.inject.Inject
 class ForegroundService: Service() {
 
     @Inject
-    lateinit var appRepository: IAppRepository
+    lateinit var networkRepository: INetworkRepository
 
     override fun onBind(intent: Intent?): IBinder? {
         return null
@@ -38,12 +38,12 @@ class ForegroundService: Service() {
         val notification = getForegroundNotification()
         startForeground(FOREGROUND_NOTIFICATION_ID, notification)
 
-        appRepository.startDiscovery()
+        networkRepository.startDiscovery()
     }
 
     private fun stop() {
-        appRepository.stopDiscovery()
-        appRepository.release()
+        networkRepository.stopDiscovery()
+        networkRepository.release()
         stopSelf()
     }
 
@@ -63,6 +63,11 @@ class ForegroundService: Service() {
             .setOngoing(true)
             .addAction(android.R.drawable.ic_media_pause, "Stop Listening", stopPendingIntent)
             .build()
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        stop()
     }
 
     companion object {
