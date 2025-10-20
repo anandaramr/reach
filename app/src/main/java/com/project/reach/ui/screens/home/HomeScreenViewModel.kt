@@ -33,7 +33,14 @@ class HomeScreenViewModel @Inject constructor(
 
             _uiState.update { it.copy(
                 userId = identityRepository.getIdentity(),
-                username = username
+                username = username,
+                chatList = listOf(
+                    ChatItem( username = "Raman", lastMessage = "Wait, did you check the link I sent?"),
+                    ChatItem( username = "Unni", lastMessage = "Got the files, thanks a lot!"),
+                    ChatItem( username = "Ananthu", lastMessage = "Let’s meet at the café tomorrow?"),
+                    ChatItem( username = "Devika", lastMessage = "Brooo that was hilarious"),
+                    ChatItem( username = "Prani", lastMessage = "Ok cool, see you at 7!"),
+                )
             ) }
         }
     }
