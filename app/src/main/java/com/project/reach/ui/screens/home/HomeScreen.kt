@@ -56,7 +56,8 @@ fun HomeScreen(
         else -> {
             Home(
                 username = uiState.username,
-                navigateToDiscovery, uiState, navigateToChat
+                chatList = uiState.chatList,
+                navigateToDiscovery, navigateToChat
             )
         }
     }

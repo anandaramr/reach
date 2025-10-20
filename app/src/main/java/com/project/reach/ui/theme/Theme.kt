@@ -9,11 +9,19 @@ import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+val grad = Brush.linearGradient(
+colors = listOf(
+    Color(0x99F7A3C7), // 60%
+    Color(0x99D6A7F7)
 
-// ---------- Dark Theme ----------
-// ---------- Dark Theme ----------
+),
+start = Offset(0f, 0f),
+end = Offset(1000f, 1000f)
+)
 private val DarkColorScheme = darkColorScheme(
     primary = Color(0xFFE4C1F9),      // Light violet/pink accent
     onPrimary = Color(0xFF121212),    // Dark text on primary
