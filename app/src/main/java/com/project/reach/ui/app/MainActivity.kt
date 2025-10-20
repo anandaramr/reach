@@ -1,12 +1,11 @@
 package com.project.reach.ui.app
 
-import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import com.project.reach.permission.PermissionHandler
-import com.project.reach.service.ForegroundService
+import com.project.reach.service.ForegroundServiceManager
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
@@ -16,10 +15,7 @@ class MainActivity: ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        permissionHandler = PermissionHandler(this)
-        permissionHandler.onNotificationPermissionGranted(
-            onGranted = ::startForegroundService
-        )
+        startReachService()
 
         enableEdgeToEdge()
         setContent {
@@ -27,10 +23,15 @@ class MainActivity: ComponentActivity() {
         }
     }
 
-    private fun startForegroundService() {
-        Intent(applicationContext, ForegroundService::class.java).also {
-            it.action = ForegroundService.ACTION_START
-            startService(it)
-        }
+    private fun startReachService() {
+        permissionHandler = PermissionHandler(this)
+        permissionHandler.onNotificationPermissionGranted(
+            onGranted = { ForegroundServiceManager.startService(applicationContext) }
+        )
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        ForegroundServiceManager.stopService(applicationContext)
     }
 }

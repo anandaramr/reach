@@ -2,7 +2,7 @@ package com.project.reach.ui.screens.home
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.project.reach.data.respository.IIdentityRepository
+import com.project.reach.domain.contracts.IIdentityRepository
 import com.project.reach.ui.utils.UIEvent
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableSharedFlow
