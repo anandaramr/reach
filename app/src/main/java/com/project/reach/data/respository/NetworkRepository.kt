@@ -1,17 +1,14 @@
 package com.project.reach.data.respository
 
-import com.project.reach.domain.contracts.IAppRepository
+import com.project.reach.domain.contracts.INetworkRepository
 import com.project.reach.domain.contracts.IWifiController
 import com.project.reach.domain.models.NotificationEvent
-import com.project.reach.network.transport.NetworkTransport
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 
-class AppRepository(
+class NetworkRepository(
     private val wifiController: IWifiController,
-): IAppRepository {
-    private val _notifications = MutableSharedFlow<NotificationEvent>()
-    override val notifications = _notifications.asSharedFlow()
+): INetworkRepository {
 
     override val isWifiActive = wifiController.isActive
     override val foundDevices = wifiController.foundDevices

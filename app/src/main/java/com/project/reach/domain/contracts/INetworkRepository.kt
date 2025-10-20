@@ -8,13 +8,7 @@ import kotlinx.coroutines.flow.StateFlow
 /**
  * Repository for managing app-level operations
  */
-interface IAppRepository {
-    /**
-     * A [SharedFlow] that emits [NotificationEvent] objects
-     *
-     * Emits all notification events
-     */
-    val notifications: SharedFlow<NotificationEvent>
+interface INetworkRepository {
 
     /**
      * A [StateFlow] that represents current WiFi state

@@ -1,12 +1,14 @@
 package com.project.reach.core.di
 
 import android.content.Context
-import com.project.reach.data.respository.AppRepository
+import com.project.reach.data.local.ReachDatabase
+import com.project.reach.data.respository.NetworkRepository
 import com.project.reach.domain.contracts.IIdentityRepository
 import com.project.reach.data.respository.IdentityRepository
-import com.project.reach.domain.contracts.IAppRepository
+import com.project.reach.data.respository.MessageRepository
+import com.project.reach.domain.contracts.IMessageRepository
+import com.project.reach.domain.contracts.INetworkRepository
 import com.project.reach.domain.contracts.IWifiController
-import com.project.reach.network.transport.NetworkTransport
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -28,9 +30,17 @@ object DataModule {
 
     @Provides
     @Singleton
-    fun provideAppRepository(
+    fun provideNetworkRepository(
         wifiController: IWifiController,
-    ): IAppRepository {
-        return AppRepository(wifiController)
+    ): INetworkRepository {
+        return NetworkRepository(wifiController)
+    }
+
+    @Provides
+    @Singleton
+    fun provideMessageRepository(
+        @ApplicationContext context: Context,
+    ): IMessageRepository {
+        return MessageRepository(ReachDatabase.getDatabase(context).messageDao())
     }
 }
