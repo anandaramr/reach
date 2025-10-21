@@ -3,6 +3,7 @@ package com.project.reach.network.controllers
 import android.content.Context
 import android.net.nsd.NsdManager
 import android.net.nsd.NsdServiceInfo
+import com.project.reach.data.local.IdentityManager
 import com.project.reach.network.model.DeviceInfo
 import com.project.reach.network.monitor.NsdDiscoveryListener
 import com.project.reach.network.monitor.NsdRegistrationListener
@@ -23,14 +24,16 @@ import java.util.UUID
  */
 class DiscoveryController(
     private val context: Context,
-    private val uuid: UUID,
-    private val username: String,
+    identityManager: IdentityManager
 ) {
+    private val username = identityManager.getUsernameIdentity()
+    private val uuid = UUID.fromString(identityManager.getUserUUID())
 
     private val nsdManager by lazy {
         context.getSystemService(Context.NSD_SERVICE) as NsdManager
     }
 
+    // TODO: Use discovery protocol over UDP on found devices
     private val _foundServices = MutableStateFlow<List<DeviceInfo>>(emptyList())
 
     /**
@@ -45,7 +48,6 @@ class DiscoveryController(
     init {
         registerService()
     }
-
 
     private fun registerService() {
         // TODO limit username chars to <=26 chars and validate username format

@@ -1,11 +1,12 @@
 package com.project.reach.core.di
 
 import android.content.Context
-import com.project.reach.data.local.ReachDatabase
-import com.project.reach.data.respository.NetworkRepository
-import com.project.reach.domain.contracts.IIdentityRepository
+import com.project.reach.data.local.IdentityManager
+import com.project.reach.data.local.database.ReachDatabase
 import com.project.reach.data.respository.IdentityRepository
 import com.project.reach.data.respository.MessageRepository
+import com.project.reach.data.respository.NetworkRepository
+import com.project.reach.domain.contracts.IIdentityRepository
 import com.project.reach.domain.contracts.IMessageRepository
 import com.project.reach.domain.contracts.INetworkRepository
 import com.project.reach.domain.contracts.IWifiController
@@ -22,10 +23,18 @@ object DataModule {
 
     @Provides
     @Singleton
-    fun provideIdentityRepository(
+    fun provideIdentityManager(
         @ApplicationContext context: Context
+    ): IdentityManager {
+        return IdentityManager(context)
+    }
+
+    @Provides
+    @Singleton
+    fun provideIdentityRepository(
+        identityManager: IdentityManager
     ): IIdentityRepository {
-        return IdentityRepository(context)
+        return IdentityRepository(identityManager)
     }
 
     @Provides
@@ -41,6 +50,10 @@ object DataModule {
     fun provideMessageRepository(
         @ApplicationContext context: Context,
     ): IMessageRepository {
-        return MessageRepository(ReachDatabase.getDatabase(context).messageDao())
+        val database = ReachDatabase.getDatabase(context)
+        return MessageRepository(
+            messageDao = database.messageDao(),
+            contactDao = database.contactDao()
+        )
     }
 }
