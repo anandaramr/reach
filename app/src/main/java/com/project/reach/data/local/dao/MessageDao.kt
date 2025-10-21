@@ -19,7 +19,7 @@ interface MessageDao {
 
     @Query(
         value = """
-            SELECT m.userId, c.username, m.text, m.timeStamp, m.messageState
+            SELECT m.userId, c.username, m.text as "lastMessage", m.timeStamp, m.messageState
             FROM messages AS m
             JOIN
             contacts AS c ON c.userId = m.userId
@@ -28,6 +28,7 @@ interface MessageDao {
                 FROM messages AS m2
                 WHERE m2.userId = m.userId
             )
+            order by m.timeStamp desc
         """
     )
     fun getMessagesPreview(): Flow<List<MessagePreview>>

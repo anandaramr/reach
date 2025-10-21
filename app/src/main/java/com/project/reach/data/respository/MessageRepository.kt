@@ -14,7 +14,7 @@ class MessageRepository(
     private val messageDao: MessageDao,
     private val contactDao: ContactDao
 ): IMessageRepository {
-    override suspend fun sendMessage(message: String, userId: String) {
+    override suspend fun sendMessage(userId: String, message: String) {
         messageDao.insertMessage(
             messageEntity = MessageEntity(
                 text = message,
