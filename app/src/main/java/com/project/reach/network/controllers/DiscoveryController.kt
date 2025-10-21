@@ -33,6 +33,7 @@ class DiscoveryController(
         context.getSystemService(Context.NSD_SERVICE) as NsdManager
     }
 
+    // TODO: Use discovery protocol over UDP on found devices
     private val _foundServices = MutableStateFlow<List<DeviceInfo>>(emptyList())
 
     /**
