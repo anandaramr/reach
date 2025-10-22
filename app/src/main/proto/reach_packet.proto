@@ -1,0 +1,12 @@
+syntax = "proto3";
+
+option java_package = "com.reach.project.core.serialization";
+option java_multiple_files = true;
+
+message ReachPacket {
+    string type = 1;
+    string sender_uuid = 2;
+    string sender_username = 3;
+    int64 timestamp = 4;
+    string payload = 5;
+}

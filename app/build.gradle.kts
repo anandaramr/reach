@@ -5,6 +5,7 @@ plugins {
 
     id("com.google.devtools.ksp") version "2.2.20-2.0.3"
     id("com.google.dagger.hilt.android") version "2.57.2"
+    id("com.google.protobuf") version "0.9.5"
 }
 
 android {
@@ -61,6 +62,8 @@ dependencies {
 
     implementation("androidx.compose.material:material-icons-extended:1.7.8")
 
+    implementation("com.google.protobuf:protobuf-javalite:4.33.0")
+
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
@@ -76,4 +79,26 @@ dependencies {
     androidTestImplementation(libs.androidx.ui.test.junit4)
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
+}
+
+protobuf {
+    protoc {
+        artifact = "com.google.protobuf:protoc:3.25.3"
+    }
+    generateProtoTasks {
+        all().forEach { task ->
+            task.builtins {
+                create("java") {
+                    option("lite")
+                }
+            }
+        }
+    }
+}
+
+// resolves task conflict due to proto
+tasks.configureEach {
+    if (name == "kspDebugKotlin") {
+        dependsOn("generateDebugProto")
+    }
 }
