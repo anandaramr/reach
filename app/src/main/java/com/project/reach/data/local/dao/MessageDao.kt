@@ -6,6 +6,7 @@ import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import com.project.reach.data.local.entity.MessageEntity
 import com.project.reach.domain.models.MessagePreview
+import com.project.reach.domain.models.MessageState
 import kotlinx.coroutines.flow.Flow
 import java.util.UUID
 
@@ -33,4 +34,6 @@ interface MessageDao {
     )
     fun getMessagesPreview(): Flow<List<MessagePreview>>
 
+    @Query("update messages set messageState = :messageState where messageId = :messageId")
+    fun updateMessageState(messageId: Int, messageState: MessageState)
 }

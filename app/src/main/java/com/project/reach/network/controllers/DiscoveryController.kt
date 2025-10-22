@@ -3,6 +3,7 @@ package com.project.reach.network.controllers
 import android.content.Context
 import android.net.nsd.NsdManager
 import android.net.nsd.NsdServiceInfo
+import android.net.wifi.WifiManager
 import com.project.reach.data.local.IdentityManager
 import com.project.reach.network.model.DeviceInfo
 import com.project.reach.network.monitor.NsdDiscoveryListener
@@ -29,6 +30,13 @@ class DiscoveryController(
     private val username = identityManager.getUsernameIdentity()
     private val uuid = UUID.fromString(identityManager.getUserUUID())
 
+    private val multicastLock by lazy {
+        val wifiManager = context.getSystemService(Context.WIFI_SERVICE) as WifiManager
+        wifiManager.createMulticastLock("ReachDiscovery").apply {
+            setReferenceCounted(true)
+        }
+    }
+
     private val nsdManager by lazy {
         context.getSystemService(Context.NSD_SERVICE) as NsdManager
     }
@@ -46,6 +54,7 @@ class DiscoveryController(
     private val registrationListener = NsdRegistrationListener()
 
     init {
+        acquireMulticastLock()
         registerService()
     }
 
@@ -116,8 +125,19 @@ class DiscoveryController(
      * Should be called during cleanup
      */
     fun close() {
+        releaseMulticastLock()
         stopDiscovery()
         unregisterService()
+    }
+
+    private fun acquireMulticastLock() {
+        multicastLock.acquire()
+    }
+
+    private fun releaseMulticastLock() {
+        if (multicastLock.isHeld) {
+            multicastLock.release()
+        }
     }
 
     private fun onFoundService(serviceInfo: NsdServiceInfo) {
@@ -128,6 +148,7 @@ class DiscoveryController(
         val username = parts[1]
 
         if (uuid == this.uuid) return
+        if (serviceInfoMap.contains(uuid)) return
 
         _foundServices.update {
             it + DeviceInfo(uuid, username)

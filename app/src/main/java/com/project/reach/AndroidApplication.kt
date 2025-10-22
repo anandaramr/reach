@@ -3,7 +3,6 @@ package com.project.reach
 import android.app.Application
 import android.app.NotificationChannel
 import android.app.NotificationManager
-import android.content.Context
 import com.project.reach.service.ForegroundService
 import dagger.hilt.android.HiltAndroidApp
 
@@ -13,14 +12,21 @@ class AndroidApplication: Application() {
     override fun onCreate() {
         super.onCreate()
 
-        val listenNotification = NotificationChannel(
+        val foregroundNotification = NotificationChannel(
             ForegroundService.FOREGROUND_CHANNEL_ID,
-            "Listen for messages",
+            "Background service channel",
             NotificationManager.IMPORTANCE_LOW
         )
 
-        val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        notificationManager.createNotificationChannel(listenNotification)
+        val messageNotification = NotificationChannel(
+            ForegroundService.MESSAGE_NOTIFICATION_CHANNEL,
+            "Notify new messages",
+            NotificationManager.IMPORTANCE_HIGH
+        )
+
+        val notificationManager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
+        notificationManager.createNotificationChannel(foregroundNotification)
+        notificationManager.createNotificationChannel(messageNotification)
     }
 
 }
