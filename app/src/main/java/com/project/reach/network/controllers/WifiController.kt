@@ -8,17 +8,19 @@ import com.project.reach.network.model.DeviceInfo
 import com.project.reach.network.model.Packet
 import com.project.reach.network.monitor.NetworkCallback
 import com.project.reach.network.transport.NetworkTransport
-import com.project.reach.util.debug
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import java.net.InetAddress
 import java.util.UUID
 
-class WifiController (
+class WifiController(
     private val context: Context,
     private val discoveryController: DiscoveryController,
     private val udpTransport: NetworkTransport
@@ -27,6 +29,10 @@ class WifiController (
     private val _isActive = MutableStateFlow(false)
     override val isActive = _isActive.asStateFlow()
 
+    private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+
+    private val _packets = MutableSharedFlow<Packet>(replay = 0, extraBufferCapacity = 64)
+    override val packets = _packets.asSharedFlow()
 
     private val connectivityManager by lazy {
         context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
@@ -45,10 +51,13 @@ class WifiController (
     }
 
     override fun startDiscovery() {
-        udpTransport.listen {
-            debug("Received message ${it.decodeToString()}")
-        }
         discoveryController.startDiscovery()
+        udpTransport.listen { bytes ->
+            try {
+                _packets.emit(Packet.deserialize(bytes))
+            } catch (_: IllegalArgumentException) {
+            }
+        }
     }
 
     override fun send(uuid: UUID, packet: Packet): Boolean {
@@ -59,8 +68,8 @@ class WifiController (
 
     private fun sendPacket(ip: InetAddress, port: Int, packet: Packet) {
         val bytes = packet.serialize()
-        CoroutineScope(Dispatchers.IO).launch {
-            udpTransport.send(bytes, InetAddress.getByName("255.255.255.255"), 3000)
+        scope.launch {
+            udpTransport.send(bytes, ip, port)
         }
     }
 
