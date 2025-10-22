@@ -4,16 +4,17 @@ import com.reach.project.core.serialization.ReachPacket
 
 sealed class Packet {
     data class Message(
-        override val uuid: String,
+        override val userId: String,
+        val username: String,
         val message: String,
         val timeStamp: Long = System.currentTimeMillis()
     ) : Packet()
 
     data class Typing(
-        override val uuid: String
+        override val userId: String
     ) : Packet()
 
-    abstract val uuid: String
+    abstract val userId: String
 
     /**
      * Serializes the packet and returns a [ByteArray] object
@@ -40,13 +41,14 @@ private object PacketSerializer {
             when (packet) {
                 is Packet.Message -> {
                     type = TYPE_MESSAGE
-                    senderUuid = packet.uuid
+                    senderUuid = packet.userId
+                    senderUsername = packet.username
                     payload = packet.message
                     timestamp = packet.timeStamp
                 }
                 is Packet.Typing -> {
                     type = TYPE_TYPING
-                    senderUuid = packet.uuid
+                    senderUuid = packet.userId
                 }
             }
         }
@@ -57,12 +59,13 @@ private object PacketSerializer {
         val proto = ReachPacket.parseFrom(bytes)
         return when (proto.type) {
             TYPE_MESSAGE -> Packet.Message(
-                uuid = proto.senderUuid,
+                userId = proto.senderUuid,
+                username = proto.senderUsername,
                 message = proto.payload,
                 timeStamp = proto.timestamp
             )
             TYPE_TYPING -> Packet.Typing(
-                uuid = proto.senderUuid
+                userId = proto.senderUuid
             )
             else -> throw IllegalArgumentException("Unknown packet type: ${proto.type}")
         }
