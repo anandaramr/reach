@@ -2,7 +2,9 @@ package com.project.reach.domain.contracts
 
 import com.project.reach.data.local.entity.MessageEntity
 import com.project.reach.domain.models.MessagePreview
+import com.project.reach.domain.models.NotificationEvent
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.SharedFlow
 
 /**
  * Repository interface for handling messaging-related operations.
@@ -11,6 +13,11 @@ import kotlinx.coroutines.flow.Flow
  * fetching message previews, and managing contacts.
  */
 interface IMessageRepository {
+
+    /**
+     * Emits [NotificationEvent] which should be shown to the user
+     */
+    val notifications: SharedFlow<NotificationEvent>
 
     /**
      * Sends message with content [message] to user with user ID [userId]

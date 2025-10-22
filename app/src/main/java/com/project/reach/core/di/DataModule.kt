@@ -49,11 +49,15 @@ object DataModule {
     @Singleton
     fun provideMessageRepository(
         @ApplicationContext context: Context,
+        wifiController: IWifiController,
+        identityManager: IdentityManager
     ): IMessageRepository {
         val database = ReachDatabase.getDatabase(context)
         return MessageRepository(
             messageDao = database.messageDao(),
-            contactDao = database.contactDao()
+            contactDao = database.contactDao(),
+            wifiController = wifiController,
+            identityManager = identityManager
         )
     }
 }
