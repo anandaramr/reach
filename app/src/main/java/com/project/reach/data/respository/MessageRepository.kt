@@ -42,4 +42,10 @@ class MessageRepository(
             )
         )
     }
+
+    override fun getUsername(userId: String): Flow<String> {
+        return contactDao.getUsername(
+            userId = UUID.fromString(userId),
+        )
+    }
 }

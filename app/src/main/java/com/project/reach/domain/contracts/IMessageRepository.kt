@@ -36,4 +36,10 @@ interface IMessageRepository {
      * can be performed
      */
     suspend fun saveNewContact(userId: String, username: String)
+
+    /**
+     * Get username for user using UserId
+     */
+    fun getUsername(userId: String): Flow<String>
+
 }
