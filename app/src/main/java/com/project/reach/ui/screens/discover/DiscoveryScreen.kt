@@ -17,7 +17,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 
 
 object DiscoverScreenDestination : NavigationDestination {
@@ -26,7 +26,8 @@ object DiscoverScreenDestination : NavigationDestination {
 
 @Composable
 fun DiscoveryScreen(
-    viewModel: DiscoverViewModel = viewModel<DiscoverViewModel>(),
+    viewModel: DiscoverViewModel = hiltViewModel(),
+    navigateToChat : (String) -> Unit,
 ) {
     val uiState by viewModel.uiState.collectAsState()
     Scaffold(
@@ -48,8 +49,8 @@ fun DiscoveryScreen(
                 .padding()
                 .fillMaxSize()
         ) {
-            items(items = uiState.peerNameList) { user ->
-                OnlineUser(user)
+            items(items = uiState.peerList) { user ->
+                OnlineUser(user, navigateToChat = {peerId -> navigateToChat(peerId)}, saveContact = {peer-> viewModel.saveContact(peer) })
             }
         }
     }

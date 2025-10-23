@@ -17,19 +17,19 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.project.reach.domain.models.MessagePreview
 import com.project.reach.ui.components.AvatarIcon
-import com.project.reach.ui.screens.home.ChatItem
 
 @Composable
 fun ChatPreview(
-    navigateToChat: () -> Unit,
-    user: ChatItem
+    navigateToChat: (String) -> Unit,
+    user: MessagePreview
 ) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
             .clickable(
-                onClick = navigateToChat
+                onClick = { navigateToChat(user.userId.toString()) }
             )
     ) {
         AvatarIcon(user.username[0])

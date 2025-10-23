@@ -23,24 +23,35 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBackIosNew
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.unit.dp
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.project.reach.ui.screens.chat.components.ChatBubble
 import com.project.reach.ui.screens.chat.components.MessageTextField
+import com.project.reach.ui.screens.discover.Peer
+import com.project.reach.util.debug
+import dagger.hilt.android.lifecycle.HiltViewModel
 
 
 object ChatScreenDestination : NavigationDestination {
-    override val route: String = "chat"
+    override val route: String = "chat/{peerId}"
+    fun createRoute(peerId: String) = "chat/$peerId"
 }
+
 
 @Composable
 fun ChatScreen(
+    peerId: String,
     modifier: Modifier = Modifier,
-    viewModel: ChatScreenViewModel = viewModel<ChatScreenViewModel>(),
+    viewModel: ChatScreenViewModel = hiltViewModel(),
     navigateBack: () -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val scrollState = rememberLazyListState()
+    LaunchedEffect(Unit) {
+        viewModel.initializeChat(peerId)
+    }
     Scaffold(
         modifier = modifier
             .imePadding(),
@@ -50,7 +61,7 @@ fun ChatScreen(
                     modifier = Modifier.height(80.dp),
                     title = {
                         Text(
-                            text = uiState.user.username,
+                            text = uiState.peerName,
                         )
                     },
 

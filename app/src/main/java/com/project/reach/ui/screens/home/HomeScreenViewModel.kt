@@ -2,6 +2,7 @@ package com.project.reach.ui.screens.home
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.project.reach.domain.contracts.IMessageRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -11,21 +12,19 @@ import javax.inject.Inject
 
 @HiltViewModel
 class HomeScreenViewModel @Inject constructor(
+    messageRepository: IMessageRepository
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(HomeScreenState())
     val uiState = _uiState.asStateFlow()
 
     init {
         viewModelScope.launch {
-            _uiState.update { it.copy(
-                chatList = listOf(
-                    ChatItem( username = "Raman", lastMessage = "Wait, did you check the link I sent?"),
-                    ChatItem( username = "Unni", lastMessage = "Got the files, thanks a lot!"),
-                    ChatItem( username = "Ananthu", lastMessage = "Let’s meet at the café tomorrow?"),
-                    ChatItem( username = "Devika", lastMessage = "Brooo that was hilarious"),
-                    ChatItem( username = "Prani", lastMessage = "Ok cool, see you at 7!"),
-                )
-            ) }
+            messageRepository.getMessagesPreview().collect { messagePreviews ->
+                _uiState.update {
+                    it.copy(chatList = messagePreviews)
+                }
+            }
         }
     }
+
 }

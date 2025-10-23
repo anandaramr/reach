@@ -2,7 +2,7 @@ package com.project.reach.ui.screens.discover
 
 import java.util.UUID
 
-data class PeerName(
+data class Peer(
     val username: String,
-    val uuid : UUID
+    val uuid : String
 )
