@@ -117,6 +117,7 @@ class MessageRepository(
                     )
                     _notifications.emit(
                         NotificationEvent.Message(
+                            userId = packet.userId,
                             username = packet.username,
                             message = packet.message,
                             timeStamp = packet.timeStamp
