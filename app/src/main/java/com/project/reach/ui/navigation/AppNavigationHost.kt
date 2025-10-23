@@ -11,12 +11,14 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavHostController
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import com.project.reach.ui.components.bottomBar.BottomBar
-import com.project.reach.ui.components.bottomBar.BottomNavBarItem
+import androidx.navigation.navArgument
+import com.project.reach.ui.components.BottomBar
+import com.project.reach.ui.components.BottomNavBarItem
 import com.project.reach.ui.screens.chat.ChatScreen
 import com.project.reach.ui.screens.chat.ChatScreenDestination
 import com.project.reach.ui.screens.discover.DiscoverScreenDestination
@@ -26,6 +28,7 @@ import com.project.reach.ui.screens.home.HomeScreenDestination
 import com.project.reach.ui.screens.onboarding.OnboardingScreen
 import com.project.reach.ui.screens.settings.SettingsScreen
 import com.project.reach.ui.screens.settings.SettingsScreenDestination
+import com.project.reach.util.debug
 
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
 @Composable
@@ -58,11 +61,13 @@ fun AppNavigationHost(
             startDestination = if (isOnboardingRequired) OnboardingScreen.route else HomeScreenDestination.route,
         ) {
             composable(route = DiscoverScreenDestination.route) {
-                DiscoveryScreen()
+                DiscoveryScreen(
+                    navigateToChat = { peerId -> navController.navigate(ChatScreenDestination.createRoute(peerId)); }
+                )
             }
             composable(route = OnboardingScreen.route, exitTransition = { ExitTransition.None }) {
                 OnboardingScreen(
-                    onOnboardingComplete = { navController.navigate(HomeScreenDestination.route) }
+                    onOnboardingComplete = { navController.navigate(route = HomeScreenDestination.route) }
                 )
             }
             composable(route = SettingsScreenDestination.route) {
@@ -70,13 +75,18 @@ fun AppNavigationHost(
             }
             composable(route = HomeScreenDestination.route) {
                 HomeScreen(
-                    navigateToChat = { navController.navigate(route = ChatScreenDestination.route) },
+                    navigateToChat = { peerId -> navController.navigate(ChatScreenDestination.createRoute(peerId)) },
                     startService = startService
                 )
             }
-            composable(route = ChatScreenDestination.route) {
+            composable(
+                route = ChatScreenDestination.route,
+                arguments = listOf(navArgument("peerId") { type = NavType.StringType })
+            ) { backStackEntry ->
+                val peerId = backStackEntry.arguments?.getString("peerId")?:""
                 ChatScreen(
-                    navigateBack = { navController.popBackStack() }
+                    peerId = peerId,
+                    navigateBack = { navController.popBackStack(route = HomeScreenDestination.route, inclusive = false) }
                 )
             }
         }

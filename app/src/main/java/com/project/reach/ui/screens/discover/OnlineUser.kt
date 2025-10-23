@@ -1,6 +1,8 @@
 package com.project.reach.ui.screens.discover
 
 
+import android.util.Log
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -14,17 +16,30 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.project.reach.data.respository.MessageRepository
+import com.project.reach.domain.contracts.IMessageRepository
 import com.project.reach.ui.components.AvatarIcon
+import java.util.UUID
+import kotlin.math.log
 
 @Composable
 fun OnlineUser(
-    peerName : PeerName
+    peer: Peer,
+    navigateToChat : (String) -> Unit,
+    saveContact : (Peer) -> Unit
 ) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier.padding(10.dp)
+        modifier = Modifier
+            .padding(10.dp)
+            .clickable(
+                onClick = {
+                    saveContact(peer)
+                    navigateToChat(peer.uuid)
+                }
+            )
     ) {
-        AvatarIcon(peerName.username[0])
+        AvatarIcon(peer.username[0])
         Spacer(Modifier.width(10.dp))
         Column(
             modifier = Modifier
@@ -32,7 +47,7 @@ fun OnlineUser(
                 .padding(vertical = 10.dp),
         ) {
             Text(
-                peerName.username,
+                peer.username,
                 fontSize = 20.sp,
                 fontWeight = FontWeight.SemiBold
             )

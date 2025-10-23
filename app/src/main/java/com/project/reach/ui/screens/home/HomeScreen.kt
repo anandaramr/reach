@@ -28,7 +28,7 @@ object HomeScreenDestination: NavigationDestination {
 @Composable
 fun HomeScreen(
     viewModel: HomeScreenViewModel = hiltViewModel(),
-    navigateToChat: () -> Unit,
+    navigateToChat: (String) -> Unit,
     startService: () -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -59,7 +59,7 @@ fun HomeScreen(
             ) {
                 items(uiState.chatList) { user ->
                     ChatPreview(
-                        navigateToChat,
+                        navigateToChat = {peerId -> navigateToChat(peerId)},
                         user,
                     )
                 }
