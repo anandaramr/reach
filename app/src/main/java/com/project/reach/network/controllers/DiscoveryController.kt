@@ -9,11 +9,11 @@ import com.project.reach.network.model.DeviceInfo
 import com.project.reach.network.monitor.NsdDiscoveryListener
 import com.project.reach.network.monitor.NsdRegistrationListener
 import com.project.reach.network.monitor.NsdResolveListener
+import com.project.reach.network.transport.UDPTransport
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
-import java.net.DatagramSocket
 import java.net.InetAddress
 import java.util.UUID
 
@@ -63,7 +63,7 @@ class DiscoveryController(
         val serviceInfo = NsdServiceInfo().apply {
             serviceName = "$uuid:$username"
             serviceType = SERVICE_TYPE
-            port = getAvailablePort()
+            port = UDPTransport.PORT
         }
 
         nsdManager.registerService(serviceInfo, NsdManager.PROTOCOL_DNS_SD, registrationListener)
@@ -97,16 +97,16 @@ class DiscoveryController(
 
     /**
      * Resolves the service with the given [uuid] and
-     * invokes [onResolved] when its host and port are available
+     * invokes [onResolved] when its host address is available
      *
      * Example usage:
      * ```
-     * getServiceInfo(uuid) { host, port ->
-     *  Log.d(TAG, "Device address is $host:$port")
+     * resolvePeerAddress(uuid) { host ->
+     *  Log.d(TAG, "Device address is $host")
      * }
      * ```
      */
-    fun getServiceInfo(uuid: UUID, onResolved: (host: InetAddress, port: Int) -> Unit): Boolean {
+    fun resolvePeerAddress(uuid: UUID, onResolved: (host: InetAddress) -> Unit): Boolean {
         resolveCallback = onResolved
         if (!serviceInfoMap.contains(uuid)) return false
 
@@ -115,9 +115,9 @@ class DiscoveryController(
     }
 
     private val serviceInfoMap: MutableMap<UUID, NsdServiceInfo> = mutableMapOf()
-    private var resolveCallback: ((InetAddress, Int) -> Unit)? = null
-    private val resolveListener = NsdResolveListener { ip, port ->
-        resolveCallback?.invoke(ip, port)
+    private var resolveCallback: ((InetAddress) -> Unit)? = null
+    private val resolveListener = NsdResolveListener { ip ->
+        resolveCallback?.invoke(ip)
         resolveCallback = null
     }
 
@@ -174,10 +174,6 @@ class DiscoveryController(
 
     private fun parseServiceName(serviceInfo: NsdServiceInfo): List<String> {
         return serviceInfo.serviceName.split(':')
-    }
-
-    private fun getAvailablePort(): Int {
-        return DatagramSocket(0).localPort
     }
 
     companion object {

@@ -6,7 +6,7 @@ import com.project.reach.util.debug
 import java.net.InetAddress
 
 class NsdResolveListener(
-    private val onResolved: (ip: InetAddress, port: Int) -> Unit
+    private val onResolved: (ip: InetAddress) -> Unit
 ): NsdManager.ResolveListener {
     override fun onResolveFailed(
         serviceInfo: NsdServiceInfo?,
@@ -17,7 +17,6 @@ class NsdResolveListener(
 
     override fun onServiceResolved(serviceInfo: NsdServiceInfo) {
         val ip = serviceInfo.host
-        val port = serviceInfo.port
-        onResolved(ip, port)
+        onResolved(ip)
     }
 }
