@@ -101,4 +101,7 @@ tasks.configureEach {
     if (name == "kspDebugKotlin") {
         dependsOn("generateDebugProto")
     }
+    if (name == "kspReleaseKotlin") {
+        dependsOn("generateReleaseProto")
+    }
 }
