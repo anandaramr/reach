@@ -61,15 +61,15 @@ class WifiController(
     }
 
     override fun send(uuid: UUID, packet: Packet): Boolean {
-        return discoveryController.getServiceInfo(uuid) { ip, port ->
-            sendPacket(ip, port, packet)
+        return discoveryController.resolvePeerAddress(uuid) { ip ->
+            sendPacket(ip, packet)
         }
     }
 
-    private fun sendPacket(ip: InetAddress, port: Int, packet: Packet) {
+    private fun sendPacket(ip: InetAddress, packet: Packet) {
         val bytes = packet.serialize()
         scope.launch {
-            udpTransport.send(bytes, ip, port)
+            udpTransport.send(bytes, ip)
         }
     }
 
