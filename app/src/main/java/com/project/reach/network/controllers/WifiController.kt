@@ -3,7 +3,6 @@ package com.project.reach.network.controllers
 import android.content.Context
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
-import com.project.reach.core.exceptions.UnknownSourceException
 import com.project.reach.data.local.IdentityManager
 import com.project.reach.domain.contracts.IWifiController
 import com.project.reach.network.contracts.DiscoveryHandler
@@ -19,7 +18,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
@@ -71,7 +69,7 @@ class WifiController(
 
                 scope.launch { _newDevice.emit(device) }
                 true
-            } catch (e: IllegalArgumentException) {
+            } catch (_: IllegalArgumentException) {
                 false
             }
         },
@@ -156,6 +154,5 @@ class WifiController(
     override fun close() {
         connectivityManager.unregisterNetworkCallback(networkCallback)
         udpDiscoveryHandler.close()
-        udpTransport.close()
     }
 }
