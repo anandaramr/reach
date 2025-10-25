@@ -9,10 +9,11 @@ import java.util.UUID
 interface IWifiController {
     val isActive: StateFlow<Boolean>
     val foundDevices: StateFlow<List<DeviceInfo>>
+    val newDevices: SharedFlow<DeviceInfo>
     val packets: SharedFlow<Packet>
 
     fun startDiscovery()
-    fun send(uuid: UUID, packet: Packet): Boolean
+    suspend fun send(uuid: UUID, packet: Packet): Boolean
     fun stopDiscovery()
 
     fun close()

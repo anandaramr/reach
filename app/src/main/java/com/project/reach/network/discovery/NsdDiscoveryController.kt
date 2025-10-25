@@ -1,4 +1,4 @@
-package com.project.reach.network.controllers
+package com.project.reach.network.discovery
 
 import android.content.Context
 import android.net.nsd.NsdManager
@@ -9,13 +9,14 @@ import com.project.reach.network.model.DeviceInfo
 import com.project.reach.network.monitor.NsdDiscoveryListener
 import com.project.reach.network.monitor.NsdRegistrationListener
 import com.project.reach.network.monitor.NsdResolveListener
-import com.project.reach.network.transport.UDPTransport
+import com.project.reach.network.transport.NetworkTransport
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import java.net.InetAddress
 import java.util.UUID
+import kotlin.collections.plus
 
 /**
  * Manages discovery and resolution of available REACH services
@@ -23,9 +24,9 @@ import java.util.UUID
  *
  * Should call [close] during cleanup
  */
-class DiscoveryController(
+class NsdDiscoveryController(
     private val context: Context,
-    identityManager: IdentityManager
+    identityManager: IdentityManager,
 ) {
     private val username = identityManager.getUsernameIdentity()
     private val uuid = UUID.fromString(identityManager.getUserUUID())
@@ -45,7 +46,7 @@ class DiscoveryController(
     private val _foundServices = MutableStateFlow<List<DeviceInfo>>(emptyList())
 
     /**
-     * Exposes a read-only [StateFlow] of discovered services.
+     * Exposes a read-only [kotlinx.coroutines.flow.StateFlow] of discovered services.
      *
      * Each entry is a [Pair] where the first value is the service `uuid` and the second is the `username`
      */
@@ -63,7 +64,7 @@ class DiscoveryController(
         val serviceInfo = NsdServiceInfo().apply {
             serviceName = "$uuid:$username"
             serviceType = SERVICE_TYPE
-            port = UDPTransport.PORT
+            port = NetworkTransport.Companion.PORT
         }
 
         nsdManager.registerService(serviceInfo, NsdManager.PROTOCOL_DNS_SD, registrationListener)
@@ -165,7 +166,7 @@ class DiscoveryController(
 
         _foundServices.update {
             it.filter { uuid ->
-                uuid == foundUuid
+                uuid != foundUuid
             }
         }
 

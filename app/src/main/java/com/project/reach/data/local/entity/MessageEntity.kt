@@ -22,7 +22,7 @@ import java.util.UUID
 )
 data class MessageEntity(
     @PrimaryKey(autoGenerate = true)
-    var messageId: Int = 0,
+    var messageId: Long = 0,
     val text: String,
     val userId: UUID,
     val isFromPeer: Boolean,
