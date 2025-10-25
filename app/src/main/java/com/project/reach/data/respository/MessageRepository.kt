@@ -10,6 +10,7 @@ import com.project.reach.domain.contracts.IWifiController
 import com.project.reach.domain.models.MessagePreview
 import com.project.reach.domain.models.MessageState
 import com.project.reach.domain.models.NotificationEvent
+import com.project.reach.domain.models.NotificationEvent.*
 import com.project.reach.network.model.Packet
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -40,7 +41,7 @@ class MessageRepository(
     }
 
     override suspend fun sendMessage(userId: String, message: String) {
-        messageDao.insertMessage(
+        val messageId = messageDao.insertMessage(
             messageEntity = MessageEntity(
                 text = message,
                 userId = UUID.fromString(userId),
@@ -49,7 +50,10 @@ class MessageRepository(
             )
         )
 
-        sendMessageToUser(userId, message)
+        val successful = sendMessageToUser(userId, message)
+        if (successful) {
+            messageDao.updateMessageState(messageId, MessageState.SENT)
+        }
     }
 
     private suspend fun receiveMessage(
@@ -94,7 +98,7 @@ class MessageRepository(
         )
     }
 
-    private fun sendMessageToUser(userId: String, message: String): Boolean {
+    private suspend fun sendMessageToUser(userId: String, message: String): Boolean {
         return wifiController.send(
             uuid = UUID.fromString(userId),
             packet = Packet.Message(
@@ -116,7 +120,7 @@ class MessageRepository(
                         timestamp = packet.timeStamp
                     )
                     _notifications.emit(
-                        NotificationEvent.Message(
+                        Message(
                             userId = packet.userId,
                             username = packet.username,
                             message = packet.message,
@@ -126,6 +130,9 @@ class MessageRepository(
                 }
 
                 is Packet.Typing -> {}
+                is Packet.GoodBye -> {}
+                is Packet.Heartbeat -> {}
+                is Packet.Hello -> {}
             }
         }
     }

@@ -15,11 +15,15 @@ import java.net.SocketException
 
 class UDPTransport: NetworkTransport {
 
-    private val socket by lazy { DatagramSocket(PORT) }
+    private val socket by lazy {
+        DatagramSocket(NetworkTransport.PORT).apply {
+            broadcast = true
+        }
+    }
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private var serverJob: Job? = null
 
-    override fun listen(handleClient: suspend (ByteArray) -> Unit) {
+    override fun listen(handleClient: suspend (clientIp: InetAddress, bytes: ByteArray) -> Unit) {
         if (serverJob != null) return
 
         serverJob = scope.launch {
@@ -31,7 +35,7 @@ class UDPTransport: NetworkTransport {
                 try {
                     socket.receive(packet)
                     launch {
-                        handleClient(packet.data.copyOf(packet.length))
+                        handleClient(packet.address, packet.data.copyOf(packet.length))
                     }
                 } catch (e: SocketException) {
                     if (!isActive) break
@@ -41,7 +45,7 @@ class UDPTransport: NetworkTransport {
     }
 
     override suspend fun send(bytes: ByteArray, ip: InetAddress): Boolean {
-        val packet = DatagramPacket(bytes, bytes.size, ip, PORT)
+        val packet = DatagramPacket(bytes, bytes.size, ip, NetworkTransport.PORT)
 
         return try {
             socket.send(packet)
@@ -56,10 +60,5 @@ class UDPTransport: NetworkTransport {
         Log.d("DBG", "[UDP] Closing...")
         runCatching { serverJob?.cancel() }
         socket.close()
-    }
-
-    companion object {
-        // TODO: avoid hardcoding port
-        const val PORT = 5000
     }
 }

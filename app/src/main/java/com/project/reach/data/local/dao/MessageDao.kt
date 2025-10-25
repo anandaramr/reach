@@ -12,8 +12,8 @@ import java.util.UUID
 
 @Dao
 interface MessageDao {
-    @Insert(onConflict = OnConflictStrategy.IGNORE)
-    suspend fun insertMessage(messageEntity: MessageEntity)
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertMessage(messageEntity: MessageEntity): Long
 
     @Query("select * from messages where userId = :userId order by timeStamp")
     fun getMessageByUser(userId: UUID): Flow<List<MessageEntity>>
@@ -35,5 +35,5 @@ interface MessageDao {
     fun getMessagesPreview(): Flow<List<MessagePreview>>
 
     @Query("update messages set messageState = :messageState where messageId = :messageId")
-    fun updateMessageState(messageId: Int, messageState: MessageState)
+    suspend fun updateMessageState(messageId: Long, messageState: MessageState)
 }
