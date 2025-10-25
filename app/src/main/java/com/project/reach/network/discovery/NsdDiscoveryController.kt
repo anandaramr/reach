@@ -42,7 +42,6 @@ class NsdDiscoveryController(
         context.getSystemService(Context.NSD_SERVICE) as NsdManager
     }
 
-    // TODO: Use discovery protocol over UDP on found devices
     private val _foundServices = MutableStateFlow<List<DeviceInfo>>(emptyList())
 
     /**
@@ -60,7 +59,6 @@ class NsdDiscoveryController(
     }
 
     private fun registerService() {
-        // TODO limit username chars to <=26 chars and validate username format
         val serviceInfo = NsdServiceInfo().apply {
             serviceName = "$uuid:$username"
             serviceType = SERVICE_TYPE
