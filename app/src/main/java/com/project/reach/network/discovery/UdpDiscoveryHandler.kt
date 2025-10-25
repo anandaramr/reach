@@ -4,7 +4,6 @@ import com.project.reach.network.contracts.DiscoveryHandler
 import com.project.reach.network.model.DeviceInfo
 import com.project.reach.network.model.Packet
 import com.project.reach.network.model.PacketWithSource
-import com.project.reach.util.debug
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job

@@ -4,7 +4,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.project.reach.data.local.entity.MessageEntity
 import com.project.reach.domain.contracts.IMessageRepository
-import com.project.reach.util.debug
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -17,7 +16,7 @@ import javax.inject.Inject
 @HiltViewModel
 class ChatScreenViewModel @Inject constructor(
     private val messageRepository: IMessageRepository,
-) : ViewModel() {
+): ViewModel() {
 
     private val _uiState = MutableStateFlow(ChatScreenState())
     val uiState: StateFlow<ChatScreenState> = _uiState.asStateFlow()
@@ -46,7 +45,6 @@ class ChatScreenViewModel @Inject constructor(
     }
 
     private suspend fun getMessages() {
-        debug(_uiState.value.peerId)
         messageRepository.getMessages(_uiState.value.peerId).collect { messages ->
             _uiState.update { it.copy(messageList = messages.map { msg -> msg.toMessage() }) }
         }
