@@ -46,7 +46,6 @@ class ChatScreenViewModel @Inject constructor(
     }
 
     private suspend fun getMessages() {
-        debug(_uiState.value.peerId)
         messageRepository.getMessages(_uiState.value.peerId).collect { messages ->
             _uiState.update { it.copy(messageList = messages.map { msg -> msg.toMessage() }) }
         }
