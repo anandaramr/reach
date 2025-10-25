@@ -52,7 +52,6 @@ class UdpDiscoveryHandler(
         if (!isRunning) return
         isRunning = false
 
-        debug("Sent GOODBYE")
         sendPacket(InetAddress.getByName(BROADCAST_ADDR), Packet.GoodBye(userId))
         listenJob?.cancel()
         advertiseJob?.cancel()
@@ -72,18 +71,15 @@ class UdpDiscoveryHandler(
             val packet = incoming.packet
             when (packet) {
                 is Packet.Hello -> {
-                    debug("Received HELLO from ${packet.username}:${packet.userId}")
                     handleDeviceFound(incoming.sourceIp, packet.userId, packet.username)
                     sendPacket(incoming.sourceIp, Packet.Heartbeat(userId, username))
                 }
 
                 is Packet.Heartbeat -> {
-                    debug("Received HEARTBEAT from ${packet.username}:${packet.userId}")
                     handleDeviceFound(incoming.sourceIp, packet.userId, packet.username)
                 }
 
                 is Packet.GoodBye -> {
-                    debug("Received GOODBYE from ${packet.userId}")
                     handleDeviceLost(packet.userId)
                 }
 

@@ -12,12 +12,14 @@ import com.project.reach.domain.models.MessageState
 import com.project.reach.domain.models.NotificationEvent
 import com.project.reach.domain.models.NotificationEvent.*
 import com.project.reach.network.model.Packet
+import com.project.reach.util.debug
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import java.util.UUID
 
@@ -37,6 +39,28 @@ class MessageRepository(
     init {
         scope.launch {
             handlePackets()
+        }
+
+        scope.launch {
+            wifiController.newDevices.collect { deviceInfo ->
+                launch {
+                    retryPendingMessages(deviceInfo.uuid)
+                }
+            }
+        }
+    }
+
+    private suspend fun retryPendingMessages(uuid: UUID) {
+        val pendingMessages = messageDao.getPendingMessagesById(uuid).first()
+        pendingMessages.forEach { message ->
+            retryMessage(message)
+        }
+    }
+
+    private suspend fun retryMessage(message: MessageEntity) {
+        val successful = sendMessageToUser(message.userId.toString(), message.text)
+        if (successful) {
+            messageDao.updateMessageState(message.messageId, MessageState.SENT)
         }
     }
 

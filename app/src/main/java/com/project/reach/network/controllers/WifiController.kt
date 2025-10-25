@@ -19,6 +19,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
@@ -34,6 +35,9 @@ class WifiController(
 
     private val _isActive = MutableStateFlow(false)
     override val isActive = _isActive.asStateFlow()
+
+    private val _newDevice = MutableSharedFlow<DeviceInfo>(replay = 0, extraBufferCapacity = 64)
+    override val newDevices = _newDevice.asSharedFlow()
 
     private val username = identityManager.getUsernameIdentity().toString()
     private val uuid = identityManager.getUserUUID().toString()
@@ -62,16 +66,16 @@ class WifiController(
         onFound = { id, username ->
             try {
                 val uuid = UUID.fromString(id)
-                _foundDevices.value += DeviceInfo(uuid, username)
-                debug("Found $username:$uuid")
+                val device = DeviceInfo(uuid, username)
+                _foundDevices.value += device
+
+                scope.launch { _newDevice.emit(device) }
                 true
             } catch (e: IllegalArgumentException) {
-                debug("Received invalid uuid")
                 false
             }
         },
         onLost = { id ->
-            debug("Lost $id")
             _foundDevices.update { devices ->
                 devices.filter { device -> device.uuid.toString() != id }
             }
@@ -89,10 +93,8 @@ class WifiController(
         scope.launch {
             isActive.collect { active ->
                 if (active) {
-                    debug("Restarting")
                     udpDiscoveryHandler.start()
                 } else {
-                    debug("Stopping")
                     stopDiscovery()
                 }
             }

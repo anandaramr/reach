@@ -34,6 +34,9 @@ interface MessageDao {
     )
     fun getMessagesPreview(): Flow<List<MessagePreview>>
 
+    @Query("select * from messages where userId = :userId and messageState = \"PENDING\"")
+    fun getPendingMessagesById(userId: UUID): Flow<List<MessageEntity>>
+
     @Query("update messages set messageState = :messageState where messageId = :messageId")
     suspend fun updateMessageState(messageId: Long, messageState: MessageState)
 }
