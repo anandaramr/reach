@@ -72,7 +72,6 @@ class ForegroundService: Service() {
         if (!isStarted) return
         isStarted = false
 
-        networkRepository.stopDiscovery()
         networkRepository.release()
         stopSelf()
     }

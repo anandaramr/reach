@@ -7,6 +7,8 @@ interface NetworkTransport {
 
     suspend fun send(bytes: ByteArray, ip: InetAddress): Boolean
 
+    fun start()
+
     fun close()
 
     companion object {
