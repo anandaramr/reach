@@ -1,9 +1,11 @@
 package com.project.reach.network.transport
 
+import com.project.reach.network.model.NetworkPacket
+import kotlinx.coroutines.flow.SharedFlow
 import java.net.InetAddress
 
 interface NetworkTransport {
-    fun listen(handleClient: suspend (ip: InetAddress, message: ByteArray) -> Unit)
+    val incomingPackets: SharedFlow<NetworkPacket>
 
     suspend fun send(bytes: ByteArray, ip: InetAddress): Boolean
 
