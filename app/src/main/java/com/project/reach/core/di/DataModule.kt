@@ -42,9 +42,10 @@ object DataModule {
     @Singleton
     fun provideNetworkRepository(
         wifiController: IWifiController,
-        @UDP udpTransport: NetworkTransport
+        @UDP udpTransport: NetworkTransport,
+        @TCP tcpTransport: NetworkTransport,
     ): INetworkRepository {
-        return NetworkRepository(wifiController, udpTransport)
+        return NetworkRepository(wifiController, udpTransport, tcpTransport)
     }
 
     @Provides

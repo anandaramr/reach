@@ -74,9 +74,11 @@ class MessageRepository(
             )
         )
 
-        val successful = sendMessageToUser(userId, message)
-        if (successful) {
-            messageDao.updateMessageState(messageId, MessageState.SENT)
+        scope.launch {
+            val successful = sendMessageToUser(userId, message)
+            if (successful) {
+                messageDao.updateMessageState(messageId, MessageState.SENT)
+            }
         }
     }
 
@@ -123,7 +125,7 @@ class MessageRepository(
     }
 
     private suspend fun sendMessageToUser(userId: String, message: String): Boolean {
-        return wifiController.send(
+        return wifiController.sendStream(
             uuid = UUID.fromString(userId),
             packet = Packet.Message(
                 userId = identityManager.getUserUUID().toString(),

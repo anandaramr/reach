@@ -6,7 +6,8 @@ import com.project.reach.network.transport.NetworkTransport
 
 class NetworkRepository(
     private val wifiController: IWifiController,
-    private val udpTransport: NetworkTransport
+    private val udpTransport: NetworkTransport,
+    private val tcpTransport: NetworkTransport,
 ): INetworkRepository {
 
     override val isWifiActive = wifiController.isActive
@@ -14,12 +15,14 @@ class NetworkRepository(
 
     override fun startDiscovery() {
         udpTransport.start()
+        tcpTransport.start()
         wifiController.startDiscovery()
     }
 
     override fun stopDiscovery() {
         wifiController.stopDiscovery()
         udpTransport.close()
+        tcpTransport.close()
     }
 
     override fun release() {
