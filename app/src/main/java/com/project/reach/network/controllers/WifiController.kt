@@ -28,6 +28,7 @@ import java.util.UUID
 class WifiController(
     private val context: Context,
     private val udpTransport: NetworkTransport,
+    private val tcpTransport: NetworkTransport,
     identityManager: IdentityManager
 ): IWifiController {
 
@@ -60,7 +61,10 @@ class WifiController(
         userId = uuid,
         username = username,
         packets = discoveryPackets,
-        sendPacket = ::sendPacket,
+        sendPacket = { ip, packet ->
+            scope.launch {
+                sendPacket(ip, packet, udp = true)
+            }},
         onFound = { id, username ->
             try {
                 val uuid = UUID.fromString(id)
@@ -98,15 +102,31 @@ class WifiController(
             }
         }
 
-        udpTransport.listen { clientIp, bytes ->
-            try {
-                val packet = Packet.deserialize(bytes)
-                if (isDiscoveryPacket(packet)) {
-                    discoveryPackets.emit(PacketWithSource(packet, clientIp))
-                } else {
-                    _packets.emit(Packet.deserialize(bytes))
+        scope.launch {
+            udpTransport.incomingPackets.collect { packet ->
+                val clientIp = packet.address
+                val bytes = packet.payload
+                try {
+                    val packet = Packet.deserialize(bytes)
+                    if (isDiscoveryPacket(packet)) {
+                        discoveryPackets.emit(PacketWithSource(packet, clientIp))
+                    } else {
+                        _packets.emit(Packet.deserialize(bytes))
+                    }
+                } catch (_: IllegalArgumentException) {
+                    debug("UDP received faulty proto packet")
                 }
-            } catch (_: IllegalArgumentException) {
+            }
+        }
+
+        scope.launch {
+            tcpTransport.incomingPackets.collect { packet ->
+                val bytes = packet.payload
+                try {
+                    _packets.emit(Packet.deserialize(bytes))
+                } catch (_: IllegalArgumentException) {
+                    debug("TCP received faulty proto packet")
+                }
             }
         }
     }
@@ -118,19 +138,27 @@ class WifiController(
     override suspend fun send(uuid: UUID, packet: Packet): Boolean {
         try {
             val ipAddress = udpDiscoveryHandler.resolvePeerAddress(uuid.toString())
-            sendPacket(ipAddress, packet)
-            return true
+            return sendPacket(ipAddress, packet, udp = false)
         } catch (e: NoSuchElementException) {
             debug(e.message.toString())
             return false
         }
     }
 
-    private fun sendPacket(ip: InetAddress, packet: Packet) {
-        val bytes = packet.serialize()
-        scope.launch {
-            udpTransport.send(bytes, ip)
+    override suspend fun sendStream(uuid: UUID, packet: Packet): Boolean {
+        try {
+            val ipAddress = udpDiscoveryHandler.resolvePeerAddress(uuid.toString())
+            return sendPacket(ipAddress, packet, udp = false)
+        } catch (e: NoSuchElementException) {
+            debug(e.message.toString())
+            return false
         }
+    }
+
+    private suspend fun sendPacket(ip: InetAddress, packet: Packet, udp: Boolean): Boolean {
+        val bytes = packet.serialize()
+        return if (udp) udpTransport.send(bytes, ip)
+        else tcpTransport.send(bytes, ip)
     }
 
     override fun stopDiscovery() {
