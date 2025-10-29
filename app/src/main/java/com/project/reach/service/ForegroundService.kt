@@ -25,7 +25,7 @@ class ForegroundService: Service() {
 
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
-    private val notificationHandler = NotificationHandler(this.applicationContext)
+    private val notificationHandler = NotificationHandler(this)
 
     override fun onBind(intent: Intent?): IBinder? {
         return null
