@@ -7,8 +7,10 @@ import android.app.Service
 import android.content.Intent
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
+import androidx.core.app.Person
 import com.project.reach.domain.contracts.IMessageRepository
 import com.project.reach.domain.contracts.INetworkRepository
+import com.project.reach.domain.models.MessageNotification
 import com.project.reach.domain.models.NotificationEvent
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
@@ -39,7 +41,9 @@ class ForegroundService: Service() {
                 when (event) {
                     is NotificationEvent.Message -> {
                         pushMessageNotification(
-                            username = event.username, message = event.message, timeStamp = event.timeStamp
+                            userId = event.userId,
+                            username = event.username,
+                            messages = event.messages,
                         )
                     }
                 }
@@ -95,25 +99,59 @@ class ForegroundService: Service() {
             .build()
     }
 
-    private fun pushMessageNotification(username: String, message: String, timeStamp: Long) {
+    private fun pushMessageNotification(
+        userId: String,
+        username: String,
+        messages: List<MessageNotification>,
+    ) {
+        val notificationId = userId.hashCode()
+
+        // TODO: handle grouping messages from a single user using `MessagingStyle`
         val notificationManager =
             getSystemService(NOTIFICATION_SERVICE) as NotificationManager
 
         val notification = NotificationCompat.Builder(this, MESSAGE_NOTIFICATION_CHANNEL)
             .setSmallIcon(android.R.drawable.stat_notify_chat)
             .setContentTitle(username)
-            .setContentText(message)
+            .setStyle(getNotificationStyle(username, messages))
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setAutoCancel(true)
             .setGroup("message")
+            .setWhen(messages.last().timeStamp)
             .build()
 
-        notificationManager.notify(timeStamp.toInt(), notification)
+        notificationManager.notify(notificationId, notification)
     }
 
     override fun onDestroy() {
         super.onDestroy()
         stop()
+    }
+
+    private fun getNotificationStyle(
+        username: String,
+        messages: List<MessageNotification>
+    ): NotificationCompat.MessagingStyle {
+        val currentUser = Person.Builder()
+            .setName("me")
+            .build()
+
+        val sender = Person.Builder()
+            .setName(username)
+            .build()
+
+        val messagingStyle = NotificationCompat.MessagingStyle(currentUser)
+        messages.forEachIndexed { idx, msg ->
+            messagingStyle.addMessage(
+                NotificationCompat.MessagingStyle.Message(
+                    msg.text,
+                    msg.timeStamp,
+                    sender
+                )
+            )
+        }
+
+        return messagingStyle
     }
 
     companion object {

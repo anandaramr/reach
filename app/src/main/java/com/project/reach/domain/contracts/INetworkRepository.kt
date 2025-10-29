@@ -1,8 +1,6 @@
 package com.project.reach.domain.contracts
 
-import com.project.reach.domain.models.NotificationEvent
 import com.project.reach.network.model.DeviceInfo
-import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 
 /**

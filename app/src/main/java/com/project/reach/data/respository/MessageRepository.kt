@@ -7,12 +7,13 @@ import com.project.reach.data.local.entity.ContactEntity
 import com.project.reach.data.local.entity.MessageEntity
 import com.project.reach.domain.contracts.IMessageRepository
 import com.project.reach.domain.contracts.IWifiController
+import com.project.reach.domain.models.MessageNotification
 import com.project.reach.domain.models.MessagePreview
 import com.project.reach.domain.models.MessageState
 import com.project.reach.domain.models.NotificationEvent
-import com.project.reach.domain.models.NotificationEvent.*
+import com.project.reach.domain.models.NotificationEvent.Message
 import com.project.reach.network.model.Packet
-import com.project.reach.util.debug
+import com.project.reach.ui.utils.truncate
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -149,8 +150,7 @@ class MessageRepository(
                         Message(
                             userId = packet.userId,
                             username = packet.username,
-                            message = packet.message,
-                            timeStamp = packet.timeStamp
+                            messages = getUnreadMessagesFromUser(packet.userId),
                         )
                     )
                 }
@@ -161,5 +161,25 @@ class MessageRepository(
                 is Packet.Hello -> {}
             }
         }
+    }
+
+    private suspend fun getUnreadMessagesFromUser(userId: String): List<MessageNotification> {
+        return messageDao
+            .getUnreadMessagesById(UUID.fromString(userId))
+            .first()
+            .takeLast(NUM_MESSAGES_IN_NOTIFICATION)
+            .map { entity -> entity.toMessageNotification() }
+    }
+
+    private fun MessageEntity.toMessageNotification(): MessageNotification {
+        return MessageNotification(
+            text = text.truncate(60),
+            timeStamp = timeStamp
+        )
+    }
+
+    companion object {
+        // represents the number of last unread messages to be shown in notification
+        private const val NUM_MESSAGES_IN_NOTIFICATION = 6
     }
 }
