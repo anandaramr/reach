@@ -4,7 +4,11 @@ sealed interface NotificationEvent {
     data class Message(
         val userId: String,
         val username: String,
-        val message: String,
-        val timeStamp: Long
+        val messages: List<MessageNotification>,
     ): NotificationEvent
 }
+
+data class MessageNotification(
+    val text: String,
+    val timeStamp: Long
+)

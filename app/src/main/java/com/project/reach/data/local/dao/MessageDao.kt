@@ -39,4 +39,7 @@ interface MessageDao {
 
     @Query("update messages set messageState = :messageState where messageId = :messageId")
     suspend fun updateMessageState(messageId: Long, messageState: MessageState)
+
+    @Query("select * from messages where userId = :userId and messageState = \"RECEIVED\" order by timeStamp")
+    fun getUnreadMessagesById(userId: UUID): Flow<List<MessageEntity>>
 }

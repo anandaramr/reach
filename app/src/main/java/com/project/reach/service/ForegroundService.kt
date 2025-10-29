@@ -1,12 +1,9 @@
 package com.project.reach.service
 
-import android.app.Notification
-import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.Service
 import android.content.Intent
 import android.os.IBinder
-import androidx.core.app.NotificationCompat
 import com.project.reach.domain.contracts.IMessageRepository
 import com.project.reach.domain.contracts.INetworkRepository
 import com.project.reach.domain.models.NotificationEvent
@@ -28,6 +25,8 @@ class ForegroundService: Service() {
 
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
+    private val notificationHandler = NotificationHandler(this)
+
     override fun onBind(intent: Intent?): IBinder? {
         return null
     }
@@ -38,8 +37,10 @@ class ForegroundService: Service() {
             messageRepository.notifications.collect { event ->
                 when (event) {
                     is NotificationEvent.Message -> {
-                        pushMessageNotification(
-                            username = event.username, message = event.message, timeStamp = event.timeStamp
+                        notificationHandler.pushMessageNotification(
+                            userId = event.userId,
+                            username = event.username,
+                            messages = event.messages,
                         )
                     }
                 }
@@ -62,8 +63,16 @@ class ForegroundService: Service() {
         if (isStarted) return
         isStarted = true
 
-        val notification = getForegroundNotification()
-        startForeground(FOREGROUND_NOTIFICATION_ID, notification)
+        val stopIntent = Intent(this, ForegroundService::class.java).apply {
+            action = ACTION_STOP
+        }
+        val stopPendingIntent = PendingIntent.getService(
+            this, 0, stopIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val notification = notificationHandler.getForegroundNotification(stopPendingIntent)
+        startForeground(NotificationHandler.FOREGROUND_NOTIFICATION_ID, notification)
 
         networkRepository.startDiscovery()
     }
@@ -76,50 +85,12 @@ class ForegroundService: Service() {
         stopSelf()
     }
 
-    private fun getForegroundNotification(): Notification {
-        val stopIntent = Intent(this, ForegroundService::class.java).apply {
-            action = ACTION_STOP
-        }
-        val stopPendingIntent = PendingIntent.getService(
-            this, 0, stopIntent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
-
-        return NotificationCompat.Builder(this, FOREGROUND_CHANNEL_ID)
-            .setContentTitle("REACH is running")
-            .setContentText("Listening for incoming messages")
-            .setSmallIcon(android.R.drawable.ic_media_play)
-            .setOngoing(true)
-            .setGroup(null)
-            .addAction(android.R.drawable.ic_media_pause, "Stop Listening", stopPendingIntent)
-            .build()
-    }
-
-    private fun pushMessageNotification(username: String, message: String, timeStamp: Long) {
-        val notificationManager =
-            getSystemService(NOTIFICATION_SERVICE) as NotificationManager
-
-        val notification = NotificationCompat.Builder(this, MESSAGE_NOTIFICATION_CHANNEL)
-            .setSmallIcon(android.R.drawable.stat_notify_chat)
-            .setContentTitle(username)
-            .setContentText(message)
-            .setPriority(NotificationCompat.PRIORITY_HIGH)
-            .setAutoCancel(true)
-            .setGroup("message")
-            .build()
-
-        notificationManager.notify(timeStamp.toInt(), notification)
-    }
-
     override fun onDestroy() {
         super.onDestroy()
         stop()
     }
 
     companion object {
-        const val FOREGROUND_NOTIFICATION_ID = 1
-        const val FOREGROUND_CHANNEL_ID = "foreground_notification_channel"
-        const val MESSAGE_NOTIFICATION_CHANNEL = "message_notification_channel"
         const val ACTION_START = "com.project.reach.START_SERVICE"
         const val ACTION_STOP = "com.project.reach.STOP_SERVICE"
     }
