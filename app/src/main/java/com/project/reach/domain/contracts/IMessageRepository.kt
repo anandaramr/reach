@@ -20,9 +20,9 @@ interface IMessageRepository {
     val notifications: SharedFlow<NotificationEvent>
 
     /**
-     * Sends message with content [message] to user with user ID [userId]
+     * Sends message with content [text] to user with user ID [userId]
      */
-    suspend fun sendMessage(userId: String, message: String)
+    suspend fun sendMessage(userId: String, text: String)
 
     /**
      * Returns messages to and from user with user ID [userId]
@@ -49,4 +49,10 @@ interface IMessageRepository {
      */
     fun getUsername(userId: String): Flow<String>
 
+    /**
+     * Mark message as read
+     *
+     * @param messageId The ID corresponding to the read message
+     */
+    suspend fun onReadMessage(messageId: String)
 }

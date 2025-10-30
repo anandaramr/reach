@@ -59,16 +59,13 @@ class MessageRepository(
     }
 
     private suspend fun retryMessage(message: MessageEntity) {
-        val successful = sendMessageToUser(message.userId.toString(), message.text)
-        if (successful) {
-            messageDao.updateMessageState(message.messageId, MessageState.SENT)
-        }
+        sendPendingMessageToUser(message.userId.toString(), message.messageId, message.text)
     }
 
-    override suspend fun sendMessage(userId: String, message: String) {
+    override suspend fun sendMessage(userId: String, text: String) {
         val messageId = messageDao.insertMessage(
             messageEntity = MessageEntity(
-                text = message,
+                text = text,
                 userId = UUID.fromString(userId),
                 isFromPeer = false,
                 messageState = MessageState.PENDING
@@ -76,10 +73,18 @@ class MessageRepository(
         )
 
         scope.launch {
-            val successful = sendMessageToUser(userId, message)
-            if (successful) {
-                messageDao.updateMessageState(messageId, MessageState.SENT)
-            }
+            sendPendingMessageToUser(userId, messageId, text)
+        }
+    }
+
+    private suspend fun sendPendingMessageToUser(
+        userId: String,
+        messageId: Long,
+        message: String
+    ) {
+        val successful = sendStream(userId, message)
+        if (successful) {
+            messageDao.updateMessageState(messageId, MessageState.SENT)
         }
     }
 
@@ -125,7 +130,11 @@ class MessageRepository(
         )
     }
 
-    private suspend fun sendMessageToUser(userId: String, message: String): Boolean {
+    override suspend fun onReadMessage(messageId: String) {
+        // TODO
+    }
+
+    private suspend fun sendStream(userId: String, message: String): Boolean {
         return wifiController.sendStream(
             uuid = UUID.fromString(userId),
             packet = Packet.Message(
