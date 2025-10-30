@@ -10,13 +10,13 @@ import com.project.reach.network.monitor.NsdDiscoveryListener
 import com.project.reach.network.monitor.NsdRegistrationListener
 import com.project.reach.network.monitor.NsdResolveListener
 import com.project.reach.network.transport.NetworkTransport
+import com.project.reach.ui.utils.toUUID
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import java.net.InetAddress
 import java.util.UUID
-import kotlin.collections.plus
 
 /**
  * Manages discovery and resolution of available REACH services
@@ -29,7 +29,7 @@ class NsdDiscoveryController(
     identityManager: IdentityManager,
 ) {
     private val username = identityManager.getUsernameIdentity()
-    private val uuid = UUID.fromString(identityManager.getUserUUID())
+    private val uuid = identityManager.getUserUUID()?.toUUID()
 
     private val multicastLock by lazy {
         val wifiManager = context.getSystemService(Context.WIFI_SERVICE) as WifiManager
@@ -143,7 +143,7 @@ class NsdDiscoveryController(
         val parts = parseServiceName(serviceInfo)
         if (parts.size != 2) return
 
-        val uuid = UUID.fromString(parts[0])
+        val uuid = parts[0].toUUID()
         val username = parts[1]
 
         if (uuid == this.uuid) return
@@ -160,7 +160,7 @@ class NsdDiscoveryController(
         val parts = parseServiceName(serviceInfo)
         if (parts.size != 2) return
 
-        val foundUuid = UUID.fromString(parts[0])
+        val foundUuid = parts[0].toUUID()
 
         _foundServices.update {
             it.filter { uuid ->
