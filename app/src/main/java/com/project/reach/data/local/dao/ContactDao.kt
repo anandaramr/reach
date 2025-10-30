@@ -10,7 +10,7 @@ import java.util.UUID
 
 @Dao
 interface ContactDao {
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertContact(contact: ContactEntity)
 
     @Query("select username from contacts where userId = :userId")
