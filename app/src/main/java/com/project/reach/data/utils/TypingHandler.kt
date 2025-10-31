@@ -8,31 +8,31 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.util.concurrent.ConcurrentHashMap
 
 class TypingStateHandler(
     private val scope: CoroutineScope
 ) {
-    private val typingJobs = mutableMapOf<String, Job>()
+    private val typingJobs = ConcurrentHashMap<String, Job>()
     private val typingUsers = MutableStateFlow<Set<String>>(emptySet())
     private var lastSentTime: Long = 0
 
     fun setIsTyping(userId: String) {
-        typingJobs[userId]?.cancel()
         typingUsers.update { it + userId }
 
-        val job = scope.launch {
-            delay(timeMillis = TYPING_CHECK_DELAY)
-            typingUsers.update { it - userId }
-            typingJobs.remove(userId)
+        // operations handled atomically to prevent race conditions
+        typingJobs.compute(userId) { _, job ->
+            job?.cancel()
+            scope.launch {
+                delay(TYPING_CHECK_DELAY)
+                typingUsers.update { it - userId }
+                typingJobs.remove(userId)
+            }
         }
-        typingJobs.put(userId, job)
     }
 
     fun getIsTyping(userId: String): Flow<Boolean> {
-        return typingUsers
-            .map {
-                it.contains(userId)
-            }
+        return typingUsers.map { it.contains(userId) }
     }
 
     fun throttledSend(send: () -> Unit) {
