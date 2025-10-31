@@ -5,6 +5,7 @@ import com.project.reach.data.local.dao.ContactDao
 import com.project.reach.data.local.dao.MessageDao
 import com.project.reach.data.local.entity.ContactEntity
 import com.project.reach.data.local.entity.MessageEntity
+import com.project.reach.data.utils.TypingStateHandler
 import com.project.reach.domain.contracts.IMessageRepository
 import com.project.reach.domain.contracts.IWifiController
 import com.project.reach.domain.models.MessageNotification
@@ -15,6 +16,7 @@ import com.project.reach.domain.models.NotificationEvent.Message
 import com.project.reach.network.model.Packet
 import com.project.reach.ui.utils.toUUID
 import com.project.reach.ui.utils.truncate
+import com.project.reach.util.debug
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -37,6 +39,8 @@ class MessageRepository(
     private val _notifications =
         MutableSharedFlow<NotificationEvent>(extraBufferCapacity = 8, replay = 0)
     override val notifications = _notifications.asSharedFlow()
+
+    private val typingStateHandler = TypingStateHandler(scope)
 
     init {
         scope.launch {
@@ -135,6 +139,21 @@ class MessageRepository(
         // TODO
     }
 
+    override fun isTyping(userId: String): Flow<Boolean> {
+        return typingStateHandler.getIsTyping(userId)
+    }
+
+    override fun emitTyping(userId: String) {
+        typingStateHandler.throttledSend {
+            scope.launch {
+                wifiController.send(
+                    userId.toUUID(),
+                    Packet.Typing(identityManager.getUserUUID().toString())
+                )
+            }
+        }
+    }
+
     private suspend fun sendStream(userId: String, message: String): Boolean {
         return wifiController.sendStream(
             uuid = userId.toUUID(),
@@ -165,7 +184,10 @@ class MessageRepository(
                     )
                 }
 
-                is Packet.Typing -> {}
+                is Packet.Typing -> {
+                    typingStateHandler.setIsTyping(packet.userId)
+                }
+
                 is Packet.GoodBye -> {}
                 is Packet.Heartbeat -> {}
                 is Packet.Hello -> {}
