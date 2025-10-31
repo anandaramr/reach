@@ -1,4 +1,4 @@
-package com.project.reach.ui.utils
+package com.project.reach.util
 
 import java.util.UUID
 

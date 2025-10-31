@@ -8,3 +8,4 @@ fun debug(message: String) {
         Log.d("DBG", message)
     }
 }
+
