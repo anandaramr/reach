@@ -57,12 +57,11 @@ dependencies {
     implementation("com.google.dagger:hilt-android:2.57.2")
     implementation("androidx.hilt:hilt-navigation-compose:1.3.0")
     ksp("com.google.dagger:hilt-android-compiler:2.57.2")
-
-    implementation("androidx.paging:paging-compose:3.3.6")
-
     implementation("androidx.compose.material:material-icons-extended:1.7.8")
 
+    implementation("androidx.paging:paging-compose:3.3.6")
     implementation("com.google.protobuf:protobuf-javalite:4.33.0")
+    implementation("com.journeyapps:zxing-android-embedded:4.3.0")
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
