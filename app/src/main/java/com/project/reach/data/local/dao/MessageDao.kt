@@ -12,7 +12,7 @@ import java.util.UUID
 
 @Dao
 interface MessageDao {
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertMessage(messageEntity: MessageEntity): Long
 
     @Query("select * from messages where userId = :userId order by timeStamp")

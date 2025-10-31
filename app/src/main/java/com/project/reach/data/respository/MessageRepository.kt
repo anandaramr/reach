@@ -5,6 +5,7 @@ import com.project.reach.data.local.dao.ContactDao
 import com.project.reach.data.local.dao.MessageDao
 import com.project.reach.data.local.entity.ContactEntity
 import com.project.reach.data.local.entity.MessageEntity
+import com.project.reach.data.utils.TypingStateHandler
 import com.project.reach.domain.contracts.IMessageRepository
 import com.project.reach.domain.contracts.IWifiController
 import com.project.reach.domain.models.MessageNotification
@@ -13,7 +14,9 @@ import com.project.reach.domain.models.MessageState
 import com.project.reach.domain.models.NotificationEvent
 import com.project.reach.domain.models.NotificationEvent.Message
 import com.project.reach.network.model.Packet
+import com.project.reach.ui.utils.toUUID
 import com.project.reach.ui.utils.truncate
+import com.project.reach.util.debug
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -37,6 +40,8 @@ class MessageRepository(
         MutableSharedFlow<NotificationEvent>(extraBufferCapacity = 8, replay = 0)
     override val notifications = _notifications.asSharedFlow()
 
+    private val typingStateHandler = TypingStateHandler(scope)
+
     init {
         scope.launch {
             handlePackets()
@@ -59,27 +64,32 @@ class MessageRepository(
     }
 
     private suspend fun retryMessage(message: MessageEntity) {
-        val successful = sendMessageToUser(message.userId.toString(), message.text)
-        if (successful) {
-            messageDao.updateMessageState(message.messageId, MessageState.SENT)
-        }
+        sendPendingMessageToUser(message.userId.toString(), message.messageId, message.text)
     }
 
-    override suspend fun sendMessage(userId: String, message: String) {
+    override suspend fun sendMessage(userId: String, text: String) {
         val messageId = messageDao.insertMessage(
             messageEntity = MessageEntity(
-                text = message,
-                userId = UUID.fromString(userId),
+                text = text,
+                userId = userId.toUUID(),
                 isFromPeer = false,
                 messageState = MessageState.PENDING
             )
         )
 
         scope.launch {
-            val successful = sendMessageToUser(userId, message)
-            if (successful) {
-                messageDao.updateMessageState(messageId, MessageState.SENT)
-            }
+            sendPendingMessageToUser(userId, messageId, text)
+        }
+    }
+
+    private suspend fun sendPendingMessageToUser(
+        userId: String,
+        messageId: Long,
+        message: String
+    ) {
+        val successful = sendStream(userId, message)
+        if (successful) {
+            messageDao.updateMessageState(messageId, MessageState.SENT)
         }
     }
 
@@ -93,7 +103,7 @@ class MessageRepository(
         messageDao.insertMessage(
             messageEntity = MessageEntity(
                 text = message,
-                userId = UUID.fromString(userId),
+                userId = userId.toUUID(),
                 isFromPeer = true,
                 messageState = MessageState.RECEIVED,
                 timeStamp = timestamp
@@ -103,7 +113,7 @@ class MessageRepository(
 
     // TODO: Paging
     override fun getMessages(userId: String): Flow<List<MessageEntity>> {
-        return messageDao.getMessageByUser(UUID.fromString(userId))
+        return messageDao.getMessageByUser(userId.toUUID())
     }
 
     override fun getMessagesPreview(): Flow<List<MessagePreview>> {
@@ -113,7 +123,7 @@ class MessageRepository(
     override suspend fun saveNewContact(userId: String, username: String) {
         return contactDao.insertContact(
             contact = ContactEntity(
-                userId = UUID.fromString(userId),
+                userId = userId.toUUID(),
                 username = username
             )
         )
@@ -121,13 +131,32 @@ class MessageRepository(
 
     override fun getUsername(userId: String): Flow<String> {
         return contactDao.getUsername(
-            userId = UUID.fromString(userId),
+            userId = userId.toUUID(),
         )
     }
 
-    private suspend fun sendMessageToUser(userId: String, message: String): Boolean {
+    override suspend fun onReadMessage(messageId: String) {
+        // TODO
+    }
+
+    override fun isTyping(userId: String): Flow<Boolean> {
+        return typingStateHandler.getIsTyping(userId)
+    }
+
+    override fun emitTyping(userId: String) {
+        typingStateHandler.throttledSend {
+            scope.launch {
+                wifiController.send(
+                    userId.toUUID(),
+                    Packet.Typing(identityManager.getUserUUID().toString())
+                )
+            }
+        }
+    }
+
+    private suspend fun sendStream(userId: String, message: String): Boolean {
         return wifiController.sendStream(
-            uuid = UUID.fromString(userId),
+            uuid = userId.toUUID(),
             packet = Packet.Message(
                 userId = identityManager.getUserUUID().toString(),
                 username = identityManager.getUsernameIdentity().toString(),
@@ -155,7 +184,10 @@ class MessageRepository(
                     )
                 }
 
-                is Packet.Typing -> {}
+                is Packet.Typing -> {
+                    typingStateHandler.setIsTyping(packet.userId)
+                }
+
                 is Packet.GoodBye -> {}
                 is Packet.Heartbeat -> {}
                 is Packet.Hello -> {}
@@ -165,7 +197,7 @@ class MessageRepository(
 
     private suspend fun getUnreadMessagesFromUser(userId: String): List<MessageNotification> {
         return messageDao
-            .getUnreadMessagesById(UUID.fromString(userId))
+            .getUnreadMessagesById(userId.toUUID())
             .first()
             .takeLast(NUM_MESSAGES_IN_NOTIFICATION)
             .map { entity -> entity.toMessageNotification() }

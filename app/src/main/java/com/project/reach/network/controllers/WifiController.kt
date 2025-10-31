@@ -12,6 +12,7 @@ import com.project.reach.network.model.Packet
 import com.project.reach.network.model.PacketWithSource
 import com.project.reach.network.monitor.NetworkCallback
 import com.project.reach.network.transport.NetworkTransport
+import com.project.reach.ui.utils.toUUID
 import com.project.reach.util.debug
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -65,9 +66,9 @@ class WifiController(
             scope.launch {
                 sendPacket(ip, packet, udp = true)
             }},
-        onFound = { id, username ->
+        onFound = { peerId, username ->
             try {
-                val uuid = UUID.fromString(id)
+                val uuid = peerId.toUUID()
                 val device = DeviceInfo(uuid, username)
                 _foundDevices.value += device
 
