@@ -10,7 +10,7 @@ import com.project.reach.network.monitor.NsdDiscoveryListener
 import com.project.reach.network.monitor.NsdRegistrationListener
 import com.project.reach.network.monitor.NsdResolveListener
 import com.project.reach.network.transport.NetworkTransport
-import com.project.reach.ui.utils.toUUID
+import com.project.reach.util.toUUID
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow

@@ -14,9 +14,8 @@ import com.project.reach.domain.models.MessageState
 import com.project.reach.domain.models.NotificationEvent
 import com.project.reach.domain.models.NotificationEvent.Message
 import com.project.reach.network.model.Packet
-import com.project.reach.ui.utils.toUUID
-import com.project.reach.ui.utils.truncate
-import com.project.reach.util.debug
+import com.project.reach.util.toUUID
+import com.project.reach.util.truncate
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
