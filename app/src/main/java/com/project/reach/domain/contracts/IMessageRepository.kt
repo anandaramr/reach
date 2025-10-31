@@ -63,6 +63,15 @@ interface IMessageRepository {
      * after a period of inactivity. The timeout resets each time a new typing
      * indicator is received from the user.
      *
+     * Usage:
+     * ```
+     *  viewModelScope.launch {
+     *      isTyping(userId).collect { isPeerTyping ->
+     *          if (isPeerTyping) showTypingUI()
+     *      }
+     *  }
+     * ```
+     *
      * @param userId The user ID of the user whose typing state to observe
      * @return A [Flow] that emits the current typing state of the
      * specified user. Emits `true` when typing, `false` when not typing or after timeout.
