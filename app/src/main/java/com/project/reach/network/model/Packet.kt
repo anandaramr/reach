@@ -1,7 +1,9 @@
 package com.project.reach.network.model
 
+import com.google.protobuf.InvalidProtocolBufferException
 import com.project.reach.core.exceptions.UnknownSourceException
 import com.reach.project.core.serialization.ReachPacket
+import java.util.zip.DataFormatException
 
 sealed class Packet {
     data class Message(
@@ -40,10 +42,12 @@ sealed class Packet {
         /**
          * Deserializes given bytes and returns [Packet] object
          *
-         * @throws IllegalArgumentException if the provided data cannot be deserialized
+         * @throws DataFormatException if the provided data cannot be deserialized
          * because it does not conform to the expected packet format.
          *
-         * @throws UnknownSourceException if the received packet is from a different service
+         * @throws UnknownSourceException if the received packet is from an unkown service
+         *
+         * @throws IllegalArgumentException if the parsed data contains unrecognizable values
          */
         fun deserialize(bytes: ByteArray): Packet = PacketSerializer.deserialize(bytes)
     }
@@ -87,7 +91,12 @@ private object PacketSerializer {
     }
 
     fun deserialize(bytes: ByteArray): Packet {
-        val proto = ReachPacket.parseFrom(bytes)
+        val proto = try {
+            ReachPacket.parseFrom(bytes)
+        } catch (e: InvalidProtocolBufferException) {
+            throw DataFormatException("Protobuf couldn't deserialize packet")
+        }
+
         if (proto.serviceName != SERVICE_NAME) {
             throw UnknownSourceException()
         }

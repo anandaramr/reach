@@ -12,7 +12,7 @@ import com.project.reach.network.model.Packet
 import com.project.reach.network.model.PacketWithSource
 import com.project.reach.network.monitor.NetworkCallback
 import com.project.reach.network.transport.NetworkTransport
-import com.project.reach.ui.utils.toUUID
+import com.project.reach.util.toUUID
 import com.project.reach.util.debug
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -25,6 +25,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.net.InetAddress
 import java.util.UUID
+import java.util.zip.DataFormatException
 
 class WifiController(
     private val context: Context,
@@ -112,10 +113,13 @@ class WifiController(
                     if (isDiscoveryPacket(packet)) {
                         discoveryPackets.emit(PacketWithSource(packet, clientIp))
                     } else {
-                        _packets.emit(Packet.deserialize(bytes))
+                        _packets.emit(packet)
                     }
-                } catch (_: IllegalArgumentException) {
-                    debug("UDP received faulty proto packet")
+                } catch (e: IllegalArgumentException) {
+                    debug(e.toString())
+                } catch (e: DataFormatException) {
+                    debug("UDP received faulty packet")
+                    debug(e.toString())
                 }
             }
         }
@@ -125,8 +129,11 @@ class WifiController(
                 val bytes = packet.payload
                 try {
                     _packets.emit(Packet.deserialize(bytes))
-                } catch (_: IllegalArgumentException) {
-                    debug("TCP received faulty proto packet")
+                } catch (e: IllegalArgumentException) {
+                    debug(e.toString())
+                } catch (e: DataFormatException) {
+                    debug("TCP received faulty packet")
+                    debug(e.toString())
                 }
             }
         }
