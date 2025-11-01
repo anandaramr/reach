@@ -16,12 +16,12 @@ class MainActivity: ComponentActivity() {
     @Inject
     lateinit var identityRepository: IIdentityRepository
 
-    private lateinit var permissionHandler: PermissionHandler
+    @Inject
+    lateinit var permissionHandler: PermissionHandler
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        permissionHandler = PermissionHandler(this)
         val isOnboardingRequired = identityRepository.isOnboardingRequired()
 
         enableEdgeToEdge()
