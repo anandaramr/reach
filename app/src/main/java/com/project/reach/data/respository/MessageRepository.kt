@@ -1,5 +1,10 @@
 package com.project.reach.data.respository
 
+import androidx.paging.Pager
+import androidx.paging.PagingConfig
+import androidx.paging.PagingData
+import androidx.paging.cachedIn
+import androidx.paging.map
 import com.project.reach.data.local.IdentityManager
 import com.project.reach.data.local.dao.ContactDao
 import com.project.reach.data.local.dao.MessageDao
@@ -8,11 +13,11 @@ import com.project.reach.data.local.entity.MessageEntity
 import com.project.reach.data.utils.TypingStateHandler
 import com.project.reach.domain.contracts.IMessageRepository
 import com.project.reach.domain.contracts.IWifiController
+import com.project.reach.domain.models.Message
 import com.project.reach.domain.models.MessageNotification
 import com.project.reach.domain.models.MessagePreview
 import com.project.reach.domain.models.MessageState
 import com.project.reach.domain.models.NotificationEvent
-import com.project.reach.domain.models.NotificationEvent.Message
 import com.project.reach.network.model.Packet
 import com.project.reach.util.toUUID
 import com.project.reach.util.truncate
@@ -23,6 +28,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import java.util.UUID
 
@@ -111,12 +117,52 @@ class MessageRepository(
     }
 
     // TODO: Paging
+    @Deprecated(
+        "getMessages fetches all messages from database at once which causes performance issues. Switch to paging for better performance",
+        replaceWith = ReplaceWith("getMessagesPaged(userId)")
+    )
     override fun getMessages(userId: String): Flow<List<MessageEntity>> {
         return messageDao.getMessageByUser(userId.toUUID())
     }
 
+    override fun getMessagesPaged(
+        userId: String,
+        pageSize: Int,
+        initialLoadSize: Int,
+        prefetchDistance: Int
+    ): Flow<PagingData<Message>> {
+        return Pager(
+            config = PagingConfig(
+                initialLoadSize = initialLoadSize,
+                pageSize = pageSize,
+                prefetchDistance = prefetchDistance,
+                enablePlaceholders = false,
+            ),
+            pagingSourceFactory = { messageDao.getMessageByUserPaged(userId.toUUID()) }
+        ).flow.map { pagingData ->
+            pagingData.map { msg -> msg.toMessage() }
+        }
+    }
+
+    @Deprecated("Switch to paging for better performance")
     override fun getMessagesPreview(): Flow<List<MessagePreview>> {
         return messageDao.getMessagesPreview()
+    }
+
+    override fun getMessagePreviewsPaged(
+        pageSize: Int,
+        initialLoadSize: Int,
+        prefetchDistance: Int
+    ): Flow<PagingData<MessagePreview>> {
+        return Pager(
+            config = PagingConfig(
+                initialLoadSize = initialLoadSize,
+                pageSize = pageSize,
+                prefetchDistance = prefetchDistance,
+                enablePlaceholders = false,
+            ),
+            pagingSourceFactory = { messageDao.getMessagesPreviewPaged() }
+        ).flow
     }
 
     override suspend fun saveNewContact(userId: String, username: String) {
@@ -175,7 +221,7 @@ class MessageRepository(
                         timestamp = packet.timeStamp
                     )
                     _notifications.emit(
-                        Message(
+                        NotificationEvent.Message(
                             userId = packet.userId,
                             username = packet.username,
                             messages = getUnreadMessagesFromUser(packet.userId),
@@ -205,6 +251,16 @@ class MessageRepository(
     private fun MessageEntity.toMessageNotification(): MessageNotification {
         return MessageNotification(
             text = text.truncate(60),
+            timeStamp = timeStamp
+        )
+    }
+
+    private fun MessageEntity.toMessage(): Message {
+        return Message(
+            text = text,
+            isFromSelf = !isFromPeer,
+            userId = userId.toString(),
+            messageState = messageState,
             timeStamp = timeStamp
         )
     }

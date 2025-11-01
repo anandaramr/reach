@@ -5,7 +5,6 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import com.project.reach.domain.contracts.IIdentityRepository
-import com.project.reach.permission.PermissionHandler
 import com.project.reach.service.ForegroundServiceManager
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
@@ -16,25 +15,26 @@ class MainActivity: ComponentActivity() {
     @Inject
     lateinit var identityRepository: IIdentityRepository
 
-    private lateinit var permissionHandler: PermissionHandler
+    private val coreProvider = CoreProvider(this)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        permissionHandler = PermissionHandler(this)
         val isOnboardingRequired = identityRepository.isOnboardingRequired()
 
         enableEdgeToEdge()
         setContent {
-            ReachApp(
-                isOnboardingRequired = isOnboardingRequired,
-                startService = ::startReachService
-            )
+            coreProvider {
+                ReachApp(
+                    isOnboardingRequired = isOnboardingRequired,
+                    startService = ::startReachService
+                )
+            }
         }
     }
 
     private fun startReachService() {
-        permissionHandler.onNotificationPermissionGranted(
+        coreProvider.permissionHandler.onNotificationPermissionGranted(
             onGranted = { ForegroundServiceManager.startService(applicationContext) }
         )
     }
