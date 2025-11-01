@@ -1,5 +1,6 @@
 package com.project.reach.data.local.dao
 
+import androidx.paging.PagingSource
 import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
@@ -18,6 +19,9 @@ interface MessageDao {
     @Query("select * from messages where userId = :userId order by timeStamp")
     fun getMessageByUser(userId: UUID): Flow<List<MessageEntity>>
 
+    @Query("select * from messages where userId = :userId order by timeStamp desc")
+    fun getMessageByUserPaged(userId: UUID): PagingSource<Int, MessageEntity>
+
     @Query(
         value = """
             SELECT m.userId, c.username, m.text as "lastMessage", m.timeStamp, m.messageState
@@ -33,6 +37,22 @@ interface MessageDao {
         """
     )
     fun getMessagesPreview(): Flow<List<MessagePreview>>
+
+    @Query(
+        value = """
+            SELECT m.userId, c.username, m.text as "lastMessage", m.timeStamp, m.messageState
+            FROM messages AS m
+            JOIN
+            contacts AS c ON c.userId = m.userId
+            WHERE m.timeStamp = (
+                SELECT MAX(m2.timeStamp)
+                FROM messages AS m2
+                WHERE m2.userId = m.userId
+            )
+            order by m.timeStamp desc
+        """
+    )
+    fun getMessagesPreviewPaged(): PagingSource<Int, MessagePreview>
 
     @Query("select * from messages where userId = :userId and messageState = \"PENDING\"")
     fun getPendingMessagesById(userId: UUID): Flow<List<MessageEntity>>
