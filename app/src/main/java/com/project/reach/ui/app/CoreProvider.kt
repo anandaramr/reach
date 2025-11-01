@@ -5,7 +5,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.staticCompositionLocalOf
 import com.project.reach.permission.PermissionHandler
-import com.project.reach.util.QrCodeHelper
+import com.project.reach.util.QRCode
 
 /**
  * Provides core Activity-scoped utilities to the Compose hierarchy
@@ -16,7 +16,7 @@ import com.project.reach.util.QrCodeHelper
  *
  * The following utilities are currently provided:
  * - [LocalPermissionHandler]
- * - [LocalQrCodeHelper]
+ * - [LocalQRCode]
  *
  * Usage:
  * ```
@@ -38,7 +38,7 @@ import com.project.reach.util.QrCodeHelper
  * @Composable
  * fun SomeScreen() {
  *     val permissionHandler = LocalPermissionHandler.current
- *     val qrCode = LocalQrCodeHelper.current
+ *     val qrCode = LocalQRCode.current
  *     // Use the helpers
  * }
  * ```
@@ -46,12 +46,12 @@ import com.project.reach.util.QrCodeHelper
  * @param activity The [ComponentActivity] that scopes the provided utilities
  *
  * @property permissionHandler Handles runtime permission requests and checks
- * @property qrCodeHelper Manages QR code scanning and generation functionality
+ * @property QRCode Manages QR code scanning and generation functionality
  */
 class CoreProvider(activity: ComponentActivity) {
     val permissionHandler = PermissionHandler(activity)
 
-    val qrCodeHelper = QrCodeHelper(activity)
+    val qrCode = QRCode(activity)
 
     /**
      * Provides scoped utilities to the composable tree. See
@@ -61,7 +61,7 @@ class CoreProvider(activity: ComponentActivity) {
     operator fun invoke(content: @Composable (() -> Unit)) {
         CompositionLocalProvider(
             LocalPermissionHandler provides permissionHandler,
-            LocalQrCodeHelper provides qrCodeHelper
+            LocalQRCode provides qrCode
         ) {
             content()
         }
@@ -82,14 +82,14 @@ val LocalPermissionHandler = staticCompositionLocalOf<PermissionHandler> {
 
 }
 /**
- * Provides an instance of [QrCodeHelper]
+ * Provides an instance of [QRCode]
  *
  * Usage:
  * ```
- *  val qrCode = LocalQrCodeHelper.current
+ *  val qrCode = LocalQRCode.current
  * ```
  * Note: can only be invoked inside a [Composable]
  */
-val LocalQrCodeHelper = staticCompositionLocalOf<QrCodeHelper> {
+val LocalQRCode = staticCompositionLocalOf<QRCode> {
     error("QrCodeHelper local provider failed")
 }

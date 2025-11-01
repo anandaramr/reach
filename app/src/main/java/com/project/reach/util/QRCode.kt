@@ -20,12 +20,12 @@ import com.journeyapps.barcodescanner.ScanOptions
  * - Generating QR code bitmaps from arbitrary data.
  *
  * The class is provided to the composable tree using a CompositionLocalProvider.
- * See [com.project.reach.ui.app.CoreProvider] and [com.project.reach.ui.app.LocalQrCodeHelper]
+ * See [com.project.reach.ui.app.CoreProvider] and [com.project.reach.ui.app.LocalQRCode]
  * for more
  *
  * **Example: Generating a QR code**
  * ```
- * qr = LocalQrCodeHelper.current
+ * qr = LocalQrCode.current
  * qr.generateQrCode(content)?.let { bitmap ->
  *     Image(
  *         bitmap = bitmap.asImageBitmap(),
@@ -45,9 +45,9 @@ import com.journeyapps.barcodescanner.ScanOptions
  * the activity result launcher for QR code scanning.
  *
  * @see com.project.reach.ui.app.CoreProvider
- * @see com.project.reach.ui.app.LocalQrCodeHelper
+ * @see com.project.reach.ui.app.LocalQRCode
  */
-class QrCodeHelper(activity: ComponentActivity) {
+class QRCode(activity: ComponentActivity) {
     private var onScanResultCallback: ((scanResult: String) -> Unit)? = null
     private val qrScanLauncher =
         activity.registerForActivityResult(ScanContract()) { result ->
@@ -82,7 +82,7 @@ class QrCodeHelper(activity: ComponentActivity) {
          *
          * Usage:
          * ```
-         *  qr.generateQrCode(content)?.let {
+         *  QRCode.generateQrCode(content)?.let {
          *      Image(
          *          bitmap = it.asImageBitmap(),
          *          // ...
