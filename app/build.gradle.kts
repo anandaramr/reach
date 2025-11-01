@@ -1,3 +1,16 @@
+import java.io.FileInputStream
+import java.util.Properties
+val keystorePropsFile = rootProject.file("keystore.properties")
+val keystoreProps = Properties()
+if (keystorePropsFile.exists()) {
+    keystoreProps.load(FileInputStream(keystorePropsFile))
+} else {
+    keystoreProps["storeFile"] = System.getenv("KEYSTORE_PATH")
+    keystoreProps["storePassword"] = System.getenv("KEYSTORE_PASSWORD")
+    keystoreProps["keyAlias"] = System.getenv("KEY_ALIAS")
+    keystoreProps["keyPassword"] = System.getenv("KEY_PASSWORD")
+}
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -22,6 +35,27 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    signingConfigs {
+        create("release") {
+            storeFile = file(keystoreProps["storeFile"] as String)
+            storePassword = keystoreProps["storePassword"] as String
+            keyAlias = keystoreProps["keyAlias"] as String
+            keyPassword = keystoreProps["keyPassword"] as String
+        }
+    }
+
+    splits {
+        abi {
+            isEnable = true
+            reset()
+            include("armeabi-v7a", "arm64-v8a")
+            isUniversalApk = true
+        }
+        density {
+            isEnable = false
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = false
@@ -29,6 +63,7 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            signingConfig = signingConfigs.getByName("release")
         }
     }
     compileOptions {
@@ -50,9 +85,9 @@ dependencies {
 
     implementation("androidx.navigation:navigation-compose:2.9.5")
 
-    implementation("androidx.room:room-runtime:2.8.2")
-    implementation("androidx.room:room-ktx:2.8.2")
-    ksp("androidx.room:room-compiler:2.8.2")
+    implementation("androidx.room:room-runtime:2.8.3")
+    implementation("androidx.room:room-ktx:2.8.3")
+    ksp("androidx.room:room-compiler:2.8.3")
 
     implementation("com.google.dagger:hilt-android:2.57.2")
     implementation("androidx.hilt:hilt-navigation-compose:1.3.0")
@@ -60,6 +95,8 @@ dependencies {
     implementation("androidx.compose.material:material-icons-extended:1.7.8")
 
     implementation("androidx.paging:paging-compose:3.3.6")
+    implementation("androidx.room:room-paging:2.8.3")
+
     implementation("com.google.protobuf:protobuf-javalite:4.33.0")
     implementation("com.journeyapps:zxing-android-embedded:4.3.0")
 
