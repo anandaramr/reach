@@ -1,14 +1,19 @@
 import java.io.FileInputStream
 import java.util.Properties
+
+val isReleaseBuild = gradle.startParameter.taskNames.any { it.contains("Release", ignoreCase = true) }
 val keystorePropsFile = rootProject.file("keystore.properties")
 val keystoreProps = Properties()
-if (keystorePropsFile.exists()) {
-    keystoreProps.load(FileInputStream(keystorePropsFile))
-} else {
-    keystoreProps["storeFile"] = System.getenv("KEYSTORE_PATH")
-    keystoreProps["storePassword"] = System.getenv("KEYSTORE_PASSWORD")
-    keystoreProps["keyAlias"] = System.getenv("KEY_ALIAS")
-    keystoreProps["keyPassword"] = System.getenv("KEY_PASSWORD")
+
+if (isReleaseBuild) {
+    if (keystorePropsFile.exists()) {
+        keystoreProps.load(FileInputStream(keystorePropsFile))
+    } else {
+        keystoreProps["storeFile"] = System.getenv("KEYSTORE_PATH")
+        keystoreProps["storePassword"] = System.getenv("KEYSTORE_PASSWORD")
+        keystoreProps["keyAlias"] = System.getenv("KEY_ALIAS")
+        keystoreProps["keyPassword"] = System.getenv("KEY_PASSWORD")
+    }
 }
 
 plugins {
@@ -36,11 +41,13 @@ android {
     }
 
     signingConfigs {
-        create("release") {
-            storeFile = file(keystoreProps["storeFile"] as String)
-            storePassword = keystoreProps["storePassword"] as String
-            keyAlias = keystoreProps["keyAlias"] as String
-            keyPassword = keystoreProps["keyPassword"] as String
+        if (isReleaseBuild) {
+            create("release") {
+                storeFile = file(keystoreProps["storeFile"] as String)
+                storePassword = keystoreProps["storePassword"] as String
+                keyAlias = keystoreProps["keyAlias"] as String
+                keyPassword = keystoreProps["keyPassword"] as String
+            }
         }
     }
 
@@ -63,7 +70,7 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-            signingConfig = signingConfigs.getByName("release")
+            if (isReleaseBuild) signingConfig = signingConfigs.getByName("release")
         }
     }
     compileOptions {

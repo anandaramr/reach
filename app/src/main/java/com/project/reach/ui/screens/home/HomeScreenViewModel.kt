@@ -2,8 +2,8 @@ package com.project.reach.ui.screens.home
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.paging.cachedIn
 import com.project.reach.domain.contracts.IMessageRepository
-import com.project.reach.domain.models.MessagePreview
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.Flow
@@ -12,8 +12,6 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.flow.update
-import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
@@ -22,26 +20,9 @@ class HomeScreenViewModel @Inject constructor(
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(HomeScreenState())
     val uiState = _uiState.asStateFlow()
+    val messagePreview = messageRepository.getMessagePreviewsPaged().cachedIn(viewModelScope)
+    val typingUsers = messageRepository.typingUsers
 
-    init {
-        viewModelScope.launch {
-            messageRepository.getMessagesPreview().collect { messagePreviews ->
-                _uiState.update {
-                    it.copy(chatPreview = messagePreviews.map { msg -> msg.toUIMessagePreview() })
-                }
-            }
-        }
-    }
-    private fun MessagePreview.toUIMessagePreview(): UIMessagePreview {
-        return UIMessagePreview(
-            userId = userId.toString(),
-            username = username,
-            lastMessage = lastMessage,
-            messageState = messageState,
-            timeStamp = timeStamp,
-            isTyping = messageRepository.isTyping(userId.toString()).toStateFlow( scope = viewModelScope, initialValue = false)
-        )
-    }
     private fun <T> Flow<T>.toStateFlow(
         scope: CoroutineScope,
         initialValue: T
