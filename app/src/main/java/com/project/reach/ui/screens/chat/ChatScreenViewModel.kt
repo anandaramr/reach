@@ -17,17 +17,17 @@ import javax.inject.Inject
 class ChatScreenViewModel @Inject constructor(
     private val messageRepository: IMessageRepository,
 ): ViewModel() {
-
     private val _uiState = MutableStateFlow(ChatScreenState())
     val uiState: StateFlow<ChatScreenState> = _uiState.asStateFlow()
-    fun updateMessageText(text: String) {
+
+    private fun updateMessageText(text: String) {
         _uiState.update { currentState ->
             currentState.copy(messageText = text)
         }
     }
-
     fun onInputChange(text: String) {
         updateMessageText(text)
+        messageRepository.emitTyping(_uiState.value.peerId)
     }
 
     fun sendMessage(text: String) {
@@ -51,11 +51,17 @@ class ChatScreenViewModel @Inject constructor(
     }
 
     fun initializeChat(peerId: String) {
+        viewModelScope.launch {
+            messageRepository.isTyping(peerId).collect { typeStatus ->
+                _uiState.update { it.copy( isTyping = typeStatus)}
+            }
+        }
         _uiState.update { it.copy(peerId = peerId) }
         viewModelScope.launch {
             updateUserState(peerId = peerId)
             getMessages()
         }
+
     }
 
     private fun MessageEntity.toMessage(): Message {
@@ -64,5 +70,6 @@ class ChatScreenViewModel @Inject constructor(
             isFromSelf = !isFromPeer
         )
     }
+
 }
 

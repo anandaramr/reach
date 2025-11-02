@@ -13,6 +13,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 
 @Composable
@@ -22,15 +23,16 @@ fun MessageTextField (
     onInputChange: (String) -> Unit,
     sendMessage: (String) -> Unit,
     ) {
-    Surface (modifier = Modifier.padding(vertical = 10.dp)) {
+    Surface (
+        modifier = Modifier.padding(),
+    ) {
         OutlinedTextField(
             value = messageText,
             onValueChange = onInputChange,
             placeholder = { Text("Enter the message") },
             shape = RoundedCornerShape(50.dp),
             modifier = modifier
-                .fillMaxWidth()
-                .padding(0.dp, 10.dp),
+                .fillMaxWidth(),
             trailingIcon = {
                 IconButton(
                     onClick = { sendMessage(messageText) },

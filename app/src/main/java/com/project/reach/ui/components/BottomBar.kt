@@ -25,7 +25,9 @@ fun BottomBar(navController: NavHostController, items: List<BottomNavBarItem>) {
             NavigationBarItem(
                 icon = { Icon(it.icon, contentDescription = it.label) },
                 selected = currentScreen == it.route,
-                label = { Text(it.label) },
+                label = { Text(
+                    text = it.label)
+                        },
                 onClick = {
                     navController.navigate(it.route) {
                         popUpTo(navController.graph.startDestinationId) {
