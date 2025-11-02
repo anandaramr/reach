@@ -5,6 +5,7 @@ data class ChatScreenState(
     var messageText: String = "",
     var messageList: List<Message> = emptyList(),
     var peerName : String = "User",
-    var peerId : String = ""
+    var peerId : String = "",
+    var isTyping : Boolean = false
 )
 

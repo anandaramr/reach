@@ -57,7 +57,7 @@ fun HomeScreen(
                     .padding(top = 25.dp)
                     .weight(1f),
             ) {
-                items(uiState.chatList) { user ->
+                items(uiState.chatPreview) { user ->
                     ChatPreview(
                         navigateToChat = {peerId -> navigateToChat(peerId)},
                         user,

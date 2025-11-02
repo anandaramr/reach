@@ -14,18 +14,18 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 val grad = Brush.linearGradient(
-colors = listOf(
-    Color(0x99F7A3C7), // 60%
-    Color(0x99D6A7F7)
+    colors = listOf(
+        Color(0x99F7A3C7), // 60%
+        Color(0x99D6A7F7)
 
-),
-start = Offset(0f, 0f),
-end = Offset(1000f, 1000f)
+    ),
+    start = Offset(0f, 0f),
+    end = Offset(1000f, 1000f)
 )
 private val DarkColorScheme = darkColorScheme(
     primary = Color(0xFFE4C1F9),      // Light violet/pink accent
     onPrimary = Color(0xFF121212),    // Dark text on primary
-    secondary = Color(0xFFA9DEF9),    // Soft blue accent
+    secondary = Color(0xFFE4C1F9),    // Soft blue accent
     onSecondary = Color(0xFF121212),
     background = Color(0xFF121212),   // Almost black
     onBackground = Color(0xFFEDEDED), // Light text
@@ -38,16 +38,21 @@ private val DarkColorScheme = darkColorScheme(
 
 // ---------- Light Theme ----------
 private val LightColorScheme = lightColorScheme(
-    primary = Color(0xFFFF99C8),      // Soft pink accent
-    onPrimary = Color(0xFF011213),    // Dark text on primary
-    secondary = Color(0xFFD0F4DE),    // Soft green accent
-    onSecondary = Color(0xFF011213),
-    background = Color(0xFFFCF6BD),   // Almost white / very light yellow
-    onBackground = Color(0xFF011213), // Dark text
-    surface = Color(0xFFFCF6BD),      // Same as background
-    onSurface = Color(0xFF011213),
-    outline = Color(0xFF818788),      // Light accent for borders
-    error = Color(0xFFB00020),
+    primary = Color(0xFF6907A4),      // Light violet accent (same family as dark)
+    onPrimary = Color(0xFF121212),    // Dark text on primary
+
+    secondary = Color(0xFFCA9AE8),    // Soft blue accent (same as dark)
+    onSecondary = Color(0xFF121212),
+
+    background = Color(0xFFF4F4F8),   // Soft neutral light gray (NO yellow)
+    onBackground = Color(0xFF121212), // High contrast dark text
+
+    surface = Color(0xFFF4F4F8),      // Crisp white card surfaces
+    onSurface = Color(0xFF121212),
+
+    outline = Color(0xFFD8BEE8),      // Subtle neutral border
+
+    error = Color(0xFFFF6B6B),        // Same soft red as dark mode
     onError = Color(0xFFFFFFFF)
 )
 

@@ -20,16 +20,12 @@ import com.project.reach.ui.screens.chat.Message
 
 @Composable
 fun ChatBubble(
-    modifier: Modifier = Modifier,
-    message: Message
+    modifier: Modifier = Modifier, message: Message
 ) {
     Row(
-        modifier = Modifier
-            .fillMaxWidth(),
-        horizontalArrangement =
-            if (message.isFromSelf)
-                Arrangement.End
-            else Arrangement.Start
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = if (message.isFromSelf) Arrangement.End
+        else Arrangement.Start
     ) {
         Card(
             shape = RoundedCornerShape(30.dp),
@@ -42,15 +38,16 @@ fun ChatBubble(
                 .widthIn(max = 270.dp),
             colors = CardDefaults.cardColors(
                 containerColor = Color.Transparent,
-                contentColor =
-                    if (message.isFromSelf) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onBackground
+                contentColor = if (message.isFromSelf) MaterialTheme.colorScheme.primary
+                else MaterialTheme.colorScheme.background
             ),
         ) {
             Text(
                 text = message.text,
-                modifier = Modifier
-                    .padding(15.dp, 8.dp),
-                fontSize = 14.sp
+                modifier = Modifier.padding(15.dp, 8.dp),
+                fontSize = 15.sp,
+                color = if (message.isFromSelf) MaterialTheme.colorScheme.primary
+                else MaterialTheme.colorScheme.onBackground
             )
         }
     }
