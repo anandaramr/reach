@@ -82,10 +82,8 @@ fun AppNavigationHost(
             composable(
                 route = ChatScreenDestination.route,
                 arguments = listOf(navArgument("peerId") { type = NavType.StringType })
-            ) { backStackEntry ->
-                val peerId = backStackEntry.arguments?.getString("peerId")?:""
+            ) {
                 ChatScreen(
-                    peerId = peerId,
                     navigateBack = { navController.popBackStack(route = HomeScreenDestination.route, inclusive = false) }
                 )
             }

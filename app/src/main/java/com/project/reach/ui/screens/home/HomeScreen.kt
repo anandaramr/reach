@@ -5,7 +5,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -17,6 +16,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.paging.compose.collectAsLazyPagingItems
 import com.project.reach.ui.navigation.NavigationDestination
 import com.project.reach.ui.screens.home.components.ChatPreview
 
@@ -32,7 +32,7 @@ fun HomeScreen(
     startService: () -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
-
+    val preview = viewModel.messagePreview.collectAsLazyPagingItems()
     LaunchedEffect(Unit) {
         startService()
     }
@@ -57,11 +57,15 @@ fun HomeScreen(
                     .padding(top = 25.dp)
                     .weight(1f),
             ) {
-                items(uiState.chatPreview) { user ->
-                    ChatPreview(
-                        navigateToChat = {peerId -> navigateToChat(peerId)},
-                        user,
-                    )
+                items(preview.itemCount) { idx ->
+                    preview[idx]?.let { preview ->
+                        ChatPreview(
+                            navigateToChat = {peerId -> navigateToChat(peerId)},
+                            username =  preview.username,
+                            userId =  preview.userId.toString(),
+                            lastMessage = preview.lastMessage,
+                        )
+                    }
                 }
             }
         }

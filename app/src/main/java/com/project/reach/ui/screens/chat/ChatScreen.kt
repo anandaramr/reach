@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CenterAlignedTopAppBar
@@ -33,12 +32,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.paging.compose.collectAsLazyPagingItems
 import com.project.reach.ui.screens.chat.components.ChatBubble
 import com.project.reach.ui.screens.chat.components.MessageTextField
-import com.project.reach.ui.screens.discover.Peer
-import com.project.reach.util.debug
-import dagger.hilt.android.lifecycle.HiltViewModel
 
 
 object ChatScreenDestination : NavigationDestination {
@@ -49,15 +45,15 @@ object ChatScreenDestination : NavigationDestination {
 
 @Composable
 fun ChatScreen(
-    peerId: String,
     modifier: Modifier = Modifier,
     viewModel: ChatScreenViewModel = hiltViewModel(),
     navigateBack: () -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val scrollState = rememberLazyListState()
+    val messages = viewModel.message.collectAsLazyPagingItems();
     LaunchedEffect(Unit) {
-        viewModel.initializeChat(peerId)
+        viewModel.initializeChat()
     }
     Scaffold(
         modifier = modifier.imePadding(), topBar = {
@@ -119,8 +115,10 @@ fun ChatScreen(
                         }
                     }
                 }
-                items(uiState.messageList.reversed()) { message ->
-                    ChatBubble(message = message)
+                items(messages.itemCount) { idx ->
+                    messages[idx]?.let {message ->
+                        ChatBubble(message = message)
+                    }
                 }
             }
             MessageTextField(

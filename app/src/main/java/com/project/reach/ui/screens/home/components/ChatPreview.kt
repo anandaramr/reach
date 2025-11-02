@@ -21,21 +21,23 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.project.reach.domain.models.MessagePreview
 import com.project.reach.ui.components.AvatarIcon
-import com.project.reach.ui.screens.home.UIMessagePreview
+import com.project.reach.util.truncate
 
 @Composable
 fun ChatPreview(
     navigateToChat: (String) -> Unit,
-    user: UIMessagePreview,
+    userId: String,
+    username: String,
+    lastMessage: String,
 ) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
             .clickable(
-                onClick = { navigateToChat(user.userId) }
+                onClick = { navigateToChat(userId) }
             )
     ) {
-        AvatarIcon(user.username[0])
+        AvatarIcon(username[0])
         Spacer(Modifier.width(10.dp))
         Column(
             modifier = Modifier
@@ -43,24 +45,16 @@ fun ChatPreview(
                 .padding(vertical = 10.dp),
         ) {
             Text(
-                user.username,
+                username,
                 fontSize = 20.sp,
                 fontWeight = FontWeight.SemiBold
             )
             Spacer(Modifier.width(23.dp))
-            if(user.isTyping.collectAsState().value)
-                Text(
-                    text = "Typing...",
-                    fontSize = 12.sp,
-                    color = MaterialTheme.colorScheme.outline
-                )
-            else
-                Text(
-                    user.lastMessage,
-                    fontSize = 13.sp,
-                    modifier = Modifier.alpha(0.7f)
-                )
-
+            Text(
+                lastMessage.truncate(35),
+                fontSize = 13.sp,
+                modifier = Modifier.alpha(0.7f)
+            )
         }
     }
 }

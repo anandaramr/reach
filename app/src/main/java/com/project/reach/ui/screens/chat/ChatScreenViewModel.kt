@@ -1,8 +1,8 @@
 package com.project.reach.ui.screens.chat
 
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.project.reach.data.local.entity.MessageEntity
 import com.project.reach.domain.contracts.IMessageRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -15,10 +15,15 @@ import javax.inject.Inject
 
 @HiltViewModel
 class ChatScreenViewModel @Inject constructor(
+    private val savedStateHandle: SavedStateHandle,
     private val messageRepository: IMessageRepository,
+
 ): ViewModel() {
     private val _uiState = MutableStateFlow(ChatScreenState())
     val uiState: StateFlow<ChatScreenState> = _uiState.asStateFlow()
+    private val peerId: String = savedStateHandle["peerId"]?: ""
+
+    val message = messageRepository.getMessagesPaged(peerId);
 
     private fun updateMessageText(text: String) {
         _uiState.update { currentState ->
@@ -44,13 +49,7 @@ class ChatScreenViewModel @Inject constructor(
         }
     }
 
-    private suspend fun getMessages() {
-        messageRepository.getMessages(_uiState.value.peerId).collect { messages ->
-            _uiState.update { it.copy(messageList = messages.map { msg -> msg.toMessage() }) }
-        }
-    }
-
-    fun initializeChat(peerId: String) {
+    fun initializeChat() {
         viewModelScope.launch {
             messageRepository.isTyping(peerId).collect { typeStatus ->
                 _uiState.update { it.copy( isTyping = typeStatus)}
@@ -59,17 +58,8 @@ class ChatScreenViewModel @Inject constructor(
         _uiState.update { it.copy(peerId = peerId) }
         viewModelScope.launch {
             updateUserState(peerId = peerId)
-            getMessages()
         }
 
     }
-
-    private fun MessageEntity.toMessage(): Message {
-        return Message(
-            text = text,
-            isFromSelf = !isFromPeer
-        )
-    }
-
 }
 
