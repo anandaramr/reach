@@ -26,6 +26,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
@@ -175,6 +176,7 @@ class MessageRepository(
     }
 
     override fun getUsername(userId: String): Flow<String> {
+        userId in typingStateHandler.typingUsers.value
         return contactDao.getUsername(
             userId = userId.toUUID(),
         )
@@ -183,6 +185,8 @@ class MessageRepository(
     override suspend fun onReadMessage(messageId: String) {
         // TODO
     }
+
+    override val typingUsers = typingStateHandler.typingUsers
 
     override fun isTyping(userId: String): Flow<Boolean> {
         return typingStateHandler.getIsTyping(userId)
