@@ -33,6 +33,8 @@ fun HomeScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val preview = viewModel.messagePreview.collectAsLazyPagingItems()
+    val typingUsers by viewModel.typingUsers.collectAsState()
+
     LaunchedEffect(Unit) {
         startService()
     }
@@ -64,6 +66,7 @@ fun HomeScreen(
                             username =  preview.username,
                             userId =  preview.userId.toString(),
                             lastMessage = preview.lastMessage,
+                            isTyping = preview.userId.toString() in typingUsers
                         )
                     }
                 }

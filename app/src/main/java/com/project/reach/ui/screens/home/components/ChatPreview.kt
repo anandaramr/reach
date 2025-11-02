@@ -29,6 +29,7 @@ fun ChatPreview(
     userId: String,
     username: String,
     lastMessage: String,
+    isTyping: Boolean
 ) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
@@ -50,11 +51,18 @@ fun ChatPreview(
                 fontWeight = FontWeight.SemiBold
             )
             Spacer(Modifier.width(23.dp))
-            Text(
-                lastMessage.truncate(35),
-                fontSize = 13.sp,
-                modifier = Modifier.alpha(0.7f)
-            )
+            if(isTyping)
+                Text(
+                    text = "Typing...",
+                    fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.outline
+                )
+            else
+                Text(
+                    lastMessage.truncate(35),
+                    fontSize = 13.sp,
+                    modifier = Modifier.alpha(0.7f)
+                )
         }
     }
 }

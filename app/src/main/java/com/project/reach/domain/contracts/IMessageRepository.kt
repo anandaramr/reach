@@ -196,7 +196,7 @@ interface IMessageRepository {
      *
      * In UI:
      * ```
-     * isTyping = user.userId in viewModel.typingUsers.value
+     * val typingUsers by viewModel.typingUsers.collectAsState()
      * ```
      *
      * @return A [StateFlow] emitting the set of user IDs currently typing.

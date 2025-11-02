@@ -21,6 +21,7 @@ class HomeScreenViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(HomeScreenState())
     val uiState = _uiState.asStateFlow()
     val messagePreview = messageRepository.getMessagePreviewsPaged().cachedIn(viewModelScope)
+    val typingUsers = messageRepository.typingUsers
 
     private fun <T> Flow<T>.toStateFlow(
         scope: CoroutineScope,
