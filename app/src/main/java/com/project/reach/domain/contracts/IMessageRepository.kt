@@ -7,6 +7,7 @@ import com.project.reach.domain.models.MessagePreview
 import com.project.reach.domain.models.NotificationEvent
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.StateFlow
 
 /**
  * Repository interface for handling messaging-related operations.
@@ -180,6 +181,29 @@ interface IMessageRepository {
      * @see emitTyping For sending typing indicators to a peer
      */
     fun isTyping(userId: String): Flow<Boolean>
+
+    /**
+     * Observes all active "is typing" states received from peers.
+     *
+     * This [StateFlow] continuously emits the current set of user IDs
+     * who are actively typing in their chat with the local user.
+     *
+     * Usage:
+     * In viewModel:
+     * ```
+     * val typingUsers = repository.typingUsers
+     * ```
+     *
+     * In UI:
+     * ```
+     * isTyping = user.userId in viewModel.typingUsers.value
+     * ```
+     *
+     * @return A [StateFlow] emitting the set of user IDs currently typing.
+     *         The initial value is an empty set.
+     */
+    val typingUsers: StateFlow<Set<String>>
+
 
     /**
      * Sends a typing indicator to notify other users that the current user is typing.
