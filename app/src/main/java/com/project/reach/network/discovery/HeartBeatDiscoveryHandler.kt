@@ -3,24 +3,21 @@ package com.project.reach.network.discovery
 import com.project.reach.network.contracts.DiscoveryHandler
 import com.project.reach.network.model.DeviceInfo
 import com.project.reach.network.model.Packet
-import com.project.reach.network.model.PacketWithSource
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.launch
 import java.net.InetAddress
 
-class UdpDiscoveryHandler(
+class HeartBeatDiscoveryHandler(
     private val userId: String,
     private val username: String,
-    private val packets: SharedFlow<PacketWithSource>,
     private val sendPacket: (ip: InetAddress, packet: Packet) -> Unit,
-    private val onFound: (uuid: String, username: String) -> Boolean,
+    private val onFound: (uuid: String, username: String) -> Boolean?,
     private val onLost: (uuid: String) -> Unit
 ): DiscoveryHandler {
     private val _foundDevice = MutableSharedFlow<DeviceInfo>(extraBufferCapacity = 64, replay = 0)
@@ -34,7 +31,6 @@ class UdpDiscoveryHandler(
     private var isRunning = false
 
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
-    private var listenJob: Job? = null
     private var advertiseJob: Job? = null
     private var timeoutJob: Job? = null
 
@@ -42,7 +38,6 @@ class UdpDiscoveryHandler(
         if (isRunning) return
         isRunning = true
 
-        listenJob = scope.launch { listenToIncomingPackets() }
         advertiseJob = scope.launch { advertise() }
         timeoutJob = scope.launch { handleTimeout() }
     }
@@ -52,7 +47,6 @@ class UdpDiscoveryHandler(
         isRunning = false
 
         sendPacket(InetAddress.getByName(BROADCAST_ADDR), Packet.GoodBye(userId))
-        listenJob?.cancel()
         advertiseJob?.cancel()
         timeoutJob?.cancel()
     }
@@ -65,25 +59,29 @@ class UdpDiscoveryHandler(
         return deviceInfo.address
     }
 
-    private suspend fun listenToIncomingPackets() {
-        packets.collect { incoming ->
-            val packet = incoming.packet
-            when (packet) {
-                is Packet.Hello -> {
-                    handleDeviceFound(incoming.sourceIp, packet.userId, packet.username)
-                    sendPacket(incoming.sourceIp, Packet.Heartbeat(userId, username))
-                }
-
-                is Packet.Heartbeat -> {
-                    handleDeviceFound(incoming.sourceIp, packet.userId, packet.username)
-                }
-
-                is Packet.GoodBye -> {
-                    handleDeviceLost(packet.userId)
-                }
-
-                is Packet.Message, is Packet.Typing -> {}
+    fun handleIncomingPacket(ip: InetAddress, packet: Packet) {
+        when (packet) {
+            is Packet.Hello -> {
+                handleDeviceFound(ip, packet.userId, packet.username)
+                sendPacket(ip, Packet.Heartbeat(userId, username))
             }
+
+            is Packet.Heartbeat -> {
+                handleDeviceFound(ip, packet.userId, packet.username)
+            }
+
+            is Packet.GoodBye -> {
+                handleDeviceLost(packet.userId)
+            }
+
+            is Packet.Message -> {
+                // add device to discovered list if the user receives a message from it
+                // temporarily handles cases where peer can discover user
+                // but not vice versa, useful during bad network conditions
+                handleDeviceFound(ip, packet.userId, packet.username)
+            }
+
+            else -> {}
         }
     }
 
@@ -96,7 +94,7 @@ class UdpDiscoveryHandler(
             val valid = onFound(userId, username)
 
             // remove illegitimate device from device map
-            if (!valid) deviceMap.remove(userId)
+            if (valid == false) deviceMap.remove(userId)
         }
     }
 
@@ -135,7 +133,6 @@ class UdpDiscoveryHandler(
     override fun close() {
         stop()
 
-        listenJob = null
         advertiseJob = null
         timeoutJob = null
     }
