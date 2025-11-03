@@ -137,7 +137,7 @@ class MessageRepository(
                 initialLoadSize = initialLoadSize,
                 pageSize = pageSize,
                 prefetchDistance = prefetchDistance,
-                enablePlaceholders = false,
+                enablePlaceholders = true,
             ),
             pagingSourceFactory = { messageDao.getMessageByUserPaged(userId.toUUID()) }
         ).flow.map { pagingData ->
@@ -160,7 +160,7 @@ class MessageRepository(
                 initialLoadSize = initialLoadSize,
                 pageSize = pageSize,
                 prefetchDistance = prefetchDistance,
-                enablePlaceholders = false,
+                enablePlaceholders = true,
             ),
             pagingSourceFactory = { messageDao.getMessagesPreviewPaged() }
         ).flow
