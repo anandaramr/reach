@@ -42,7 +42,8 @@ class WifiController(
     private val username = identityManager.getUsernameIdentity().toString()
     private val uuid = identityManager.getUserUUID().toString()
 
-    private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+    val supervisorJob = SupervisorJob()
+    private val scope = CoroutineScope(Dispatchers.IO + supervisorJob)
 
     private val _packets = MutableSharedFlow<Packet>(replay = 0, extraBufferCapacity = 64)
     override val packets = _packets.asSharedFlow()
@@ -135,14 +136,10 @@ class WifiController(
         }
     }
 
-    private fun isDiscoveryPacket(packet: Packet): Boolean {
-        return packet is Packet.Hello || packet is Packet.Heartbeat || packet is Packet.GoodBye
-    }
-
     override suspend fun send(uuid: UUID, packet: Packet): Boolean {
         try {
             val ipAddress = wifiDiscoveryHandler.resolvePeerAddress(uuid.toString())
-            return sendPacket(ipAddress, packet, udp = false)
+            return sendPacket(ipAddress, packet, udp = true)
         } catch (e: NoSuchElementException) {
             debug(e.message.toString())
             return false
@@ -186,5 +183,6 @@ class WifiController(
     override fun close() {
         connectivityManager.unregisterNetworkCallback(networkCallback)
         wifiDiscoveryHandler.close()
+        supervisorJob.cancel()
     }
 }

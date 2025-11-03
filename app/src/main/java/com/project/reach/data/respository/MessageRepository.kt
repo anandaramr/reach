@@ -176,7 +176,6 @@ class MessageRepository(
     }
 
     override fun getUsername(userId: String): Flow<String> {
-        userId in typingStateHandler.typingUsers.value
         return contactDao.getUsername(
             userId = userId.toUUID(),
         )

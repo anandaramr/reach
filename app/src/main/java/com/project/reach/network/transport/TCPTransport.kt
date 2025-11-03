@@ -29,7 +29,8 @@ class TCPTransport: NetworkTransport {
 
     private val connections = ConcurrentHashMap<InetAddress, Socket>()
 
-    private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+    val supervisorJob = SupervisorJob()
+    private val scope = CoroutineScope(Dispatchers.IO + supervisorJob)
     private var serverJob: Job? = null
 
     private fun listen() {
@@ -97,10 +98,12 @@ class TCPTransport: NetworkTransport {
             bytesRead += read
         }
 
-        _incomingPackets.emit(NetworkPacket(
-            address = clientIp,
-            payload = messageBuffer.copyOf(bytesRead)
-        ))
+        _incomingPackets.emit(
+            NetworkPacket(
+                address = clientIp,
+                payload = messageBuffer.copyOf(bytesRead)
+            )
+        )
         return true
     }
 
@@ -126,16 +129,13 @@ class TCPTransport: NetworkTransport {
      * a new one otherwise
      */
     private fun getOrCreateSocket(ip: InetAddress): Socket {
-        val savedSocket = connections[ip]
-        if (savedSocket != null) return savedSocket
-
-        return Socket(ip, NetworkTransport.PORT).also { socket ->
-            val socket = Socket(ip, NetworkTransport.PORT)
-            debug("connected to ${socket.inetAddress}")
-            connections.put(ip, socket)
-
-            scope.launch {
-                handlePeerSocket(socket)
+        return connections.computeIfAbsent(ip) { key ->
+            Socket(key, NetworkTransport.PORT).also { socket ->
+                debug("connected to ${socket.inetAddress}")
+                connections.put(key, socket)
+                scope.launch {
+                    handlePeerSocket(socket)
+                }
             }
         }
     }
@@ -147,9 +147,11 @@ class TCPTransport: NetworkTransport {
     }
 
     override fun close() {
-        runCatching{ serverJob?.cancel() }
+        runCatching { supervisorJob.cancel() }
         socket?.close()
         socket = null
+        connections.values.forEach { runCatching { it.close() } }
+        connections.clear()
     }
 
     private fun getCurrentTime() = System.currentTimeMillis()
