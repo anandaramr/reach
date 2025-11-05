@@ -33,6 +33,15 @@ class TypingStateHandler(
         }
     }
 
+    fun resetPeerIsTyping(userId: String) {
+        _typingUsers.update { it - userId }
+        typingJobs.remove(userId)
+    }
+
+    fun resetSelfIsTyping() {
+        lastSentTime = 0
+    }
+
     fun getIsTyping(userId: String): Flow<Boolean> {
         return _typingUsers.map { it.contains(userId) }
     }
