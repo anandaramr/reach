@@ -10,10 +10,11 @@ import com.project.reach.network.model.DeviceInfo
 import com.project.reach.network.model.Packet
 import com.project.reach.network.monitor.NetworkCallback
 import com.project.reach.network.transport.NetworkTransport
-import com.project.reach.util.toUUID
 import com.project.reach.util.debug
+import com.project.reach.util.toUUID
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -41,8 +42,10 @@ class WifiController(
     private val username = identityManager.getUsernameIdentity().toString()
     private val uuid = identityManager.getUserUUID().toString()
 
-    val supervisorJob = SupervisorJob()
-    private val scope = CoroutineScope(Dispatchers.IO + supervisorJob)
+    private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+    private var networkStateJob: Job? = null
+    private var tcpObserverJob: Job? = null
+    private var udpObserverJob: Job? = null
 
     private val _packets = MutableSharedFlow<Packet>(replay = 0, extraBufferCapacity = 64)
     override val packets = _packets.asSharedFlow()
@@ -62,7 +65,8 @@ class WifiController(
         sendPacket = { ip, packet ->
             scope.launch {
                 sendPacket(ip, packet, stream = false)
-            }},
+            }
+        },
         onFound = { peerId, username ->
             try {
                 val uuid = peerId.toUUID()
@@ -85,23 +89,42 @@ class WifiController(
     private val _foundDevices = MutableStateFlow<List<DeviceInfo>>(emptyList())
     override var foundDevices = _foundDevices.asStateFlow()
 
+    // This variable only signifies that the user has
+    // attempted to start discovery not whether discovery
+    // has actually started. So this variable should not
+    // changed elsewhere
+    private var isDiscoveryStartedByUser = false
+
     init {
         connectivityManager.registerDefaultNetworkCallback(networkCallback)
-    }
-
-    override fun startDiscovery() {
         scope.launch {
             isActive.collect { active ->
-                if (active) {
-                    wifiDiscoveryHandler.start()
-                } else {
-                    stopDiscovery()
+                if (isDiscoveryStartedByUser) {
+                    if (active) {
+                        start()
+                    } else {
+                        stop()
+                    }
                 }
             }
         }
+    }
 
-        scope.launch {
-            udpTransport.incomingPackets.collect { packet ->
+    override fun startDiscovery() {
+        if (isDiscoveryStartedByUser) return
+        isDiscoveryStartedByUser = true
+        start()
+    }
+
+    private fun start() {
+        if (isActive.value) wifiDiscoveryHandler.start()
+        udpObserverJob = observeTransport(udpTransport, "UDP")
+        tcpObserverJob = observeTransport(tcpTransport, "TCP")
+    }
+
+    private fun observeTransport(transport: NetworkTransport, transportName: String): Job {
+        return scope.launch {
+            transport.incomingPackets.collect { packet ->
                 val clientIp = packet.address
                 val bytes = packet.payload
                 try {
@@ -111,24 +134,7 @@ class WifiController(
                 } catch (e: IllegalArgumentException) {
                     debug(e.toString())
                 } catch (e: DataFormatException) {
-                    debug("UDP received faulty packet")
-                    debug(e.toString())
-                }
-            }
-        }
-
-        scope.launch {
-            tcpTransport.incomingPackets.collect { networkPacket ->
-                val bytes = networkPacket.payload
-                val clientIp = networkPacket.address
-                try {
-                    val packet = Packet.deserialize(bytes)
-                    wifiDiscoveryHandler.handleIncomingPacket(clientIp, packet)
-                    _packets.emit(packet)
-                } catch (e: IllegalArgumentException) {
-                    debug(e.toString())
-                } catch (e: DataFormatException) {
-                    debug("TCP received faulty packet")
+                    debug("$transportName received faulty packet")
                     debug(e.toString())
                 }
             }
@@ -162,14 +168,21 @@ class WifiController(
     }
 
     override fun stopDiscovery() {
+        if (!isDiscoveryStartedByUser) return
+        isDiscoveryStartedByUser = false
+        stop()
+    }
+
+    private fun stop() {
         clearFoundDevices()
+        networkStateJob?.cancel()
+        tcpObserverJob?.cancel()
+        udpObserverJob?.cancel()
         wifiDiscoveryHandler.stop()
     }
 
     private fun clearFoundDevices() {
-        _foundDevices.update {
-            emptyList()
-        }
+        _foundDevices.update { emptyList() }
         wifiDiscoveryHandler.clear()
     }
 
@@ -181,7 +194,5 @@ class WifiController(
 
     override fun close() {
         connectivityManager.unregisterNetworkCallback(networkCallback)
-        wifiDiscoveryHandler.close()
-        supervisorJob.cancel()
     }
 }

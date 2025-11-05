@@ -55,7 +55,6 @@ class NetworkController(
     }
 
     override fun release() {
-        wifiController.stopDiscovery()
         wifiController.close()
     }
 

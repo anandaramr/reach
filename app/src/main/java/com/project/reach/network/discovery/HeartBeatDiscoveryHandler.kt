@@ -19,27 +19,32 @@ class HeartBeatDiscoveryHandler(
 ): DiscoveryHandler {
     private val deviceMap: MutableMap<String, DeviceActivityInfo> = mutableMapOf()
 
-    private var isRunning = false
+    private var isDiscovering = false
 
-    private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+    private lateinit var supervisorJob: Job
+    private lateinit var scope: CoroutineScope
     private var advertiseJob: Job? = null
     private var timeoutJob: Job? = null
 
     override fun start() {
-        if (isRunning) return
-        isRunning = true
+        if (isDiscovering) return
+        isDiscovering = true
+
+        supervisorJob = SupervisorJob()
+        scope = CoroutineScope(Dispatchers.IO + supervisorJob)
 
         advertiseJob = scope.launch { advertise() }
         timeoutJob = scope.launch { handleTimeout() }
     }
 
     override fun stop() {
-        if (!isRunning) return
-        isRunning = false
+        if (!isDiscovering) return
+        isDiscovering = false
 
         sendPacket(InetAddress.getByName(BROADCAST_ADDR), Packet.GoodBye(userId))
         advertiseJob?.cancel()
         timeoutJob?.cancel()
+        clear()
     }
 
     override suspend fun resolvePeerAddress(uuid: String): InetAddress {
@@ -99,14 +104,14 @@ class HeartBeatDiscoveryHandler(
         val broadcastAddr = InetAddress.getByName(BROADCAST_ADDR)
         sendPacket(broadcastAddr, Packet.Hello(userId, username))
 
-        while (isRunning) {
+        while (isDiscovering) {
             delay(HEARTBEAT_INTERVAL)
             sendPacket(broadcastAddr, Packet.Heartbeat(userId, username))
         }
     }
 
     private suspend fun handleTimeout() {
-        while (isRunning) {
+        while (isDiscovering) {
             delay(TIMEOUT_INTERVAL)
             checkTimeout()
         }
@@ -114,18 +119,11 @@ class HeartBeatDiscoveryHandler(
 
     private fun checkTimeout() {
         // need to use toList() first to avoid triggering
-        deviceMap.forEach { (userId, deviceInfo) ->
+        deviceMap.toList().forEach { (userId, deviceInfo) ->
             if (getCurrentTime() - deviceInfo.lastSeen > TIMEOUT_INTERVAL) {
                 handleDeviceLost(userId)
             }
         }
-    }
-
-    override fun close() {
-        stop()
-
-        advertiseJob = null
-        timeoutJob = null
     }
 
     override fun clear() {

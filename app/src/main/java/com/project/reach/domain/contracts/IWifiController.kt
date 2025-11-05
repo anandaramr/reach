@@ -16,6 +16,5 @@ interface IWifiController {
     suspend fun sendDatagram(uuid: UUID, packet: Packet): Boolean
     suspend fun sendStream(uuid: UUID, packet: Packet): Boolean
     fun stopDiscovery()
-
     fun close()
 }
