@@ -10,7 +10,6 @@ import com.project.reach.domain.contracts.IIdentityRepository
 import com.project.reach.domain.contracts.IMessageRepository
 import com.project.reach.domain.contracts.INetworkController
 import com.project.reach.domain.contracts.INetworkRepository
-import com.project.reach.domain.contracts.IWifiController
 import com.project.reach.network.transport.NetworkTransport
 import dagger.Module
 import dagger.Provides
@@ -42,11 +41,11 @@ object DataModule {
     @Provides
     @Singleton
     fun provideNetworkRepository(
-        wifiController: IWifiController,
+        networkController: INetworkController,
         @UDP udpTransport: NetworkTransport,
         @TCP tcpTransport: NetworkTransport,
     ): INetworkRepository {
-        return NetworkRepository(wifiController, udpTransport, tcpTransport)
+        return NetworkRepository(networkController, udpTransport, tcpTransport)
     }
 
     @Provides
