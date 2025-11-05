@@ -94,11 +94,14 @@ class MessageRepository(
         messageId: Long,
         message: String
     ) {
+        // reset self typing state so that throttle works as intended
+        typingStateHandler.resetSelfIsTyping()
+
         val successful = networkController.sendPacket(
             userId = userId.toUUID(),
             Packet.Message(
                 senderId = selfId,
-                username = selfUsername,
+                senderUsername = selfUsername,
                 message = message
             )
         )
@@ -215,17 +218,20 @@ class MessageRepository(
                 is Packet.Message -> {
                     receiveMessage(
                         userId = packet.senderId,
-                        username = packet.username,
+                        username = packet.senderUsername,
                         message = packet.message,
                         timestamp = packet.timeStamp
                     )
                     _notifications.emit(
                         NotificationEvent.Message(
                             userId = packet.senderId,
-                            username = packet.username,
+                            username = packet.senderUsername,
                             messages = getUnreadMessagesFromUser(packet.senderId),
                         )
                     )
+
+                    // stop the typing indicator
+                    typingStateHandler.resetPeerIsTyping(packet.senderId)
                 }
 
                 is Packet.Typing -> {

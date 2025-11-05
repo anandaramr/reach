@@ -39,10 +39,5 @@ interface DiscoveryHandler {
      */
     suspend fun resolvePeerAddress(uuid: String): InetAddress
 
-    /**
-     * Cleanup
-     */
-    fun close()
-
     fun clear()
 }

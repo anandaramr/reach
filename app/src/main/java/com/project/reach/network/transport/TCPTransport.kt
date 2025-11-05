@@ -36,11 +36,12 @@ class TCPTransport: NetworkTransport {
     private fun listen() {
         if (serverJob != null) return
         socket?.let { socket ->
+            debug("[TCP] listening on ${socket.inetAddress}:${socket.localPort}")
             serverJob = scope.launch {
                 while (isActive) {
                     try {
                         val clientSocket = socket.accept()
-                        debug("connected to ${clientSocket.inetAddress}")
+                        debug("Accepted connection from ${clientSocket.inetAddress}")
                         launch {
                             handlePeerSocket(clientSocket)
                         }
@@ -131,15 +132,17 @@ class TCPTransport: NetworkTransport {
     }
 
     override fun start() {
+        debug("[TCP] starting")
         if (socket != null) return
         socket = ServerSocket(NetworkTransport.PORT)
         listen()
     }
 
     override fun close() {
-        runCatching { supervisorJob.cancel() }
+        runCatching { serverJob?.cancel() }
         socket?.close()
         socket = null
+        serverJob = null
         connections.values.forEach { runCatching { it.close() } }
         connections.clear()
     }

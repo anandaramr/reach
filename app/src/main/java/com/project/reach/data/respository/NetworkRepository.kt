@@ -26,6 +26,7 @@ class NetworkRepository(
     }
 
     override fun release() {
+        stopDiscovery()
         networkController.release()
     }
 }
