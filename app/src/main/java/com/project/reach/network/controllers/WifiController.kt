@@ -8,7 +8,6 @@ import com.project.reach.domain.contracts.IWifiController
 import com.project.reach.network.discovery.HeartBeatDiscoveryHandler
 import com.project.reach.network.model.DeviceInfo
 import com.project.reach.network.model.Packet
-import com.project.reach.network.model.PacketWithSource
 import com.project.reach.network.monitor.NetworkCallback
 import com.project.reach.network.transport.NetworkTransport
 import com.project.reach.util.toUUID
@@ -62,7 +61,7 @@ class WifiController(
         username = username,
         sendPacket = { ip, packet ->
             scope.launch {
-                sendPacket(ip, packet, udp = true)
+                sendPacket(ip, packet, stream = false)
             }},
         onFound = { peerId, username ->
             try {
@@ -136,10 +135,10 @@ class WifiController(
         }
     }
 
-    override suspend fun send(uuid: UUID, packet: Packet): Boolean {
+    override suspend fun sendDatagram(uuid: UUID, packet: Packet): Boolean {
         try {
             val ipAddress = wifiDiscoveryHandler.resolvePeerAddress(uuid.toString())
-            return sendPacket(ipAddress, packet, udp = true)
+            return sendPacket(ipAddress, packet, stream = false)
         } catch (e: NoSuchElementException) {
             debug(e.message.toString())
             return false
@@ -149,16 +148,16 @@ class WifiController(
     override suspend fun sendStream(uuid: UUID, packet: Packet): Boolean {
         try {
             val ipAddress = wifiDiscoveryHandler.resolvePeerAddress(uuid.toString())
-            return sendPacket(ipAddress, packet, udp = false)
+            return sendPacket(ipAddress, packet, stream = true)
         } catch (e: NoSuchElementException) {
             debug(e.message.toString())
             return false
         }
     }
 
-    private suspend fun sendPacket(ip: InetAddress, packet: Packet, udp: Boolean): Boolean {
+    private suspend fun sendPacket(ip: InetAddress, packet: Packet, stream: Boolean): Boolean {
         val bytes = packet.serialize()
-        return if (udp) udpTransport.send(bytes, ip)
+        return if (!stream) udpTransport.send(bytes, ip)
         else tcpTransport.send(bytes, ip)
     }
 

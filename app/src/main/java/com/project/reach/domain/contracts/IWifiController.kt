@@ -13,7 +13,7 @@ interface IWifiController {
     val packets: SharedFlow<Packet>
 
     fun startDiscovery()
-    suspend fun send(uuid: UUID, packet: Packet): Boolean
+    suspend fun sendDatagram(uuid: UUID, packet: Packet): Boolean
     suspend fun sendStream(uuid: UUID, packet: Packet): Boolean
     fun stopDiscovery()
 

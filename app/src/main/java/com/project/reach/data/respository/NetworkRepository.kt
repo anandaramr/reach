@@ -4,6 +4,7 @@ import com.project.reach.domain.contracts.INetworkRepository
 import com.project.reach.domain.contracts.IWifiController
 import com.project.reach.network.transport.NetworkTransport
 
+// TODO use NetworkController
 class NetworkRepository(
     private val wifiController: IWifiController,
     private val udpTransport: NetworkTransport,

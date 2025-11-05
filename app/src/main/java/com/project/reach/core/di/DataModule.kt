@@ -8,6 +8,7 @@ import com.project.reach.data.respository.MessageRepository
 import com.project.reach.data.respository.NetworkRepository
 import com.project.reach.domain.contracts.IIdentityRepository
 import com.project.reach.domain.contracts.IMessageRepository
+import com.project.reach.domain.contracts.INetworkController
 import com.project.reach.domain.contracts.INetworkRepository
 import com.project.reach.domain.contracts.IWifiController
 import com.project.reach.network.transport.NetworkTransport
@@ -52,14 +53,14 @@ object DataModule {
     @Singleton
     fun provideMessageRepository(
         @ApplicationContext context: Context,
-        wifiController: IWifiController,
+        networkController: INetworkController,
         identityManager: IdentityManager
     ): IMessageRepository {
         val database = ReachDatabase.getDatabase(context)
         return MessageRepository(
             messageDao = database.messageDao(),
             contactDao = database.contactDao(),
-            wifiController = wifiController,
+            networkController = networkController,
             identityManager = identityManager
         )
     }

@@ -17,15 +17,9 @@ class HeartBeatDiscoveryHandler(
     private val userId: String,
     private val username: String,
     private val sendPacket: (ip: InetAddress, packet: Packet) -> Unit,
-    private val onFound: (uuid: String, username: String) -> Boolean?,
+    private val onFound: (uuid: String, username: String) -> Boolean,
     private val onLost: (uuid: String) -> Unit
 ): DiscoveryHandler {
-    private val _foundDevice = MutableSharedFlow<DeviceInfo>(extraBufferCapacity = 64, replay = 0)
-    override val foundDevice = _foundDevice.asSharedFlow()
-
-    private val _lostDevice = MutableSharedFlow<DeviceInfo>(extraBufferCapacity = 64, replay = 0)
-    override val lostDevice = _lostDevice.asSharedFlow()
-
     private val deviceMap: MutableMap<String, DeviceActivityInfo> = mutableMapOf()
 
     private var isRunning = false
@@ -62,23 +56,23 @@ class HeartBeatDiscoveryHandler(
     fun handleIncomingPacket(ip: InetAddress, packet: Packet) {
         when (packet) {
             is Packet.Hello -> {
-                handleDeviceFound(ip, packet.userId, packet.username)
+                handleDeviceFound(ip, packet.senderId, packet.username)
                 sendPacket(ip, Packet.Heartbeat(userId, username))
             }
 
             is Packet.Heartbeat -> {
-                handleDeviceFound(ip, packet.userId, packet.username)
+                handleDeviceFound(ip, packet.senderId, packet.senderUsername)
             }
 
             is Packet.GoodBye -> {
-                handleDeviceLost(packet.userId)
+                handleDeviceLost(packet.senderId)
             }
 
             is Packet.Message -> {
                 // add device to discovered list if the user receives a message from it
                 // temporarily handles cases where peer can discover user
                 // but not vice versa, useful during bad network conditions
-                handleDeviceFound(ip, packet.userId, packet.username)
+                handleDeviceFound(ip, packet.senderId, packet.username)
             }
 
             else -> {}
