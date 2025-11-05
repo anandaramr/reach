@@ -1,32 +1,31 @@
 package com.project.reach.data.respository
 
+import com.project.reach.domain.contracts.INetworkController
 import com.project.reach.domain.contracts.INetworkRepository
-import com.project.reach.domain.contracts.IWifiController
 import com.project.reach.network.transport.NetworkTransport
 
 class NetworkRepository(
-    private val wifiController: IWifiController,
+    private val networkController: INetworkController,
     private val udpTransport: NetworkTransport,
     private val tcpTransport: NetworkTransport,
 ): INetworkRepository {
 
-    override val isWifiActive = wifiController.isActive
-    override val foundDevices = wifiController.foundDevices
+    override val networkState = networkController.networkState
+    override val foundDevices = networkController.foundDevices
 
     override fun startDiscovery() {
         udpTransport.start()
         tcpTransport.start()
-        wifiController.startDiscovery()
+        networkController.startDiscovery()
     }
 
     override fun stopDiscovery() {
-        wifiController.stopDiscovery()
+        networkController.stopDiscovery()
         udpTransport.close()
         tcpTransport.close()
     }
 
     override fun release() {
-        stopDiscovery()
-        wifiController.close()
+        networkController.release()
     }
 }

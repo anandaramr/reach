@@ -11,6 +11,7 @@ import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -49,19 +50,23 @@ class ForegroundService: Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        when (intent?.action) {
-            ACTION_START -> start()
-            ACTION_STOP -> stop()
+        val action  = intent?.action
+
+        if (action == null) {
+            start()
+        } else {
+            when (action) {
+                ACTION_START -> start()
+                ACTION_STOP -> stop()
+            }
         }
 
         return START_STICKY
     }
 
-    private var isStarted = false
-
     private fun start() {
-        if (isStarted) return
-        isStarted = true
+        if (ForegroundServiceManager.isRunning()) return
+        ForegroundServiceManager.setServiceState(true)
 
         val stopIntent = Intent(this, ForegroundService::class.java).apply {
             action = ACTION_STOP
@@ -78,8 +83,8 @@ class ForegroundService: Service() {
     }
 
     private fun stop() {
-        if (!isStarted) return
-        isStarted = false
+        if (!ForegroundServiceManager.isRunning()) return
+        ForegroundServiceManager.setServiceState(false)
 
         networkRepository.release()
         stopSelf()
@@ -87,6 +92,7 @@ class ForegroundService: Service() {
 
     override fun onDestroy() {
         super.onDestroy()
+        scope.cancel()
         stop()
     }
 

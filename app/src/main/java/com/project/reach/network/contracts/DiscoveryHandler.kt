@@ -6,16 +6,6 @@ import java.net.InetAddress
 
 interface DiscoveryHandler {
     /**
-     * Emits details about newly discovered devices
-     */
-    val foundDevice: SharedFlow<DeviceInfo>
-
-    /**
-     * Emits details about device that are no longer discoverable
-     */
-    val lostDevice: SharedFlow<DeviceInfo>
-
-    /**
      * Starts discovery process if it has not already started
      */
     fun start()

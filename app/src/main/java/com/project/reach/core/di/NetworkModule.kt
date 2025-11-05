@@ -2,6 +2,8 @@ package com.project.reach.core.di
 
 import android.content.Context
 import com.project.reach.data.local.IdentityManager
+import com.project.reach.data.network.NetworkController
+import com.project.reach.domain.contracts.INetworkController
 import com.project.reach.domain.contracts.IWifiController
 import com.project.reach.network.controllers.WifiController
 import com.project.reach.network.discovery.NsdDiscoveryController
@@ -28,6 +30,14 @@ object NetworkModule {
         identityManager: IdentityManager,
     ): IWifiController {
         return WifiController(context, udpTransport, tcpTransport, identityManager)
+    }
+
+    @Provides
+    @Singleton
+    fun provideNetworkController(
+        wifiController: IWifiController,
+    ): INetworkController {
+        return NetworkController(wifiController)
     }
 
     @Provides

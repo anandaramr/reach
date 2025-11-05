@@ -1,5 +1,6 @@
 package com.project.reach.domain.contracts
 
+import com.project.reach.domain.models.NetworkState
 import com.project.reach.network.model.DeviceInfo
 import kotlinx.coroutines.flow.StateFlow
 
@@ -14,7 +15,7 @@ interface INetworkRepository {
      * Emits `true` if device is connected to a private network
      * via WiFi, otherwise emits `false`
      */
-    val isWifiActive: StateFlow<Boolean>
+    val networkState: StateFlow<NetworkState>
 
     /**
      * List of [StateFlow] objects holding the `uuid` and `username` of the users

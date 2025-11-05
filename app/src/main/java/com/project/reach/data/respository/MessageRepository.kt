@@ -3,7 +3,6 @@ package com.project.reach.data.respository
 import androidx.paging.Pager
 import androidx.paging.PagingConfig
 import androidx.paging.PagingData
-import androidx.paging.cachedIn
 import androidx.paging.map
 import com.project.reach.data.local.IdentityManager
 import com.project.reach.data.local.dao.ContactDao
@@ -12,7 +11,7 @@ import com.project.reach.data.local.entity.ContactEntity
 import com.project.reach.data.local.entity.MessageEntity
 import com.project.reach.data.utils.TypingStateHandler
 import com.project.reach.domain.contracts.IMessageRepository
-import com.project.reach.domain.contracts.IWifiController
+import com.project.reach.domain.contracts.INetworkController
 import com.project.reach.domain.models.Message
 import com.project.reach.domain.models.MessageNotification
 import com.project.reach.domain.models.MessagePreview
@@ -26,7 +25,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
@@ -36,8 +34,8 @@ import java.util.UUID
 class MessageRepository(
     private val messageDao: MessageDao,
     private val contactDao: ContactDao,
-    private val wifiController: IWifiController,
-    private val identityManager: IdentityManager
+    private val networkController: INetworkController,
+    identityManager: IdentityManager
 ): IMessageRepository {
 
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
@@ -48,13 +46,16 @@ class MessageRepository(
 
     private val typingStateHandler = TypingStateHandler(scope)
 
+    val selfId = identityManager.getUserUUID().toString()
+    val selfUsername = identityManager.getUsernameIdentity().toString()
+
     init {
         scope.launch {
             handlePackets()
         }
 
         scope.launch {
-            wifiController.newDevices.collect { deviceInfo ->
+            networkController.newDevices.collect { deviceInfo ->
                 launch {
                     retryPendingMessages(deviceInfo.uuid)
                 }
@@ -93,7 +94,14 @@ class MessageRepository(
         messageId: Long,
         message: String
     ) {
-        val successful = sendStream(userId, message)
+        val successful = networkController.sendPacket(
+            userId = userId.toUUID(),
+            Packet.Message(
+                senderId = selfId,
+                username = selfUsername,
+                message = message
+            )
+        )
         if (successful) {
             messageDao.updateMessageState(messageId, MessageState.SENT)
         }
@@ -120,7 +128,6 @@ class MessageRepository(
     // TODO: Paging
     @Deprecated(
         "getMessages fetches all messages from database at once which causes performance issues. Switch to paging for better performance",
-        replaceWith = ReplaceWith("getMessagesPaged(userId)")
     )
     override fun getMessages(userId: String): Flow<List<MessageEntity>> {
         return messageDao.getMessageByUser(userId.toUUID())
@@ -137,7 +144,7 @@ class MessageRepository(
                 initialLoadSize = initialLoadSize,
                 pageSize = pageSize,
                 prefetchDistance = prefetchDistance,
-                enablePlaceholders = false,
+                enablePlaceholders = true,
             ),
             pagingSourceFactory = { messageDao.getMessageByUserPaged(userId.toUUID()) }
         ).flow.map { pagingData ->
@@ -160,7 +167,7 @@ class MessageRepository(
                 initialLoadSize = initialLoadSize,
                 pageSize = pageSize,
                 prefetchDistance = prefetchDistance,
-                enablePlaceholders = false,
+                enablePlaceholders = true,
             ),
             pagingSourceFactory = { messageDao.getMessagesPreviewPaged() }
         ).flow
@@ -176,7 +183,6 @@ class MessageRepository(
     }
 
     override fun getUsername(userId: String): Flow<String> {
-        userId in typingStateHandler.typingUsers.value
         return contactDao.getUsername(
             userId = userId.toUUID(),
         )
@@ -195,46 +201,35 @@ class MessageRepository(
     override fun emitTyping(userId: String) {
         typingStateHandler.throttledSend {
             scope.launch {
-                wifiController.send(
-                    userId.toUUID(),
-                    Packet.Typing(identityManager.getUserUUID().toString())
+                networkController.sendPacket(
+                    userId = userId.toUUID(),
+                    Packet.Typing(selfId)
                 )
             }
         }
     }
 
-    private suspend fun sendStream(userId: String, message: String): Boolean {
-        return wifiController.sendStream(
-            uuid = userId.toUUID(),
-            packet = Packet.Message(
-                userId = identityManager.getUserUUID().toString(),
-                username = identityManager.getUsernameIdentity().toString(),
-                message = message
-            )
-        )
-    }
-
     private suspend fun handlePackets() {
-        wifiController.packets.collect { packet ->
+        networkController.packets.collect { packet ->
             when (packet) {
                 is Packet.Message -> {
                     receiveMessage(
-                        userId = packet.userId,
+                        userId = packet.senderId,
                         username = packet.username,
                         message = packet.message,
                         timestamp = packet.timeStamp
                     )
                     _notifications.emit(
                         NotificationEvent.Message(
-                            userId = packet.userId,
+                            userId = packet.senderId,
                             username = packet.username,
-                            messages = getUnreadMessagesFromUser(packet.userId),
+                            messages = getUnreadMessagesFromUser(packet.senderId),
                         )
                     )
                 }
 
                 is Packet.Typing -> {
-                    typingStateHandler.setIsTyping(packet.userId)
+                    typingStateHandler.setIsTyping(packet.senderId)
                 }
 
                 is Packet.GoodBye -> {}

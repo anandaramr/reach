@@ -5,11 +5,9 @@ import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import com.project.reach.data.local.IdentityManager
 import com.project.reach.domain.contracts.IWifiController
-import com.project.reach.network.contracts.DiscoveryHandler
-import com.project.reach.network.discovery.UdpDiscoveryHandler
+import com.project.reach.network.discovery.HeartBeatDiscoveryHandler
 import com.project.reach.network.model.DeviceInfo
 import com.project.reach.network.model.Packet
-import com.project.reach.network.model.PacketWithSource
 import com.project.reach.network.monitor.NetworkCallback
 import com.project.reach.network.transport.NetworkTransport
 import com.project.reach.util.toUUID
@@ -43,7 +41,8 @@ class WifiController(
     private val username = identityManager.getUsernameIdentity().toString()
     private val uuid = identityManager.getUserUUID().toString()
 
-    private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+    val supervisorJob = SupervisorJob()
+    private val scope = CoroutineScope(Dispatchers.IO + supervisorJob)
 
     private val _packets = MutableSharedFlow<Packet>(replay = 0, extraBufferCapacity = 64)
     override val packets = _packets.asSharedFlow()
@@ -57,15 +56,12 @@ class WifiController(
         onConnectionLost = { _isActive.value = false }
     )
 
-    private val discoveryPackets =
-        MutableSharedFlow<PacketWithSource>(replay = 0, extraBufferCapacity = 64)
-    private val udpDiscoveryHandler: DiscoveryHandler = UdpDiscoveryHandler(
+    private val wifiDiscoveryHandler = HeartBeatDiscoveryHandler(
         userId = uuid,
         username = username,
-        packets = discoveryPackets,
         sendPacket = { ip, packet ->
             scope.launch {
-                sendPacket(ip, packet, udp = true)
+                sendPacket(ip, packet, stream = false)
             }},
         onFound = { peerId, username ->
             try {
@@ -97,7 +93,7 @@ class WifiController(
         scope.launch {
             isActive.collect { active ->
                 if (active) {
-                    udpDiscoveryHandler.start()
+                    wifiDiscoveryHandler.start()
                 } else {
                     stopDiscovery()
                 }
@@ -110,11 +106,8 @@ class WifiController(
                 val bytes = packet.payload
                 try {
                     val packet = Packet.deserialize(bytes)
-                    if (isDiscoveryPacket(packet)) {
-                        discoveryPackets.emit(PacketWithSource(packet, clientIp))
-                    } else {
-                        _packets.emit(packet)
-                    }
+                    wifiDiscoveryHandler.handleIncomingPacket(clientIp, packet)
+                    _packets.emit(packet)
                 } catch (e: IllegalArgumentException) {
                     debug(e.toString())
                 } catch (e: DataFormatException) {
@@ -125,10 +118,13 @@ class WifiController(
         }
 
         scope.launch {
-            tcpTransport.incomingPackets.collect { packet ->
-                val bytes = packet.payload
+            tcpTransport.incomingPackets.collect { networkPacket ->
+                val bytes = networkPacket.payload
+                val clientIp = networkPacket.address
                 try {
-                    _packets.emit(Packet.deserialize(bytes))
+                    val packet = Packet.deserialize(bytes)
+                    wifiDiscoveryHandler.handleIncomingPacket(clientIp, packet)
+                    _packets.emit(packet)
                 } catch (e: IllegalArgumentException) {
                     debug(e.toString())
                 } catch (e: DataFormatException) {
@@ -139,14 +135,10 @@ class WifiController(
         }
     }
 
-    private fun isDiscoveryPacket(packet: Packet): Boolean {
-        return packet is Packet.Hello || packet is Packet.Heartbeat || packet is Packet.GoodBye
-    }
-
-    override suspend fun send(uuid: UUID, packet: Packet): Boolean {
+    override suspend fun sendDatagram(uuid: UUID, packet: Packet): Boolean {
         try {
-            val ipAddress = udpDiscoveryHandler.resolvePeerAddress(uuid.toString())
-            return sendPacket(ipAddress, packet, udp = false)
+            val ipAddress = wifiDiscoveryHandler.resolvePeerAddress(uuid.toString())
+            return sendPacket(ipAddress, packet, stream = false)
         } catch (e: NoSuchElementException) {
             debug(e.message.toString())
             return false
@@ -155,30 +147,30 @@ class WifiController(
 
     override suspend fun sendStream(uuid: UUID, packet: Packet): Boolean {
         try {
-            val ipAddress = udpDiscoveryHandler.resolvePeerAddress(uuid.toString())
-            return sendPacket(ipAddress, packet, udp = false)
+            val ipAddress = wifiDiscoveryHandler.resolvePeerAddress(uuid.toString())
+            return sendPacket(ipAddress, packet, stream = true)
         } catch (e: NoSuchElementException) {
             debug(e.message.toString())
             return false
         }
     }
 
-    private suspend fun sendPacket(ip: InetAddress, packet: Packet, udp: Boolean): Boolean {
+    private suspend fun sendPacket(ip: InetAddress, packet: Packet, stream: Boolean): Boolean {
         val bytes = packet.serialize()
-        return if (udp) udpTransport.send(bytes, ip)
+        return if (!stream) udpTransport.send(bytes, ip)
         else tcpTransport.send(bytes, ip)
     }
 
     override fun stopDiscovery() {
         clearFoundDevices()
-        udpDiscoveryHandler.stop()
+        wifiDiscoveryHandler.stop()
     }
 
     private fun clearFoundDevices() {
         _foundDevices.update {
             emptyList()
         }
-        udpDiscoveryHandler.clear()
+        wifiDiscoveryHandler.clear()
     }
 
     private fun isConnectedToWifiAP(): Boolean {
@@ -189,6 +181,7 @@ class WifiController(
 
     override fun close() {
         connectivityManager.unregisterNetworkCallback(networkCallback)
-        udpDiscoveryHandler.close()
+        wifiDiscoveryHandler.close()
+        supervisorJob.cancel()
     }
 }

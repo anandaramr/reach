@@ -7,31 +7,31 @@ import java.util.zip.DataFormatException
 
 sealed class Packet {
     data class Message(
-        override val userId: String,
+        override val senderId: String,
         val username: String,
         val message: String,
         val timeStamp: Long = System.currentTimeMillis()
     ): Packet()
 
     data class Typing(
-        override val userId: String
+        override val senderId: String
     ): Packet()
 
     data class Hello(
-        override val userId: String,
+        override val senderId: String,
         val username: String
     ): Packet()
 
     data class Heartbeat(
-        override val userId: String,
-        val username: String
+        override val senderId: String,
+        val senderUsername: String
     ): Packet()
 
     data class GoodBye(
-        override val userId: String
+        override val senderId: String
     ): Packet()
 
-    abstract val userId: String
+    abstract val senderId: String
 
     /**
      * Serializes the packet and returns a [ByteArray] object
@@ -45,7 +45,7 @@ sealed class Packet {
          * @throws DataFormatException if the provided data cannot be deserialized
          * because it does not conform to the expected packet format.
          *
-         * @throws UnknownSourceException if the received packet is from an unkown service
+         * @throws UnknownSourceException if the received packet is from an unknown service
          *
          * @throws IllegalArgumentException if the parsed data contains unrecognizable values
          */
@@ -62,28 +62,32 @@ private object PacketSerializer {
                 when (packet) {
                     is Packet.Message -> {
                         type = TYPE_MESSAGE
-                        senderUuid = packet.userId
+                        senderUuid = packet.senderId
                         senderUsername = packet.username
                         payload = packet.message
                         timestamp = packet.timeStamp
                     }
+
                     is Packet.Typing -> {
                         type = TYPE_TYPING
-                        senderUuid = packet.userId
+                        senderUuid = packet.senderId
                     }
+
                     is Packet.Heartbeat -> {
                         type = TYPE_HEARTBEAT
-                        senderUuid = packet.userId
-                        senderUsername = packet.username
+                        senderUuid = packet.senderId
+                        senderUsername = packet.senderUsername
                     }
+
                     is Packet.Hello -> {
                         type = TYPE_HELLO
-                        senderUuid = packet.userId
+                        senderUuid = packet.senderId
                         senderUsername = packet.username
                     }
+
                     is Packet.GoodBye -> {
                         type = TYPE_GOODBYE
-                        senderUuid = packet.userId
+                        senderUuid = packet.senderId
                     }
                 }
             }
@@ -93,7 +97,7 @@ private object PacketSerializer {
     fun deserialize(bytes: ByteArray): Packet {
         val proto = try {
             ReachPacket.parseFrom(bytes)
-        } catch (e: InvalidProtocolBufferException) {
+        } catch (_: InvalidProtocolBufferException) {
             throw DataFormatException("Protobuf couldn't deserialize packet")
         }
 
@@ -103,28 +107,28 @@ private object PacketSerializer {
 
         return when (proto.type) {
             TYPE_MESSAGE -> Packet.Message(
-                userId = proto.senderUuid,
+                senderId = proto.senderUuid,
                 username = proto.senderUsername,
                 message = proto.payload,
                 timeStamp = proto.timestamp
             )
 
             TYPE_TYPING -> Packet.Typing(
-                userId = proto.senderUuid
+                senderId = proto.senderUuid
             )
 
             TYPE_HELLO -> Packet.Hello(
-                userId = proto.senderUuid,
+                senderId = proto.senderUuid,
                 username = proto.senderUsername
             )
 
             TYPE_HEARTBEAT -> Packet.Heartbeat(
-                userId = proto.senderUuid,
-                username = proto.senderUsername
+                senderId = proto.senderUuid,
+                senderUsername = proto.senderUsername
             )
 
             TYPE_GOODBYE -> Packet.GoodBye(
-                userId = proto.senderUuid,
+                senderId = proto.senderUuid,
             )
 
             else -> throw IllegalArgumentException("Unknown packet type: ${proto.type}")
