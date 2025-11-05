@@ -8,7 +8,7 @@ import java.util.zip.DataFormatException
 sealed class Packet {
     data class Message(
         override val senderId: String,
-        val username: String,
+        val senderUsername: String,
         val message: String,
         val timeStamp: Long = System.currentTimeMillis()
     ): Packet()
@@ -19,7 +19,7 @@ sealed class Packet {
 
     data class Hello(
         override val senderId: String,
-        val username: String
+        val senderUsername: String
     ): Packet()
 
     data class Heartbeat(
@@ -63,7 +63,7 @@ private object PacketSerializer {
                     is Packet.Message -> {
                         type = TYPE_MESSAGE
                         senderUuid = packet.senderId
-                        senderUsername = packet.username
+                        senderUsername = packet.senderUsername
                         payload = packet.message
                         timestamp = packet.timeStamp
                     }
@@ -82,7 +82,7 @@ private object PacketSerializer {
                     is Packet.Hello -> {
                         type = TYPE_HELLO
                         senderUuid = packet.senderId
-                        senderUsername = packet.username
+                        senderUsername = packet.senderUsername
                     }
 
                     is Packet.GoodBye -> {
@@ -108,7 +108,7 @@ private object PacketSerializer {
         return when (proto.type) {
             TYPE_MESSAGE -> Packet.Message(
                 senderId = proto.senderUuid,
-                username = proto.senderUsername,
+                senderUsername = proto.senderUsername,
                 message = proto.payload,
                 timeStamp = proto.timestamp
             )
@@ -119,7 +119,7 @@ private object PacketSerializer {
 
             TYPE_HELLO -> Packet.Hello(
                 senderId = proto.senderUuid,
-                username = proto.senderUsername
+                senderUsername = proto.senderUsername
             )
 
             TYPE_HEARTBEAT -> Packet.Heartbeat(

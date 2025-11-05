@@ -1,15 +1,12 @@
 package com.project.reach.network.discovery
 
 import com.project.reach.network.contracts.DiscoveryHandler
-import com.project.reach.network.model.DeviceInfo
 import com.project.reach.network.model.Packet
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.launch
 import java.net.InetAddress
 
@@ -56,7 +53,7 @@ class HeartBeatDiscoveryHandler(
     fun handleIncomingPacket(ip: InetAddress, packet: Packet) {
         when (packet) {
             is Packet.Hello -> {
-                handleDeviceFound(ip, packet.senderId, packet.username)
+                handleDeviceFound(ip, packet.senderId, packet.senderUsername)
                 sendPacket(ip, Packet.Heartbeat(userId, username))
             }
 
@@ -72,7 +69,7 @@ class HeartBeatDiscoveryHandler(
                 // add device to discovered list if the user receives a message from it
                 // temporarily handles cases where peer can discover user
                 // but not vice versa, useful during bad network conditions
-                handleDeviceFound(ip, packet.senderId, packet.username)
+                handleDeviceFound(ip, packet.senderId, packet.senderUsername)
             }
 
             else -> {}
@@ -88,7 +85,7 @@ class HeartBeatDiscoveryHandler(
             val valid = onFound(userId, username)
 
             // remove illegitimate device from device map
-            if (valid == false) deviceMap.remove(userId)
+            if (!valid) deviceMap.remove(userId)
         }
     }
 
