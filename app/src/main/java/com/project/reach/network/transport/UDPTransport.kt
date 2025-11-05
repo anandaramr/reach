@@ -19,7 +19,6 @@ import java.net.SocketException
 
 class UDPTransport(
 ): NetworkTransport {
-
     private var socket: DatagramSocket? = null
     private val socketLock = Mutex()
 
@@ -32,7 +31,7 @@ class UDPTransport(
 
     private fun listen() {
         serverJob = scope.launch {
-            debug("Listening on ${socket?.localAddress}:${socket?.localPort}")
+            debug("[UDP] Listening on ${socket?.localAddress}:${socket?.localPort}")
             while (isActive && socket?.isClosed == false) {
                 val buffer = ByteArray(1024)
                 val packet = DatagramPacket(buffer, buffer.size)
