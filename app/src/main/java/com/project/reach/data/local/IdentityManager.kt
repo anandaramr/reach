@@ -19,8 +19,7 @@ class IdentityManager(
         context.getSharedPreferences("reach_prefs", Context.MODE_PRIVATE)
     }
 
-    private val _userId: MutableStateFlow<String> = MutableStateFlow(getUserId() ?: createNewUserID())
-    val userId = _userId.asStateFlow()
+    val userId: String = getUserIdIfExists() ?: createNewUserID()
 
     private val _username: MutableStateFlow<String> = MutableStateFlow(getUsername() ?: "")
     val username = _username.asStateFlow()
@@ -34,7 +33,7 @@ class IdentityManager(
         return sharedPrefs.getString(UUID_KEY, null)
     }
 
-    private fun getUserId(): String? {
+    private fun getUserIdIfExists(): String? {
         return sharedPrefs.getString(UUID_KEY, null)
     }
 
@@ -48,7 +47,7 @@ class IdentityManager(
     }
 
     private fun createNewUserID(): String {
-        if (getUserId() != null) {
+        if (getUserIdIfExists() != null) {
             throw IllegalStateException("ID already created. Cannot create duplicate ID")
         }
 

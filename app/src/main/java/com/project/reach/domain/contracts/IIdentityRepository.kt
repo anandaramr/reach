@@ -6,7 +6,7 @@ import kotlinx.coroutines.flow.StateFlow
  * Handles user identity creation and retrieval
  */
 interface IIdentityRepository {
-    val userId: StateFlow<String>
+    val userId: String
     val username: StateFlow<String>
 
     /**
@@ -14,14 +14,6 @@ interface IIdentityRepository {
      * Use this to check whether user needs to be onboarded
      */
     fun isOnboardingRequired(): Boolean
-
-    /**
-     * Retrieves identity key from `DataStore` if it exists
-     *
-     * Return new identity key if it doesn't already exist
-     */
-    @Deprecated("Use the userId StateFlow instead")
-    fun getUserId(): String
 
     /**
      * Retrieves username. Return `null` if it doesn't exist

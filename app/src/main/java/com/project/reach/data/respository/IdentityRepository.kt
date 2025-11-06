@@ -14,11 +14,6 @@ class IdentityRepository @Inject constructor(
         return identityManager.needsOnboarding()
     }
 
-    @Deprecated("Use the userId StateFlow instead")
-    override fun getUserId(): String {
-        return identityManager.userId.value
-    }
-
     @Deprecated("Use the username StateFlow instead")
     override fun getUsername(): String? {
         return identityManager.username.value
