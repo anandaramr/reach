@@ -3,12 +3,14 @@ package com.project.reach.data.respository
 import com.project.reach.data.local.dao.ContactDao
 import com.project.reach.data.local.entity.ContactEntity
 import com.project.reach.domain.contracts.IContactRepository
+import com.project.reach.util.debug
 import com.project.reach.util.toUUID
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 
@@ -21,7 +23,7 @@ class ContactRepository(
         .map { contacts -> contacts.associateBy { it.userId } }
         .stateIn(
             scope = scope,
-            started = SharingStarted.WhileSubscribed(5000),
+            started = SharingStarted.Eagerly,
             initialValue = emptyMap()
         )
 
