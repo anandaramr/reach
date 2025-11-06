@@ -7,12 +7,13 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import java.net.InetAddress
 
 class HeartBeatDiscoveryHandler(
-    private val userId: String,
-    private val username: String,
+    private val myUserId: String,
+    private val myUsername: StateFlow<String>,
     private val sendPacket: (ip: InetAddress, packet: Packet) -> Unit,
     private val onFound: (uuid: String, username: String) -> Boolean,
     private val onLost: (uuid: String) -> Unit
@@ -41,7 +42,7 @@ class HeartBeatDiscoveryHandler(
         if (!isDiscovering) return
         isDiscovering = false
 
-        sendPacket(InetAddress.getByName(BROADCAST_ADDR), Packet.GoodBye(userId))
+        sendPacket(InetAddress.getByName(BROADCAST_ADDR), Packet.GoodBye(myUserId))
         advertiseJob?.cancel()
         timeoutJob?.cancel()
         clear()
@@ -59,7 +60,7 @@ class HeartBeatDiscoveryHandler(
         when (packet) {
             is Packet.Hello -> {
                 handleDeviceFound(ip, packet.senderId, packet.senderUsername)
-                sendPacket(ip, Packet.Heartbeat(userId, username))
+                sendPacket(ip, Packet.Heartbeat(myUserId, myUsername.value))
             }
 
             is Packet.Heartbeat -> {
@@ -82,7 +83,7 @@ class HeartBeatDiscoveryHandler(
     }
 
     private fun handleDeviceFound(ip: InetAddress, userId: String, username: String) {
-        if (userId == this.userId) return
+        if (userId == this.myUserId) return
 
         val deviceInfo = DeviceActivityInfo(address = ip, lastSeen = getCurrentTime())
         if (deviceMap.put(userId, deviceInfo) == null) {
@@ -95,18 +96,18 @@ class HeartBeatDiscoveryHandler(
     }
 
     private fun handleDeviceLost(userId: String) {
-        if (userId == this.userId) return
+        if (userId == this.myUserId) return
         deviceMap.remove(userId)
         onLost(userId)
     }
 
     private suspend fun advertise() {
         val broadcastAddr = InetAddress.getByName(BROADCAST_ADDR)
-        sendPacket(broadcastAddr, Packet.Hello(userId, username))
+        sendPacket(broadcastAddr, Packet.Hello(myUserId, myUsername.value))
 
         while (isDiscovering) {
             delay(HEARTBEAT_INTERVAL)
-            sendPacket(broadcastAddr, Packet.Heartbeat(userId, username))
+            sendPacket(broadcastAddr, Packet.Heartbeat(myUserId, myUsername.value))
         }
     }
 

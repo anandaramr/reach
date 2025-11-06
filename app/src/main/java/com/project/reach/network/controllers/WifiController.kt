@@ -39,8 +39,8 @@ class WifiController(
     private val _newDevice = MutableSharedFlow<DeviceInfo>(replay = 0, extraBufferCapacity = 64)
     override val newDevices = _newDevice.asSharedFlow()
 
-    private val username = identityManager.getUsernameIdentity().toString()
-    private val uuid = identityManager.getUserUUID().toString()
+    private val myUserId = identityManager.userId
+    private val myUsername = identityManager.username
 
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private var networkStateJob: Job? = null
@@ -60,8 +60,8 @@ class WifiController(
     )
 
     private val wifiDiscoveryHandler = HeartBeatDiscoveryHandler(
-        userId = uuid,
-        username = username,
+        myUserId = myUserId,
+        myUsername = myUsername,
         sendPacket = { ip, packet ->
             scope.launch {
                 sendPacket(ip, packet, stream = false)
@@ -76,6 +76,7 @@ class WifiController(
                 scope.launch { _newDevice.emit(device) }
                 true
             } catch (_: IllegalArgumentException) {
+                debug("Invalid device credentials")
                 false
             }
         },

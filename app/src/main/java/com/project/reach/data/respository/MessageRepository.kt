@@ -46,8 +46,9 @@ class MessageRepository(
 
     private val typingStateHandler = TypingStateHandler(scope)
 
-    val selfId = identityManager.getUserUUID().toString()
-    val selfUsername = identityManager.getUsernameIdentity().toString()
+    // TODO replace this with a stateflow in IdentityManger
+    private val myUserId = identityManager.userId
+    private val myUsername = identityManager.username
 
     init {
         scope.launch {
@@ -56,6 +57,7 @@ class MessageRepository(
 
         scope.launch {
             networkController.newDevices.collect { deviceInfo ->
+                /* TODO update device details in db if necessary by using cache */
                 launch {
                     retryPendingMessages(deviceInfo.uuid)
                 }
@@ -100,8 +102,8 @@ class MessageRepository(
         val successful = networkController.sendPacket(
             userId = userId.toUUID(),
             Packet.Message(
-                senderId = selfId,
-                senderUsername = selfUsername,
+                senderId = myUserId,
+                senderUsername = myUsername.value,
                 message = message
             )
         )
@@ -206,7 +208,7 @@ class MessageRepository(
             scope.launch {
                 networkController.sendPacket(
                     userId = userId.toUUID(),
-                    Packet.Typing(selfId)
+                    Packet.Typing(myUserId)
                 )
             }
         }
