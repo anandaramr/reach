@@ -7,37 +7,29 @@ import javax.inject.Inject
 class IdentityRepository @Inject constructor(
     private val identityManager: IdentityManager
 ): IIdentityRepository {
+    override val userId = identityManager.userId
+    override val username = identityManager.username
 
     override fun isOnboardingRequired(): Boolean {
-        return identityManager.getUserUUID()?.isBlank() != false
+        return identityManager.needsOnboarding()
     }
 
-    override fun getUserId(): String {
-        val uuid = identityManager.getUserUUID()
-        return if (uuid?.isBlank() == false) {
-            uuid
-        } else {
-            identityManager.createUserUUID()
-        }
-    }
-
+    @Deprecated("Use the username StateFlow instead")
     override fun getUsername(): String? {
-        return identityManager.getUsernameIdentity()
+        return identityManager.username.value
     }
 
     override fun updateUsername(username: String) {
-        if (!username.matches(Regex(USERNAME_REGEX))) {
-            throw IllegalArgumentException("Username should only contain alphabets, numbers, underscores or dots")
+        val trimmedUsername = username.trim()
+        if (!trimmedUsername.matches(Regex(USERNAME_REGEX))) {
+            throw IllegalArgumentException("Username should contain only alphabets, numbers, underscores or dots")
         }
 
-        if (username.length > 24) {
+        if (trimmedUsername.length > 24) {
             throw IllegalArgumentException("Username should have at most 24 characters")
         }
 
-        identityManager.updateUsernameIdentity(username)
-
-        // create UUID if it doesn't exist
-        getUserId()
+        identityManager.updateUsername(trimmedUsername)
     }
 
     companion object {

@@ -144,11 +144,13 @@ interface IMessageRepository {
      * Users need to be saved to contacts before any communication
      * can be performed
      */
+    @Deprecated("Use addToContacts from IContactRepository instead")
     suspend fun saveNewContact(userId: String, username: String)
 
     /**
      * Get username for user using UserId
      */
+    @Deprecated("Use getUsername from IContactRepository instead")
     fun getUsername(userId: String): Flow<String>
 
     /**

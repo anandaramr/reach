@@ -5,11 +5,10 @@ import androidx.paging.PagingConfig
 import androidx.paging.PagingData
 import androidx.paging.map
 import com.project.reach.data.local.IdentityManager
-import com.project.reach.data.local.dao.ContactDao
 import com.project.reach.data.local.dao.MessageDao
-import com.project.reach.data.local.entity.ContactEntity
 import com.project.reach.data.local.entity.MessageEntity
 import com.project.reach.data.utils.TypingStateHandler
+import com.project.reach.domain.contracts.IContactRepository
 import com.project.reach.domain.contracts.IMessageRepository
 import com.project.reach.domain.contracts.INetworkController
 import com.project.reach.domain.models.Message
@@ -33,7 +32,7 @@ import java.util.UUID
 
 class MessageRepository(
     private val messageDao: MessageDao,
-    private val contactDao: ContactDao,
+    private val contactRepository: IContactRepository,
     private val networkController: INetworkController,
     identityManager: IdentityManager
 ): IMessageRepository {
@@ -46,8 +45,8 @@ class MessageRepository(
 
     private val typingStateHandler = TypingStateHandler(scope)
 
-    val selfId = identityManager.getUserUUID().toString()
-    val selfUsername = identityManager.getUsernameIdentity().toString()
+    private val myUserId = identityManager.userId
+    private val myUsername = identityManager.username
 
     init {
         scope.launch {
@@ -100,8 +99,8 @@ class MessageRepository(
         val successful = networkController.sendPacket(
             userId = userId.toUUID(),
             Packet.Message(
-                senderId = selfId,
-                senderUsername = selfUsername,
+                senderId = myUserId,
+                senderUsername = myUsername.value,
                 message = message
             )
         )
@@ -116,7 +115,7 @@ class MessageRepository(
         message: String,
         timestamp: Long
     ) {
-        saveNewContact(userId, username)
+        contactRepository.addToContacts(userId, username)
         messageDao.insertMessage(
             messageEntity = MessageEntity(
                 text = message,
@@ -176,19 +175,14 @@ class MessageRepository(
         ).flow
     }
 
+    @Deprecated("Use updateContact from IContactRepository instead")
     override suspend fun saveNewContact(userId: String, username: String) {
-        return contactDao.insertContact(
-            contact = ContactEntity(
-                userId = userId.toUUID(),
-                username = username
-            )
-        )
+        return contactRepository.addToContacts(userId, username)
     }
 
+    @Deprecated("Use updateContact from IContactRepository instead")
     override fun getUsername(userId: String): Flow<String> {
-        return contactDao.getUsername(
-            userId = userId.toUUID(),
-        )
+        return contactRepository.getUsername(userId)
     }
 
     override suspend fun onReadMessage(messageId: String) {
@@ -206,7 +200,7 @@ class MessageRepository(
             scope.launch {
                 networkController.sendPacket(
                     userId = userId.toUUID(),
-                    Packet.Typing(selfId)
+                    Packet.Typing(myUserId)
                 )
             }
         }
@@ -229,7 +223,6 @@ class MessageRepository(
                             messages = getUnreadMessagesFromUser(packet.senderId),
                         )
                     )
-
                     // stop the typing indicator
                     typingStateHandler.resetPeerIsTyping(packet.senderId)
                 }
@@ -238,9 +231,15 @@ class MessageRepository(
                     typingStateHandler.setIsTyping(packet.senderId)
                 }
 
+                is Packet.Heartbeat -> {
+                    contactRepository.updateContactIfItExists(packet.senderId, packet.senderUsername)
+                }
+
+                is Packet.Hello -> {
+                    contactRepository.updateContactIfItExists(packet.senderId, packet.senderUsername)
+                }
+
                 is Packet.GoodBye -> {}
-                is Packet.Heartbeat -> {}
-                is Packet.Hello -> {}
             }
         }
     }
