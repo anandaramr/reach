@@ -34,8 +34,8 @@ fun ChatBubble(
                 if (message.isFromSelf) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onBackground
             ),
             modifier = Modifier
-                .padding(vertical = 4.dp)
-                .widthIn(max = 270.dp),
+                .padding(vertical = 6.dp)
+                .widthIn(max = 275.dp),
             colors = CardDefaults.cardColors(
                 containerColor = Color.Transparent,
                 contentColor = if (message.isFromSelf) MaterialTheme.colorScheme.primary
@@ -44,8 +44,8 @@ fun ChatBubble(
         ) {
             Text(
                 text = message.text,
-                modifier = Modifier.padding(15.dp, 8.dp),
-                fontSize = 15.sp,
+                modifier = Modifier.padding(18.dp, 10.dp),
+                fontSize = 14.sp,
                 color = if (message.isFromSelf) MaterialTheme.colorScheme.primary
                 else MaterialTheme.colorScheme.onBackground
             )

@@ -19,6 +19,7 @@ import androidx.compose.ui.unit.sp
 import com.project.reach.data.respository.MessageRepository
 import com.project.reach.domain.contracts.IMessageRepository
 import com.project.reach.ui.components.AvatarIcon
+import com.project.reach.ui.components.AvatarIconSize
 import java.util.UUID
 import kotlin.math.log
 
@@ -39,7 +40,7 @@ fun OnlineUser(
                 }
             )
     ) {
-        AvatarIcon(peer.username[0])
+        AvatarIcon(peer.username[0], AvatarIconSize.SMALL)
         Spacer(Modifier.width(10.dp))
         Column(
             modifier = Modifier

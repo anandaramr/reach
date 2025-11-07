@@ -16,11 +16,13 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.project.reach.domain.models.MessagePreview
 import com.project.reach.ui.components.AvatarIcon
+import com.project.reach.ui.components.AvatarIconSize
 import com.project.reach.util.truncate
 
 @Composable
@@ -38,7 +40,7 @@ fun ChatPreview(
                 onClick = { navigateToChat(userId) }
             )
     ) {
-        AvatarIcon(username[0])
+        AvatarIcon(username.first(), AvatarIconSize.SMALL)
         Spacer(Modifier.width(10.dp))
         Column(
             modifier = Modifier
@@ -54,6 +56,7 @@ fun ChatPreview(
             if(isTyping)
                 Text(
                     text = "Typing...",
+                    fontStyle = FontStyle.Italic,
                     fontSize = 12.sp,
                     color = MaterialTheme.colorScheme.outline
                 )
