@@ -95,7 +95,7 @@ fun ChatScreen(
             ) {
                 item { Spacer(modifier = Modifier.size(10.dp)) }
                 item {
-//                    if (uiState.isTyping) {
+                    if (uiState.isTyping) {
                         Card(
                             shape = RoundedCornerShape(30.dp),
                             border = BorderStroke(
@@ -110,7 +110,7 @@ fun ChatScreen(
                         ) {
                             TypingBubble()
                         }
-//                    }
+                    }
                 }
                 items(messages.itemCount) { idx ->
                     messages[idx]?.let {message ->
