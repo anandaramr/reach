@@ -31,17 +31,8 @@ fun DiscoveryScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     Scaffold(
-        topBar = { TopBar() },
         modifier = Modifier.fillMaxSize()
     ) { innerPadding ->
-        Text(
-            modifier = Modifier
-                .fillMaxWidth(),
-            textAlign = TextAlign.Center,
-            text = "Devices near you",
-            fontSize = 18.sp,
-            color = MaterialTheme.colorScheme.outline
-        )
         LazyColumn(
             modifier = Modifier
                 .padding(innerPadding)

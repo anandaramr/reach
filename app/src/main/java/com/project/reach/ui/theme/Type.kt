@@ -14,42 +14,41 @@ val alSans = FontFamily(
     Font(R.font.al_sans_semibold, FontWeight.SemiBold),
     Font(R.font.al_sans_regular, FontWeight.Normal),
 )
-val ubuntu = FontFamily(
-    Font(R.font.ubuntu_bold, FontWeight.Bold),
-    Font(R.font.ubuntu_medium, FontWeight.Medium),
-    Font(R.font.ubuntu_regular, FontWeight.Normal),
-)
 val cabin = FontFamily(
     Font(R.font.cabin_bold, FontWeight.Bold),
     Font(R.font.cabin_medium, FontWeight.Medium),
     Font(R.font.cabin_regular, FontWeight.Normal),
     Font(R.font.cabin_semibold, FontWeight.SemiBold),
 )
-
+val inter = FontFamily(
+    Font(R.font.inter_18pt_light, FontWeight.Light),
+    Font(R.font.inter_18pt_regular, FontWeight.Normal),
+    Font(R.font.inter_18pt_semibold, FontWeight.SemiBold),
+)
 
 val MultiFontTypography = Typography(
     displayLarge = TextStyle(
-        fontFamily = cabin,
-        fontWeight = FontWeight.Bold,
+        fontFamily = inter,
+        fontWeight = FontWeight.SemiBold,
         fontSize = 32.sp
     ),
     titleLarge = TextStyle(
-        fontFamily = cabin,
-        fontWeight = FontWeight.Bold,
+        fontFamily = inter,
+        fontWeight = FontWeight.SemiBold,
         fontSize = 22.sp
     ),
     bodyLarge = TextStyle(
-        fontFamily = alSans,
+        fontFamily = inter,
         fontWeight = FontWeight.Normal,
         fontSize = 16.sp
     ),
     bodyMedium = TextStyle(
-        fontFamily = alSans,
-        fontWeight = FontWeight.Normal,
+        fontFamily = inter,
+        fontWeight = FontWeight.SemiBold,
         fontSize = 14.sp
     ),
     labelSmall = TextStyle(
-        fontFamily = alSans,
+        fontFamily = inter,
         fontWeight = FontWeight.Normal,
         fontSize = 12.sp
     )
