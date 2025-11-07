@@ -8,6 +8,7 @@ import java.util.zip.DataFormatException
 sealed class Packet {
     data class Message(
         override val senderId: String,
+        val messageId: String,
         val senderUsername: String,
         val message: String,
         val timeStamp: Long = System.currentTimeMillis()
@@ -66,6 +67,7 @@ private object PacketSerializer {
                         senderUsername = packet.senderUsername
                         payload = packet.message
                         timestamp = packet.timeStamp
+                        payloadId = packet.messageId
                     }
 
                     is Packet.Typing -> {
@@ -107,6 +109,7 @@ private object PacketSerializer {
 
         return when (proto.type) {
             TYPE_MESSAGE -> Packet.Message(
+                messageId = proto.payloadId,
                 senderId = proto.senderUuid,
                 senderUsername = proto.senderUsername,
                 message = proto.payload,

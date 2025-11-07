@@ -15,6 +15,7 @@ import com.project.reach.domain.models.Message
 import com.project.reach.domain.models.MessageNotification
 import com.project.reach.domain.models.MessagePreview
 import com.project.reach.domain.models.MessageState
+import com.project.reach.domain.models.MessageType
 import com.project.reach.domain.models.NotificationEvent
 import com.project.reach.network.model.Packet
 import com.project.reach.util.toUUID
@@ -70,13 +71,16 @@ class MessageRepository(
     }
 
     private suspend fun retryMessage(message: MessageEntity) {
-        sendPendingMessageToUser(message.userId.toString(), message.messageId, message.text)
+        sendPendingMessageToUser(message.userId.toString(), message.messageId, message.data)
     }
 
     override suspend fun sendMessage(userId: String, text: String) {
-        val messageId = messageDao.insertMessage(
+        val messageId = UUID.randomUUID()
+        messageDao.insertMessage(
             messageEntity = MessageEntity(
-                text = text,
+                messageId = messageId,
+                messageType = MessageType.TEXT,
+                data = text,
                 userId = userId.toUUID(),
                 isFromPeer = false,
                 messageState = MessageState.PENDING
@@ -90,7 +94,7 @@ class MessageRepository(
 
     private suspend fun sendPendingMessageToUser(
         userId: String,
-        messageId: Long,
+        messageId: UUID,
         message: String
     ) {
         // reset self typing state so that throttle works as intended
@@ -101,7 +105,8 @@ class MessageRepository(
             Packet.Message(
                 senderId = myUserId,
                 senderUsername = myUsername.value,
-                message = message
+                message = message,
+                messageId = messageId.toString()
             )
         )
         if (successful) {
@@ -112,27 +117,22 @@ class MessageRepository(
     private suspend fun receiveMessage(
         userId: String,
         username: String,
+        messageId: String,
         message: String,
         timestamp: Long
     ) {
         contactRepository.addToContacts(userId, username)
         messageDao.insertMessage(
             messageEntity = MessageEntity(
-                text = message,
+                messageId = messageId.toUUID(),
+                data = message,
+                messageType = MessageType.TEXT,
                 userId = userId.toUUID(),
                 isFromPeer = true,
                 messageState = MessageState.RECEIVED,
                 timeStamp = timestamp
             )
         )
-    }
-
-    // TODO: Paging
-    @Deprecated(
-        "getMessages fetches all messages from database at once which causes performance issues. Switch to paging for better performance",
-    )
-    override fun getMessages(userId: String): Flow<List<MessageEntity>> {
-        return messageDao.getMessageByUser(userId.toUUID())
     }
 
     override fun getMessagesPaged(
@@ -152,11 +152,6 @@ class MessageRepository(
         ).flow.map { pagingData ->
             pagingData.map { msg -> msg.toMessage() }
         }
-    }
-
-    @Deprecated("Switch to paging for better performance")
-    override fun getMessagesPreview(): Flow<List<MessagePreview>> {
-        return messageDao.getMessagesPreview()
     }
 
     override fun getMessagePreviewsPaged(
@@ -213,6 +208,7 @@ class MessageRepository(
                     receiveMessage(
                         userId = packet.senderId,
                         username = packet.senderUsername,
+                        messageId = packet.messageId,
                         message = packet.message,
                         timestamp = packet.timeStamp
                     )
@@ -254,14 +250,17 @@ class MessageRepository(
 
     private fun MessageEntity.toMessageNotification(): MessageNotification {
         return MessageNotification(
-            text = text.truncate(60),
+            text = data.truncate(60),
             timeStamp = timeStamp
         )
     }
 
     private fun MessageEntity.toMessage(): Message {
         return Message(
-            text = text,
+            messageId = messageId.toString(),
+            text = data,
+            messageType = messageType,
+            metadata = metadata,
             isFromSelf = !isFromPeer,
             userId = userId.toString(),
             messageState = messageState,

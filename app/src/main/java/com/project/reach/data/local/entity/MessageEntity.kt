@@ -5,6 +5,7 @@ import androidx.room.ForeignKey
 import androidx.room.Index
 import androidx.room.PrimaryKey
 import com.project.reach.domain.models.MessageState
+import com.project.reach.domain.models.MessageType
 import java.util.UUID
 
 @Entity(
@@ -21,9 +22,10 @@ import java.util.UUID
     indices = [ Index(value = ["userId"]) ]
 )
 data class MessageEntity(
-    @PrimaryKey(autoGenerate = true)
-    var messageId: Long = 0,
-    val text: String,
+    @PrimaryKey var messageId: UUID,
+    val messageType: MessageType,
+    val data: String,
+    val metadata: String? = "",
     val userId: UUID,
     val isFromPeer: Boolean,
     val messageState: MessageState = MessageState.PENDING,

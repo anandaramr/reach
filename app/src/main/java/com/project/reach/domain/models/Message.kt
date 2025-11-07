@@ -1,7 +1,10 @@
 package com.project.reach.domain.models
 
 data class Message(
-    val text: String ,
+    val messageId: String,
+    val text: String,
+    val messageType: MessageType,
+    val metadata: String?,
     val isFromSelf: Boolean,
     val userId: String,
     val messageState: MessageState,

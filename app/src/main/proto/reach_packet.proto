@@ -10,4 +10,5 @@ message ReachPacket {
     string sender_username = 4;
     int64 timestamp = 5;
     string payload = 6;
+    string payload_id = 7;
 }

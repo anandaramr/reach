@@ -10,7 +10,7 @@ import com.project.reach.data.local.entity.ContactEntity
 import com.project.reach.data.local.entity.MessageEntity
 
 @Database(
-    version = 1,
+    version = 3,
     entities = [MessageEntity::class, ContactEntity::class],
     exportSchema = false
 )

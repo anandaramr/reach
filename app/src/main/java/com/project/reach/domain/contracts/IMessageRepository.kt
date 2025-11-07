@@ -1,7 +1,6 @@
 package com.project.reach.domain.contracts
 
 import androidx.paging.PagingData
-import com.project.reach.data.local.entity.MessageEntity
 import com.project.reach.domain.models.Message
 import com.project.reach.domain.models.MessagePreview
 import com.project.reach.domain.models.NotificationEvent
@@ -26,12 +25,6 @@ interface IMessageRepository {
      * Sends message with content [text] to user with user ID [userId]
      */
     suspend fun sendMessage(userId: String, text: String)
-
-    /**
-     * Returns messages to and from user with user ID [userId]
-     */
-    @Deprecated(message = "Switch to paging for better performance")
-    fun getMessages(userId: String): Flow<List<MessageEntity>>
 
     /**
      * Returns a paginated flow of messages for a specific user, ordered in
@@ -82,14 +75,6 @@ interface IMessageRepository {
         initialLoadSize: Int = 60,
         prefetchDistance: Int = 5
     ): Flow<PagingData<Message>>
-
-    /**
-     * Returns preview of chats
-     *
-     * Contains a list of users and the last message sent to them
-     */
-    @Deprecated(message = "Switch to paging for better performance")
-    fun getMessagesPreview(): Flow<List<MessagePreview>>
 
     /**
      * Returns a paginated flow of message previews (last message for each conversation),
@@ -205,7 +190,6 @@ interface IMessageRepository {
      *         The initial value is an empty set.
      */
     val typingUsers: StateFlow<Set<String>>
-
 
     /**
      * Sends a typing indicator to notify other users that the current user is typing.
