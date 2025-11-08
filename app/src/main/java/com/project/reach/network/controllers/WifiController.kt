@@ -64,7 +64,7 @@ class WifiController(
         myUsername = myUsername,
         sendPacket = { ip, packet ->
             scope.launch {
-                sendPacket(ip, packet, stream = false)
+                sendPacketToAddress(ip, packet, stream = false)
             }
         },
         onFound = { peerId, username ->
@@ -143,29 +143,30 @@ class WifiController(
     }
 
     override suspend fun sendDatagram(uuid: UUID, packet: Packet): Boolean {
-        try {
-            val ipAddress = wifiDiscoveryHandler.resolvePeerAddress(uuid.toString())
-            return sendPacket(ipAddress, packet, stream = false)
-        } catch (e: NoSuchElementException) {
-            debug(e.message.toString())
-            return false
-        }
+        return sendPacketToUser(uuid, packet, stream = false)
     }
 
     override suspend fun sendStream(uuid: UUID, packet: Packet): Boolean {
-        try {
-            val ipAddress = wifiDiscoveryHandler.resolvePeerAddress(uuid.toString())
-            return sendPacket(ipAddress, packet, stream = true)
+        return sendPacketToUser(uuid, packet, stream = true)
+    }
+
+    private suspend fun sendPacketToUser(uuid: UUID, packet: Packet, stream: Boolean): Boolean {
+        val ipAddress = try {
+            wifiDiscoveryHandler.resolvePeerAddress(uuid.toString())
         } catch (e: NoSuchElementException) {
             debug(e.message.toString())
             return false
         }
+
+        return sendPacketToAddress(ipAddress, packet, stream)
     }
 
-    private suspend fun sendPacket(ip: InetAddress, packet: Packet, stream: Boolean): Boolean {
+    private suspend fun sendPacketToAddress(
+        ip: InetAddress, packet: Packet, stream: Boolean
+    ): Boolean {
         val bytes = packet.serialize()
-        return if (!stream) udpTransport.send(bytes, ip)
-        else tcpTransport.send(bytes, ip)
+        val transport = if (stream) tcpTransport else udpTransport
+        return transport.send(bytes, ip)
     }
 
     override fun stopDiscovery() {
