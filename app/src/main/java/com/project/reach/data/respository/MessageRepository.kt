@@ -18,6 +18,7 @@ import com.project.reach.domain.models.MessageState
 import com.project.reach.domain.models.MessageType
 import com.project.reach.domain.models.NotificationEvent
 import com.project.reach.network.model.Packet
+import com.project.reach.util.debug
 import com.project.reach.util.toUUID
 import com.project.reach.util.truncate
 import kotlinx.coroutines.CoroutineScope
@@ -104,7 +105,7 @@ class MessageRepository(
     }
 
     private suspend fun dispatchMessage(message: MessageEntity) {
-        sendTextMessageToUser(message.userId.toString(), message.messageId, message.data)
+        sendTextMessageToUser(message)
     }
 
     override suspend fun sendMessage(userId: String, text: String) {
@@ -123,24 +124,23 @@ class MessageRepository(
     }
 
     private suspend fun sendTextMessageToUser(
-        userId: String,
-        messageId: UUID,
-        message: String
+        message: MessageEntity
     ) {
         // reset self typing state so that throttling works as intended
         typingStateHandler.resetSelfIsTyping()
 
         val successful = networkController.sendPacket(
-            userId = userId.toUUID(),
+            userId = message.userId,
             Packet.Message(
                 senderId = myUserId,
                 senderUsername = myUsername.value,
-                message = message,
-                messageId = messageId.toString()
+                message = message.data,
+                messageId = message.messageId.toString(),
+                timeStamp = message.timeStamp
             )
         )
         if (successful) {
-            messageDao.updateMessageState(messageId, MessageState.SENT)
+            messageDao.updateMessageState(message.messageId, MessageState.SENT)
         }
     }
 

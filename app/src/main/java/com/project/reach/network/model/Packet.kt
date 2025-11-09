@@ -11,7 +11,7 @@ sealed class Packet {
         val messageId: String,
         val senderUsername: String,
         val message: String,
-        val timeStamp: Long = System.currentTimeMillis()
+        val timeStamp: Long
     ): Packet()
 
     data class Typing(
