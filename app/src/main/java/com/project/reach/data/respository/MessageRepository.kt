@@ -25,11 +25,18 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import java.util.UUID
+import java.util.concurrent.ConcurrentHashMap
 
 class MessageRepository(
     private val messageDao: MessageDao,
@@ -49,29 +56,55 @@ class MessageRepository(
     private val myUserId = identityManager.userId
     private val myUsername = identityManager.username
 
+    private val foundDevices = networkController.foundDevices
+        .map { devices -> devices.map { it.uuid }.toSet() }
+        .stateIn(
+            scope = scope,
+            started = SharingStarted.Eagerly,
+            initialValue = emptySet()
+        )
+
     init {
         scope.launch {
             handlePackets()
         }
 
         scope.launch {
-            networkController.newDevices.collect { deviceInfo ->
-                launch {
-                    retryPendingMessages(deviceInfo.uuid)
+            startMessageDispatcher()
+        }
+    }
+
+    // Message dispatcher keeps track of new messages and pending ones
+    // and dispatches them if the recipient is discoverable
+    private suspend fun startMessageDispatcher() {
+        val pendingFlow = messageDao.getUserIdsOfPendingMessages()
+
+        combine(foundDevices, pendingFlow) { onlineUsers, usersWithPendingMessages ->
+            onlineUsers.intersect(usersWithPendingMessages)
+        }.distinctUntilChanged()
+            .collect { userIds ->
+                userIds.forEach { userId ->
+                    dispatchPendingMessages(userId)
                 }
+            }
+    }
+
+    private val sendLocks = ConcurrentHashMap<UUID, Mutex>()
+    private suspend fun dispatchPendingMessages(userId: UUID) {
+        val sendLock = sendLocks.computeIfAbsent(userId) { Mutex() }
+
+        sendLock.withLock {
+            if (userId !in foundDevices.value) return
+
+            val pendingMessages = messageDao.getPendingMessagesById(userId).first()
+            pendingMessages.forEach { message ->
+                dispatchMessage(message)
             }
         }
     }
 
-    private suspend fun retryPendingMessages(uuid: UUID) {
-        val pendingMessages = messageDao.getPendingMessagesById(uuid).first()
-        pendingMessages.forEach { message ->
-            retryMessage(message)
-        }
-    }
-
-    private suspend fun retryMessage(message: MessageEntity) {
-        sendPendingMessageToUser(message.userId.toString(), message.messageId, message.data)
+    private suspend fun dispatchMessage(message: MessageEntity) {
+        sendTextMessageToUser(message.userId.toString(), message.messageId, message.data)
     }
 
     override suspend fun sendMessage(userId: String, text: String) {
@@ -86,18 +119,15 @@ class MessageRepository(
                 messageState = MessageState.PENDING
             )
         )
-
-        scope.launch {
-            sendPendingMessageToUser(userId, messageId, text)
-        }
+        // Message dispatcher handles sending the message
     }
 
-    private suspend fun sendPendingMessageToUser(
+    private suspend fun sendTextMessageToUser(
         userId: String,
         messageId: UUID,
         message: String
     ) {
-        // reset self typing state so that throttle works as intended
+        // reset self typing state so that throttling works as intended
         typingStateHandler.resetSelfIsTyping()
 
         val successful = networkController.sendPacket(
@@ -228,11 +258,17 @@ class MessageRepository(
                 }
 
                 is Packet.Heartbeat -> {
-                    contactRepository.updateContactIfItExists(packet.senderId, packet.senderUsername)
+                    contactRepository.updateContactIfItExists(
+                        packet.senderId,
+                        packet.senderUsername
+                    )
                 }
 
                 is Packet.Hello -> {
-                    contactRepository.updateContactIfItExists(packet.senderId, packet.senderUsername)
+                    contactRepository.updateContactIfItExists(
+                        packet.senderId,
+                        packet.senderUsername
+                    )
                 }
 
                 is Packet.GoodBye -> {}
