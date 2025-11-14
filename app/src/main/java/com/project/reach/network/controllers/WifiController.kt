@@ -133,8 +133,6 @@ class WifiController(
                     wifiDiscoveryHandler.handleIncomingPacket(clientIp, packet)
                     _packets.emit(packet)
                 } catch (e: IllegalArgumentException) {
-                    debug(e.toString())
-                } catch (e: DataFormatException) {
                     debug("$transportName received faulty packet")
                     debug(e.toString())
                 }

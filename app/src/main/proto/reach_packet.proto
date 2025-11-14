@@ -5,10 +5,31 @@ option java_multiple_files = true;
 
 message ReachPacket {
     string service_name = 1;
-    string type = 2;
-    string sender_uuid = 3;
-    string sender_username = 4;
-    int64 timestamp = 5;
-    string payload = 6;
-    string payload_id = 7;
+    string sender_id = 2;
+    oneof payload {
+        TextMessage text_message = 3;
+        TypingIndicator typing_indicator = 4;
+        Hello hello = 5;
+        Heartbeat heartbeat = 6;
+        Goodbye goodbye = 7;
+    }
 }
+
+message TextMessage {
+    string sender_username = 1;
+    string message_id = 2;
+    string message_text = 3;
+    int64 timestamp = 4;
+}
+
+message TypingIndicator { }
+
+message Hello {
+    string sender_username = 1;
+}
+
+message Heartbeat {
+    string sender_username = 1;
+}
+
+message Goodbye { }
