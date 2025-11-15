@@ -6,6 +6,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.isActive
@@ -22,8 +23,11 @@ class UDPTransport(
     private var socket: DatagramSocket? = null
     private val socketLock = Mutex()
 
-    private val _incomingPackets =
-        MutableSharedFlow<NetworkPacket>(extraBufferCapacity = 64, replay = 0)
+    private val _incomingPackets = MutableSharedFlow<NetworkPacket>(
+        extraBufferCapacity = 64,
+        replay = 0,
+        onBufferOverflow = BufferOverflow.SUSPEND
+    )
     override val incomingPackets = _incomingPackets.asSharedFlow()
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -39,10 +43,12 @@ class UDPTransport(
                 try {
                     socket?.receive(packet)
 
-                    _incomingPackets.emit(NetworkPacket(
-                        address = packet.address,
-                        payload = packet.data.copyOf(packet.length)
-                    ) )
+                    _incomingPackets.emit(
+                        NetworkPacket(
+                            address = packet.address,
+                            payload = packet.data.copyOf(packet.length)
+                        )
+                    )
                 } catch (_: SocketException) {
                     if (!isActive) break
                 }
