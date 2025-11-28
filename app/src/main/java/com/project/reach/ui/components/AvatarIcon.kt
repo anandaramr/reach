@@ -14,17 +14,18 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlin.math.pow
 
 @Composable
 fun AvatarIcon(letter: Char, size: AvatarIconSize) {
     val avatarSize =
         when(size) {
             AvatarIconSize.LARGE -> 65
-            AvatarIconSize.SMALL -> 20
+            AvatarIconSize.SMALL -> 27
         }
     Box(
         modifier = Modifier
-            .size((avatarSize*2).dp)
+            .size((avatarSize/0.6).dp)
             .background(MaterialTheme.colorScheme.outline, CircleShape),
         contentAlignment = Alignment.Center
     ) {
