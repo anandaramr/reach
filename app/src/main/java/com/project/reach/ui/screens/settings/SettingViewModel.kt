@@ -22,15 +22,14 @@ class SettingViewModel @Inject constructor(
     val error = _error.asSharedFlow()
 
     init {
-        viewModelScope.launch {
-            _uiState.update {
-                it.copy(
-                    username = identityRepository.getUsername()?:"user",
-                    userId = identityRepository.getUserId()
-                )
-            }
+        _uiState.update {
+            it.copy(
+                username = identityRepository.username.value,
+                userId = identityRepository.userId
+            )
         }
     }
+
     fun updateUsername(): Boolean {
         try{
             identityRepository.updateUsername(_uiState.value.username)
