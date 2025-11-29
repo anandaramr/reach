@@ -49,6 +49,17 @@ class ChatScreenViewModel @Inject constructor(
         debug(uri.toString())
         storeFileUri(uri)
     }
+    fun changeFileName(fileName: String){
+        storeFileName(fileName)
+    }
+
+    private fun storeFileName(fileName: String){
+        _uiState.update {
+            it.copy(
+                fileName = fileName
+            )
+        }
+    }
 
     fun sendFile(uri: Uri?) {
         changeFileUri(null)

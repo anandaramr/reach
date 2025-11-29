@@ -125,7 +125,9 @@ fun ChatScreen(
                 onInputChange = viewModel::onInputChange,
                 sendMessage = viewModel::sendMessage,
                 sendFile = viewModel::sendFile,
-                changeFileUri = viewModel::changeFileUri
+                changeFileUri = viewModel::changeFileUri,
+                changeFileName = viewModel::changeFileName,
+                fileName = uiState.fileName
             )
         }
     }

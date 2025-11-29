@@ -1,7 +1,6 @@
 package com.project.reach.ui.screens.chat.components
 
 import android.content.Context
-import android.content.Intent
 import android.net.Uri
 import android.provider.OpenableColumns
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -9,15 +8,11 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.DriveFileMove
 import androidx.compose.material.icons.automirrored.filled.InsertDriveFile
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Add
@@ -34,6 +29,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.project.reach.util.truncate
 
 
 @Composable
@@ -41,10 +37,12 @@ fun MessageTextField(
     modifier: Modifier = Modifier,
     messageText: String,
     fileUri: Uri?,
+    fileName: String,
     onInputChange: (String) -> Unit,
     sendMessage: (String) -> Unit,
     changeFileUri: (Uri?) -> Unit,
     sendFile: (Uri?) -> Unit,
+    changeFileName: (String) -> Unit
 ) {
     Surface(
         modifier = Modifier.padding(),
@@ -59,26 +57,28 @@ fun MessageTextField(
             )
         else
             FilePreview(
-                sendFile,
-                fileUri
+                changeFileName = changeFileName,
+                sendFile = sendFile,
+                fileUri = fileUri,
+                fileName = fileName
             )
     }
 }
-
-fun getFileName(context: Context, uri: Uri): String {
+fun getFileName(context: Context, uri: Uri, changeFileName:(String)-> Unit) {
     val cursor = context.contentResolver.query(uri, null, null, null, null)
     cursor?.use {
         if (it.moveToFirst()) {
             val nameIndex = it.getColumnIndex(OpenableColumns.DISPLAY_NAME)
-            return it.getString(nameIndex)
+            changeFileName(it.getString(nameIndex))
         }
     }
-    return "unknown"
 }
 
 @Composable
 fun FilePreview(
+    changeFileName: (String) -> Unit,
     sendFile: (Uri?) -> Unit,
+    fileName: String,
     fileUri: Uri?
 ) {
     val context = LocalContext.current
@@ -93,13 +93,13 @@ fun FilePreview(
                 imageVector = Icons.AutoMirrored.Filled.InsertDriveFile,
                 contentDescription = "file",
             )
-            val fileName = getFileName(context, fileUri)
+            getFileName(context, fileUri, changeFileName )
             LazyColumn(
                 modifier = Modifier.fillMaxWidth(0.8f)
             ) {
                 item {
                     Text(
-                        text = fileName,
+                        text = fileName.truncate(60),
                         fontSize = 13.sp
                     )
                 }
