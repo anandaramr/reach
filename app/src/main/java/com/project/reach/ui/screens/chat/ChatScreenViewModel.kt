@@ -1,9 +1,11 @@
 package com.project.reach.ui.screens.chat
 
+import android.net.Uri
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.project.reach.domain.contracts.IMessageRepository
+import com.project.reach.util.debug
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -42,6 +44,22 @@ class ChatScreenViewModel @Inject constructor(
         }
     }
 
+    fun changeFileUri(uri: Uri?){
+        debug("file")
+        debug(uri.toString())
+        storeFileUri(uri)
+    }
+
+    fun sendFile(uri: Uri?) {
+        changeFileUri(null)
+        debug(uri.toString())
+    }
+
+    private fun storeFileUri(uri: Uri?){
+        _uiState.update { it.copy(
+            fileUri = uri
+        ) }
+    }
     private suspend fun updateUserState(peerId: String) {
         val username = messageRepository.getUsername(peerId).first()
         _uiState.update {
