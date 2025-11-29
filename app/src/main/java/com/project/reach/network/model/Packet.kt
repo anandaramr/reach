@@ -29,6 +29,20 @@ sealed class Packet {
         override val senderId: String
     ): Packet()
 
+    data class FileHeader(
+        override val senderId: String,
+        val fileId: String,
+        val filename: String,
+        val mimeType: String,
+        val fileSize: Long
+    ): Packet()
+
+    data class FileAccept(
+        override val senderId: String,
+        val fileId: String,
+        val port: Int,
+    ): Packet()
+
     abstract val senderId: String
 
     /**

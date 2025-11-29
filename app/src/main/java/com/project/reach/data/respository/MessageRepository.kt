@@ -36,6 +36,8 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import java.io.ByteArrayInputStream
+import java.io.ByteArrayOutputStream
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 
@@ -231,6 +233,10 @@ class MessageRepository(
         }
     }
 
+    val file = "hello".toByteArray()
+    val inputStream = ByteArrayInputStream(file)
+    val outputStream = ByteArrayOutputStream()
+
     private suspend fun handlePackets() {
         networkController.packets.collect { packet ->
             when (packet) {
@@ -259,19 +265,48 @@ class MessageRepository(
 
                 is Packet.Heartbeat -> {
                     contactRepository.updateContactIfItExists(
-                        packet.senderId,
-                        packet.senderUsername
+                        userId = packet.senderId,
+                        username = packet.senderUsername
                     )
                 }
 
                 is Packet.Hello -> {
                     contactRepository.updateContactIfItExists(
-                        packet.senderId,
-                        packet.senderUsername
+                        userId = packet.senderId,
+                        username = packet.senderUsername
+                    )
+
+                    networkController.sendFileHeader(
+                        peerId = packet.senderId.toUUID(),
+                        fileId = UUID.randomUUID(),
+                        filename = "filename.txt",
+                        mimeType = "text.plain",
+                        size = file.size.toLong()
                     )
                 }
 
                 is Packet.GoodBye -> {}
+                is Packet.FileAccept -> {
+                    debug("Got file accept for $packet")
+                    networkController.sendFile(
+                        peerId = packet.senderId.toUUID(),
+                        inputStream = inputStream,
+                        size = file.size.toLong(),
+                        fileAccept = packet
+                    )
+                }
+
+                is Packet.FileHeader -> {
+                    debug("Got file header: $packet")
+                    networkController.acceptFile(
+                        peerId = packet.senderId.toUUID(),
+                        fileId = packet.fileId,
+                        outputStream = outputStream,
+                        size = file.size.toLong()
+                    )
+
+                    debug("Got file with content: $outputStream")
+                }
             }
         }
     }

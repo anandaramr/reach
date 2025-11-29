@@ -12,6 +12,8 @@ message ReachPacket {
         Hello hello = 5;
         Heartbeat heartbeat = 6;
         Goodbye goodbye = 7;
+        FileHeader file_header = 8;
+        FileAccept file_accept = 9;
     }
 }
 
@@ -33,3 +35,15 @@ message Heartbeat {
 }
 
 message Goodbye { }
+
+message FileHeader {
+    string file_id = 1;
+    string filename = 2;
+    int64 file_size = 3;
+    string mime_type = 4;
+}
+
+message FileAccept {
+    string file_id = 1;
+    int32 port = 2;
+}

@@ -2,6 +2,8 @@ package com.project.reach.network.model
 
 import com.google.protobuf.InvalidProtocolBufferException
 import com.project.reach.core.exceptions.UnknownSourceException
+import com.reach.project.core.serialization.FileAccept
+import com.reach.project.core.serialization.FileHeader
 import com.reach.project.core.serialization.Goodbye
 import com.reach.project.core.serialization.Heartbeat
 import com.reach.project.core.serialization.Hello
@@ -45,6 +47,22 @@ internal object PacketSerializer {
 
                     is Packet.Typing -> {
                         typingIndicator = TypingIndicator.newBuilder().build()
+                    }
+
+                    is Packet.FileAccept -> {
+                        fileAccept = FileAccept.newBuilder().apply {
+                            fileId = packet.fileId
+                            port = packet.port
+                        }.build()
+                    }
+
+                    is Packet.FileHeader -> {
+                        fileHeader = FileHeader.newBuilder().apply {
+                            fileId = packet.fileId
+                            filename = packet.filename
+                            mimeType = packet.mimeType
+                            fileSize = packet.fileSize
+                        }.build()
                     }
                 }
             }
@@ -100,6 +118,24 @@ internal object PacketSerializer {
 
             ReachPacket.PayloadCase.PAYLOAD_NOT_SET -> {
                 throw IllegalArgumentException("Payload not set")
+            }
+
+            ReachPacket.PayloadCase.FILE_HEADER -> {
+                Packet.FileHeader(
+                    senderId = senderId,
+                    fileId = proto.fileHeader.fileId,
+                    filename = proto.fileHeader.filename,
+                    mimeType = proto.fileHeader.mimeType,
+                    fileSize = proto.fileHeader.fileSize
+                )
+            }
+
+            ReachPacket.PayloadCase.FILE_ACCEPT -> {
+                Packet.FileAccept(
+                    senderId = senderId,
+                    fileId = proto.fileAccept.fileId,
+                    port = proto.fileAccept.port
+                )
             }
         }
     }

@@ -1,6 +1,9 @@
 package com.project.reach.network.transport
 
 import com.project.reach.util.debug
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.runInterruptible
+import kotlinx.coroutines.withContext
 import java.io.Closeable
 import java.io.IOException
 import java.io.InputStream
@@ -13,50 +16,52 @@ import java.net.SocketTimeoutException
 import kotlin.math.min
 
 class DataInputChannel(
-    private val senderIp: InetAddress,
+    private val peerIp: InetAddress,
 ): Closeable {
     private val socket = ServerSocket(0).apply { soTimeout = WAIT_TIMEOUT }
     val port = socket.localPort
 
-    fun readInto(output: OutputStream, size: Long): Boolean {
-        try {
-            while (true) {
-                val client = socket.accept()
+    suspend fun readInto(output: OutputStream, size: Long): Boolean {
+        if (socket.isClosed) {
+            debug("${this::class.simpleName}: Use after close")
+            return false
+        }
 
-                try {
-                    val input = client.inputStream
-                    if (client.inetAddress == senderIp) {
-                        debug("Receiving $size bytes from $senderIp")
-                        handleClient(input, output, size)
-                        return true
-                    }
-                } catch (e: Exception) {
-                    debug("Error receiving data: $e")
-                    return false
-                } finally {
-                    client.close()
-                }
-            }
+        try {
+            val client = socket.accept()
+            val input = client.inputStream
+            debug("Receiving $size bytes from $peerIp")
+            // TODO check if sender is valid
+
+            handleClient(input, output, size)
+            client.close()
+            return true
         } catch (_: SocketTimeoutException) {
-            debug("Data receive timeout: $senderIp")
+            debug("Data receive timeout: $peerIp")
             return false
         }
     }
 
-    private fun handleClient(input: InputStream, output: OutputStream, size: Long) {
-        val buffer = ByteArray(8192)
-        var totalRead = 0L
+    private suspend fun handleClient(input: InputStream, output: OutputStream, size: Long) =
+        withContext(Dispatchers.IO) {
+            runInterruptible {
+                val buffer = ByteArray(8192)
+                var totalRead = 0L
 
-        while (totalRead < size) {
-            val bytesToRead = min(buffer.size.toLong(), size - totalRead).toInt()
-            val receivedBytes = input.read(buffer, 0, bytesToRead)
-            if (receivedBytes <= 0) {
-                throw IOException("Unexpected end of file")
+                // TODO check transfer fails
+                while (totalRead < size) {
+                    val bytesToRead = min(buffer.size.toLong(), size - totalRead).toInt()
+                    val receivedBytes = input.read(buffer, 0, bytesToRead)
+                    if (receivedBytes <= 0) {
+                        throw IOException("Unexpected end of file")
+                    }
+                    output.write(buffer, 0, receivedBytes)
+                    totalRead += receivedBytes
+                }
+
+                output.flush()
             }
-            output.write(buffer, 0, receivedBytes)
-            totalRead += receivedBytes
         }
-    }
 
     override fun close() {
         socket.close()
@@ -68,17 +73,22 @@ class DataInputChannel(
 }
 
 class DataOutputChannel(
-    private val receiverIp: InetAddress,
+    private val peerIp: InetAddress,
     private val port: Int
 ): Closeable {
     private val socket = Socket().apply { soTimeout = WAIT_TIMEOUT }
 
     fun writeFrom(input: InputStream, size: Long): Boolean {
+        if (socket.isClosed) {
+            debug("${this::class.simpleName}: Use after close")
+            return false
+        }
+
         val output = try {
-            socket.connect(InetSocketAddress(receiverIp, port), WAIT_TIMEOUT)
+            socket.connect(InetSocketAddress(peerIp, port), WAIT_TIMEOUT)
             socket.outputStream
         } catch (_: Exception) {
-            debug("Error connecting to $receiverIp:$port on ${this::class.simpleName}")
+            debug("Error connecting to $peerIp:$port on ${this::class.simpleName}")
             return false
         }
 
