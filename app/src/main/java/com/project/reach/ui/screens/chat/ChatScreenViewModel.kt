@@ -43,34 +43,55 @@ class ChatScreenViewModel @Inject constructor(
             messageRepository.sendMessage(_uiState.value.peerId, text)
         }
     }
-
+//  ---------------------------------------------------------------------------------------
+    // Public function that can be accessed by UI functions to store File Uri, File name and Image Uri
     fun changeFileUri(uri: Uri?){
-        debug("file")
-        debug(uri.toString())
         storeFileUri(uri)
+    }
+    fun changeImageUri(uri: Uri?){
+        debug(uri.toString())
+        storeImageUri(uri)
+    }
+    fun changeImageName(imageName: String){
+        storeImageName(imageName)
     }
     fun changeFileName(fileName: String){
         storeFileName(fileName)
     }
-
+//  ---------------------------------------------------------------------------------------
+    // Storing File and Image details in state
+    private fun storeFileUri(uri: Uri?){
+        _uiState.update { it.copy(
+            fileUri = uri
+        )}
+    }
     private fun storeFileName(fileName: String){
         _uiState.update {
             it.copy(
                 fileName = fileName
-            )
-        }
+            )}
     }
+    private fun storeImageUri(uri: Uri?){
+        _uiState.update { it.copy(
+            imageUri = uri
+        )}
+    }
+    private fun storeImageName(imageName: String){
+        _uiState.update { it.copy(
+            imageName = imageName
+        )}
+    }
+//  ---------------------------------------------------------------------------------------
 
     fun sendFile(uri: Uri?) {
         changeFileUri(null)
         debug(uri.toString())
     }
-
-    private fun storeFileUri(uri: Uri?){
-        _uiState.update { it.copy(
-            fileUri = uri
-        ) }
+    fun sendImage(uri: Uri?) {
+        changeImageUri(null)
+        debug(uri.toString())
     }
+
     private suspend fun updateUserState(peerId: String) {
         val username = messageRepository.getUsername(peerId).first()
         _uiState.update {

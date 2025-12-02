@@ -9,6 +9,8 @@ data class ChatScreenState(
     var peerId : String = "",
     var isTyping : Boolean = false,
     var fileUri : Uri? = null,
-    var fileName: String = ""
+    var imageUri : Uri? = null,
+    var fileName: String = "",
+    var imageName: String = ""
 )
 

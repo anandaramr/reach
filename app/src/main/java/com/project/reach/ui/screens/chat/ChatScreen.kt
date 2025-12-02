@@ -122,12 +122,17 @@ fun ChatScreen(
             MessageTextField(
                 messageText = uiState.messageText,
                 fileUri = uiState.fileUri,
+                fileName = uiState.fileName,
+                imageUri = uiState.imageUri,
+                imageName = uiState.imageName,
                 onInputChange = viewModel::onInputChange,
                 sendMessage = viewModel::sendMessage,
                 sendFile = viewModel::sendFile,
                 changeFileUri = viewModel::changeFileUri,
                 changeFileName = viewModel::changeFileName,
-                fileName = uiState.fileName
+                changeImageUri = viewModel::changeImageUri,
+                changeImageName = viewModel::changeImageName,
+                sendImage = viewModel::sendImage
             )
         }
     }
