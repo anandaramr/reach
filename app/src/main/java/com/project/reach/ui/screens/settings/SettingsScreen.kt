@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.QrCode
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.HorizontalDivider
@@ -128,6 +129,7 @@ fun SettingsScreen(
                 )
             }
             AccountDetails(navigateToQRCode, uiState.userId)
+            Spacer(modifier = Modifier.size(10.dp))
             NotificationChannel()
         }
     }
@@ -151,20 +153,20 @@ private fun NotificationChannel() {
                 fontSize = 16.sp,
                 fontWeight = FontWeight.SemiBold
             )
-
-            Text(
-                text = "Manage Notification",
-                fontSize = 12.sp,
-                color = MaterialTheme.colorScheme.onSecondary,
-                modifier = Modifier.clickable(
-                    onClick = {
+            Icon(
+                imageVector = Icons.Default.ChevronRight,
+                contentDescription = "Right Arrow",
+                tint = MaterialTheme.colorScheme.onSecondary,
+                modifier = Modifier
+                    .size(23.dp)
+                    .clickable(
+                        onClick = {
                         val intent = Intent(Settings.ACTION_CHANNEL_NOTIFICATION_SETTINGS).apply {
                             putExtra(Settings.EXTRA_APP_PACKAGE,context.packageName)
                             putExtra(Settings.EXTRA_CHANNEL_ID, NotificationHandler.MESSAGE_NOTIFICATION_CHANNEL)
                         }
                         context.startActivity(intent)
-                    }
-                )
+                        })
             )
         }
     }
