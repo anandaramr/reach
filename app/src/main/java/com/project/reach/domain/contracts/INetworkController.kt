@@ -36,7 +36,7 @@ interface INetworkController {
         inputStream: InputStream,
         size: Long,
         fileAccept: Packet.FileAccept
-    )
+    ): Boolean
 
     fun startDiscovery()
     fun stopDiscovery()

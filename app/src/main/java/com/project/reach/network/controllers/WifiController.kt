@@ -150,13 +150,23 @@ class WifiController(
         return sendPacketToUser(uuid, packet, stream = true)
     }
 
-    override suspend fun getDataInputChannel(uuid: UUID): DataInputChannel {
-        val address = wifiDiscoveryHandler.resolvePeerAddress(uuid.toString())
+    override suspend fun getDataInputChannel(uuid: UUID): DataInputChannel? {
+        val address = try {
+            wifiDiscoveryHandler.resolvePeerAddress(uuid.toString())
+        } catch (e: NoSuchElementException) {
+            debug("Couldn't create data channel: peer not found")
+            return null
+        }
         return DataInputChannel(address)
     }
 
-    override suspend fun getDataOutputChannel(uuid: UUID, port: Int): DataOutputChannel {
-        val address = wifiDiscoveryHandler.resolvePeerAddress(uuid.toString())
+    override suspend fun getDataOutputChannel(uuid: UUID, port: Int): DataOutputChannel? {
+        val address = try {
+            wifiDiscoveryHandler.resolvePeerAddress(uuid.toString())
+        } catch (e: NoSuchElementException) {
+            debug("Couldn't create data channel: peer not found")
+            return null
+        }
         return DataOutputChannel(address, port)
     }
 

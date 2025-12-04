@@ -17,8 +17,8 @@ interface IWifiController {
     fun startDiscovery()
     suspend fun sendDatagram(uuid: UUID, packet: Packet): Boolean
     suspend fun sendStream(uuid: UUID, packet: Packet): Boolean
-    suspend fun getDataInputChannel(uuid: UUID): DataInputChannel
-    suspend fun getDataOutputChannel(uuid: UUID, port: Int): DataOutputChannel
+    suspend fun getDataInputChannel(uuid: UUID): DataInputChannel?
+    suspend fun getDataOutputChannel(uuid: UUID, port: Int): DataOutputChannel?
     fun stopDiscovery()
     fun close()
 }

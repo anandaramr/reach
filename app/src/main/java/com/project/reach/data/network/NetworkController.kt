@@ -11,7 +11,6 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
-import java.io.ByteArrayInputStream
 import java.io.InputStream
 import java.io.OutputStream
 import java.util.UUID
@@ -80,7 +79,7 @@ class NetworkController(
         size: Long
     ): Boolean {
         val dataInputChannel = wifiController.getDataInputChannel(peerId)
-        dataInputChannel.use { channel ->
+        dataInputChannel?.use { channel ->
             val sendResult = sendPacketViaStream(
                 userId = peerId, Packet.FileAccept(
                     senderId = myUserId,
@@ -93,6 +92,8 @@ class NetworkController(
 
             return channel.readInto(outputStream, size)
         }
+
+        return false
     }
 
     override suspend fun sendFile(
@@ -100,13 +101,15 @@ class NetworkController(
         inputStream: InputStream,
         size: Long,
         fileAccept: Packet.FileAccept
-    ) {
+    ): Boolean {
         val port = fileAccept.port
         val dataOutputChannel = wifiController.getDataOutputChannel(peerId, port)
 
-        dataOutputChannel.use { channel ->
-            channel.writeFrom(inputStream, size = size)
+        dataOutputChannel?.use { channel ->
+            return channel.writeFrom(inputStream, size = size)
         }
+
+        return false
     }
 
     override fun startDiscovery() {
