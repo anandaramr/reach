@@ -1,6 +1,7 @@
 package com.project.reach.ui.screens.home.components
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -33,39 +34,43 @@ fun ChatPreview(
     lastMessage: String,
     isTyping: Boolean
 ) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
+    Box(
         modifier = Modifier
             .clickable(
                 onClick = { navigateToChat(userId) }
             )
     ) {
-        AvatarIcon(username.first(), AvatarIconSize.SMALL)
-        Spacer(Modifier.width(10.dp))
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 10.dp),
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.padding(horizontal = 20.dp)
         ) {
-            Text(
-                username,
-                fontSize = 20.sp,
-                fontWeight = FontWeight.SemiBold
-            )
-            Spacer(Modifier.width(23.dp))
-            if(isTyping)
+            AvatarIcon(username.first(), AvatarIconSize.SMALL)
+            Spacer(Modifier.width(10.dp))
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 10.dp),
+            ) {
                 Text(
-                    text = "Typing...",
-                    fontStyle = FontStyle.Italic,
-                    fontSize = 12.sp,
-                    color = MaterialTheme.colorScheme.outline
+                    username,
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.SemiBold
                 )
-            else
-                Text(
-                    lastMessage.truncate(35),
-                    fontSize = 13.sp,
-                    modifier = Modifier.alpha(0.7f)
-                )
+                Spacer(Modifier.width(23.dp))
+                if (isTyping)
+                    Text(
+                        text = "Typing...",
+                        fontStyle = FontStyle.Italic,
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.outline
+                    )
+                else
+                    Text(
+                        lastMessage.truncate(35),
+                        fontSize = 13.sp,
+                        modifier = Modifier.alpha(0.7f)
+                    )
+            }
         }
     }
 }

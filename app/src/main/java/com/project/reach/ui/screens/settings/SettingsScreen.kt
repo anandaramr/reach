@@ -1,9 +1,12 @@
 package com.project.reach.ui.screens.settings
 
 
-import androidx.compose.foundation.BorderStroke
+import android.content.Intent
+import android.provider.Settings
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import com.project.reach.ui.navigation.NavigationDestination
@@ -13,16 +16,12 @@ import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CopyAll
+import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.QrCode
 import androidx.compose.material.icons.filled.Share
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -40,6 +39,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -48,10 +48,11 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import com.project.reach.service.NotificationHandler
 import com.project.reach.ui.components.AvatarIcon
 import com.project.reach.ui.components.AvatarIconSize
 import com.project.reach.util.debug
-import com.project.reach.util.truncate
+import kotlin.apply
 
 object SettingsScreenDestination : NavigationDestination {
     override val route: String = "settings"
@@ -60,6 +61,7 @@ object SettingsScreenDestination : NavigationDestination {
 @Composable
 fun SettingsScreen(
     viewModel: SettingViewModel = hiltViewModel(),
+    navigateToQRCode: (String) -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val focusManager = LocalFocusManager.current
@@ -67,139 +69,184 @@ fun SettingsScreen(
     LaunchedEffect(Unit) {
         viewModel.error.collect { error ->
             debug(error)
-            snackbarHostState.showSnackbar(error,)
+            snackbarHostState.showSnackbar(error)
         }
     }
     Scaffold(
-        snackbarHost = { SnackbarHost(
-            hostState = snackbarHostState,
-            modifier = Modifier.padding(20.dp)
-        ) },
+        snackbarHost = {
+            SnackbarHost(
+                hostState = snackbarHostState,
+                modifier = Modifier.padding(20.dp)
+            )
+        },
         modifier = Modifier
             .fillMaxSize()
             .imePadding()
     ) { innerPadding ->
-        LazyColumn(
+        Column(
             modifier = Modifier
                 .padding(innerPadding)
-                .padding(25.dp)
+                .padding(vertical = 25.dp, horizontal = 15.dp)
                 .fillMaxSize()
         ) {
-            item {
-                Column(
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 20.dp, bottom = 10.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                AvatarIcon(uiState.username.firstOrNull() ?: ' ', AvatarIconSize.LARGE)
+                Spacer(modifier = Modifier.size(10.dp))
+                TextField(
+                    value = uiState.username,
+                    onValueChange = { viewModel.onUsernameChange(it) },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(top = 20.dp, bottom = 10.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    AvatarIcon(uiState.username.firstOrNull()?: ' ', AvatarIconSize.LARGE)
-                    Spacer(modifier = Modifier.size(10.dp))
-                    TextField(
-                        value = uiState.username,
-                        onValueChange = {viewModel.onUsernameChange(it)},
-                        modifier = Modifier.fillMaxWidth().align(Alignment.CenterHorizontally),
-                        textStyle = TextStyle(
-                            textAlign = TextAlign.Center,
-                            fontSize = 34.sp,
-                            fontWeight = FontWeight.SemiBold
-                        ),
-                        singleLine = true,
-                        keyboardOptions = KeyboardOptions(
-                            imeAction = ImeAction.Done
-                        ),
-                        keyboardActions = KeyboardActions (
-                            onDone = {
-                                if(viewModel.updateUsername())
-                                    focusManager.clearFocus()
-                            },
-
-                        ),
-                        colors = TextFieldDefaults.colors(
-                            focusedContainerColor = Color.Transparent,
-                            unfocusedContainerColor = Color.Transparent,
-                            disabledContainerColor = Color.Transparent,
-                            focusedIndicatorColor = Color.Transparent,
-                            unfocusedIndicatorColor = Color.Transparent,
-                            disabledIndicatorColor = Color.Transparent,
-                        ),
-                    )
-                }
-            }
-            item {
-                HorizontalDivider(
-                    modifier = Modifier
-                        .padding(horizontal = 10.dp)
-                        .padding(top = 20.dp, bottom = 10.dp),
-                    color = MaterialTheme.colorScheme.outlineVariant
+                        .align(Alignment.CenterHorizontally),
+                    textStyle = TextStyle(
+                        textAlign = TextAlign.Center,
+                        fontSize = 34.sp,
+                        fontWeight = FontWeight.SemiBold
+                    ),
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(
+                        imeAction = ImeAction.Done
+                    ),
+                    keyboardActions = KeyboardActions(
+                        onDone = {
+                            if (viewModel.updateUsername())
+                                focusManager.clearFocus()
+                        },
+                    ),
+                    colors = TextFieldDefaults.colors(
+                        focusedContainerColor = Color.Transparent,
+                        unfocusedContainerColor = Color.Transparent,
+                        disabledContainerColor = Color.Transparent,
+                        focusedIndicatorColor = Color.Transparent,
+                        unfocusedIndicatorColor = Color.Transparent,
+                        disabledIndicatorColor = Color.Transparent,
+                    ),
                 )
             }
-            item {
-//                Card(
-//                    shape = RoundedCornerShape(20.dp),
-//                    colors = CardDefaults.cardColors(
-//                        containerColor = MaterialTheme.colorScheme.surface,
-//                    ),
-//                    modifier = Modifier.fillMaxWidth(),
-//                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.)
-//                ) {
-                    Column(
-                        modifier = Modifier.padding(10.dp)
-                    ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth().padding(bottom = 15.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Text(
-                                text = "Account",
-                                fontSize = 16.sp,
-                                fontWeight = FontWeight.SemiBold
-                            )
-                            Row {
-                                Icon(
-                                    imageVector = Icons.Default.QrCode,
-                                    contentDescription = "QR Code",
-                                    modifier = Modifier
-                                        .size(23.dp),
-                                )
-                                Spacer(modifier = Modifier.width(10.dp))
-                                Icon(
-                                    imageVector = Icons.Default.Share,
-                                    contentDescription = "Share",
-                                    modifier = Modifier
-                                        .size(23.dp),
-                                )
-                            }
+            AccountDetails(navigateToQRCode, uiState.userId)
+            Spacer(modifier = Modifier.size(10.dp))
+            NotificationChannel()
+        }
+    }
+}
+
+@Composable
+private fun NotificationChannel() {
+    val context = LocalContext.current
+    Column(
+        modifier = Modifier.padding(10.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 15.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text(
+                text = "Notification",
+                fontSize = 16.sp,
+                fontWeight = FontWeight.SemiBold
+            )
+            Icon(
+                imageVector = Icons.Default.ChevronRight,
+                contentDescription = "Right Arrow",
+                tint = MaterialTheme.colorScheme.onSecondary,
+                modifier = Modifier
+                    .size(23.dp)
+                    .clickable(
+                        onClick = {
+                        val intent = Intent(Settings.ACTION_CHANNEL_NOTIFICATION_SETTINGS).apply {
+                            putExtra(Settings.EXTRA_APP_PACKAGE,context.packageName)
+                            putExtra(Settings.EXTRA_CHANNEL_ID, NotificationHandler.MESSAGE_NOTIFICATION_CHANNEL)
                         }
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Text(
-                                text = uiState.userId,
-                                fontSize = 14.sp,
-                                color = MaterialTheme.colorScheme.onSecondary
-                            )
-//                            Icon(
-//                                imageVector = Icons.Default.CopyAll,
-//                                contentDescription = "Copy",
-//                                modifier = Modifier
-//                                    .padding(horizontal = 5.dp)
-//                                    .size(20.dp),
-//                            )
-                        }
-                    }
+                        context.startActivity(intent)
+                        })
+            )
+        }
+    }
+}
+@Composable
+private fun AccountDetails(
+    navigateToQRCode: (String) -> Unit,
+    userId: String
+) {
+        Column(
+            modifier = Modifier.padding(10.dp)
+        ) {
+            Divider()
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 15.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    text = "Account",
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Row {
+                    Icon(
+                        imageVector = Icons.Default.QrCode,
+                        contentDescription = "QR Code",
+                        modifier = Modifier
+                            .size(23.dp)
+                            .clickable(onClick = { navigateToQRCode(userId) })
+                    )
+                    Spacer(modifier = Modifier.width(10.dp))
+                    ShareId(userId)
                 }
-//            }
-            item {
-                HorizontalDivider(
-                    modifier = Modifier
-                        .padding(horizontal = 10.dp)
-                        .padding(top = 20.dp, bottom = 10.dp),
-                    color = MaterialTheme.colorScheme.outlineVariant
+            }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    text = userId,
+                    fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.onSecondary
                 )
             }
         }
+}
+
+@Composable
+private fun ColumnScope.Divider() {
+    HorizontalDivider(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 20.dp)
+            .align(Alignment.CenterHorizontally),
+        color = MaterialTheme.colorScheme.outlineVariant
+    )
+}
+
+@Composable
+fun ShareId(userId: String) {
+    val sendIndent: Intent = Intent().apply {
+        action = Intent.ACTION_SEND
+        putExtra(Intent.EXTRA_TEXT, userId)
+        type = "text/plain"
     }
+    val shareIntent = Intent.createChooser(sendIndent, null)
+    val context = LocalContext.current
+    Icon(
+        imageVector = Icons.Default.Share,
+        contentDescription = "Share",
+        modifier = Modifier
+            .size(23.dp)
+            .clickable(
+                onClick = {
+                    context.startActivity(shareIntent)
+                }
+            )
+    )
 }

@@ -31,7 +31,8 @@ fun DiscoveryScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     Scaffold(
-        modifier = Modifier.fillMaxSize()
+        modifier = Modifier.fillMaxSize(),
+        topBar = { TopBar() }
     ) { innerPadding ->
         LazyColumn(
             modifier = Modifier
@@ -50,6 +51,6 @@ fun DiscoveryScreen(
 fun TopBar() {
     CenterAlignedTopAppBar(
         modifier = Modifier.padding(horizontal = 20.dp),
-        title = { Text(text = "REACH") }
+        title = { Text(text = "Nearby devices") }
     )
 }

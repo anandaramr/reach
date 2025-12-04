@@ -26,13 +26,13 @@ private val DarkColorScheme = darkColorScheme(
     primary = Color(0xFFE4C1F9),      // Light violet/pink accent
     onPrimary = Color(0xFF121212),    // Dark text on primary
     secondary = Color(0xFFE4C1F9),    // Soft blue accent
-    onSecondary = Color(0xFF787183),
+    onSecondary = Color(0xFF7E7E80),
     background = Color(0xFF121212),   // Almost black
     onBackground = Color(0xFFEDEDED), // Light text
     surface = Color(0xFF121212),      // Same as background
     onSurface = Color(0xFFEDEDED),
     outline = Color(0xFF332C3F), // Subtle accent for borders
-    outlineVariant = Color(0x80332C3F),      // Same as background
+    outlineVariant = Color(0x1AEAEFEF),      // Same as background
     error = Color(0xFFFF6B6B),        // Soft red
     onError = Color(0xFFFFFFFF)       // White text on error
 )
@@ -51,7 +51,8 @@ private val LightColorScheme = lightColorScheme(
     surface = Color(0xFFF4F4F8),      // Crisp white card surfaces
     onSurface = Color(0xFF121212),
 
-    outline = Color(0xFFD8BEE8),      // Subtle neutral border
+    outline = Color(0xFFD8BEE8),
+    outlineVariant = Color(0x1A000303),      // Same as background
     error = Color(0xFFFF6B6B),        // Same soft red as dark mode
     onError = Color(0xFFFFFFFF)
 )

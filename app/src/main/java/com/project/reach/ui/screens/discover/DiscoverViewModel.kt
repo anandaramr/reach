@@ -1,7 +1,9 @@
 package com.project.reach.ui.screens.discover
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.project.reach.data.respository.ContactRepository
 import com.project.reach.data.respository.MessageRepository
+import com.project.reach.domain.contracts.IContactRepository
 import com.project.reach.domain.contracts.IMessageRepository
 import com.project.reach.domain.contracts.INetworkRepository
 import com.project.reach.network.model.DeviceInfo
@@ -17,7 +19,8 @@ import javax.inject.Inject
 @HiltViewModel
 class DiscoverViewModel @Inject constructor(
    private val networkRepository: INetworkRepository,
-   private val messageRepository: IMessageRepository
+   private val messageRepository: IMessageRepository,
+   private val contactRepository: IContactRepository
 ): ViewModel() {
     private val _uiState = MutableStateFlow(DiscoveryState())
     val uiState : StateFlow<DiscoveryState> = _uiState.asStateFlow()
@@ -36,7 +39,7 @@ class DiscoverViewModel @Inject constructor(
 
     fun saveContact(peer: Peer) {
         viewModelScope.launch {
-            messageRepository.saveNewContact(peer.uuid, peer.username)
+            contactRepository.addToContacts(peer.uuid, peer.username)
         }
     }
 }

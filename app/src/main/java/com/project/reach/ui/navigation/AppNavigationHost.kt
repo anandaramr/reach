@@ -2,6 +2,7 @@ package com.project.reach.ui.navigation
 
 import android.annotation.SuppressLint
 import androidx.compose.animation.ExitTransition
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Search
@@ -26,6 +27,8 @@ import com.project.reach.ui.screens.discover.DiscoveryScreen
 import com.project.reach.ui.screens.home.HomeScreen
 import com.project.reach.ui.screens.home.HomeScreenDestination
 import com.project.reach.ui.screens.onboarding.OnboardingScreen
+import com.project.reach.ui.screens.qrcode.QRCodeScreen
+import com.project.reach.ui.screens.qrcode.QRCodeScreenDestination
 import com.project.reach.ui.screens.settings.SettingsScreen
 import com.project.reach.ui.screens.settings.SettingsScreenDestination
 import com.project.reach.util.debug
@@ -71,7 +74,9 @@ fun AppNavigationHost(
                 )
             }
             composable(route = SettingsScreenDestination.route) {
-                SettingsScreen()
+                SettingsScreen(
+                    navigateToQRCode = { userId ->  navController.navigate(QRCodeScreenDestination.createRoute(userId))},
+                )
             }
             composable(route = HomeScreenDestination.route) {
                 HomeScreen(
@@ -85,6 +90,17 @@ fun AppNavigationHost(
             ) {
                 ChatScreen(
                     navigateBack = { navController.popBackStack(route = HomeScreenDestination.route, inclusive = false) }
+                )
+            }
+            composable(
+                route = QRCodeScreenDestination.route,
+                arguments = listOf(navArgument("userId") { type = NavType.StringType })
+            ){ backStackEntry ->
+                val userId = backStackEntry.arguments?.getString("userId")?:""
+                QRCodeScreen(
+                    modifier = Modifier.padding(innerPadding),
+                    navigateBack = { navController.navigate(SettingsScreenDestination.route) },
+                    userId = userId
                 )
             }
         }
