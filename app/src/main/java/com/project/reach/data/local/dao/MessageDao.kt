@@ -5,7 +5,9 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.Transaction
 import com.project.reach.data.local.entity.MessageEntity
+import com.project.reach.data.model.MessageWithMedia
 import com.project.reach.domain.models.MessagePreview
 import com.project.reach.domain.models.MessageState
 import kotlinx.coroutines.flow.Flow
@@ -16,15 +18,13 @@ interface MessageDao {
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertMessage(messageEntity: MessageEntity)
 
-    @Query("select * from messages where userId = :userId order by timeStamp")
-    fun getMessageByUser(userId: UUID): Flow<List<MessageEntity>>
-
+    @Transaction
     @Query("select * from messages where userId = :userId order by timeStamp desc")
-    fun getMessageByUserPaged(userId: UUID): PagingSource<Int, MessageEntity>
+    fun getMessagesByUserPaged(userId: UUID): PagingSource<Int, MessageWithMedia>
 
     @Query(
         value = """
-            SELECT m.userId, c.username, m.messageType, m.data as "lastMessage", m.timeStamp, m.messageState
+            SELECT m.userId, c.username, m.messageType, m.content as "lastMessage", m.timeStamp, m.messageState
             FROM messages AS m
             JOIN
             contacts AS c ON c.userId = m.userId

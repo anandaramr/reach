@@ -6,11 +6,15 @@ import androidx.paging.PagingData
 import androidx.paging.map
 import com.project.reach.data.local.IdentityManager
 import com.project.reach.data.local.dao.MessageDao
+import com.project.reach.data.local.entity.MediaEntity
 import com.project.reach.data.local.entity.MessageEntity
+import com.project.reach.data.model.MessageWithMedia
 import com.project.reach.data.utils.TypingStateHandler
 import com.project.reach.domain.contracts.IContactRepository
+import com.project.reach.domain.contracts.IFileRepository
 import com.project.reach.domain.contracts.IMessageRepository
 import com.project.reach.domain.contracts.INetworkController
+import com.project.reach.domain.models.Media
 import com.project.reach.domain.models.Message
 import com.project.reach.domain.models.MessageNotification
 import com.project.reach.domain.models.MessagePreview
@@ -36,8 +40,6 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import java.io.ByteArrayInputStream
-import java.io.ByteArrayOutputStream
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 
@@ -45,6 +47,7 @@ class MessageRepository(
     private val messageDao: MessageDao,
     private val contactRepository: IContactRepository,
     private val networkController: INetworkController,
+    private val fileRepository: IFileRepository,
     identityManager: IdentityManager
 ): IMessageRepository {
 
@@ -115,11 +118,12 @@ class MessageRepository(
         messageDao.insertMessage(
             messageEntity = MessageEntity(
                 messageId = messageId,
-                messageType = MessageType.TEXT,
-                data = text,
+                mediaId = null,
+                content = text,
                 userId = userId.toUUID(),
                 isFromPeer = false,
-                messageState = MessageState.PENDING
+                messageState = MessageState.PENDING,
+                messageType = MessageType.TEXT
             )
         )
         // Message dispatcher handles sending the message
@@ -136,7 +140,7 @@ class MessageRepository(
             Packet.Message(
                 senderId = myUserId,
                 senderUsername = myUsername.value,
-                message = message.data,
+                message = message.content,
                 messageId = message.messageId.toString(),
                 timeStamp = message.timeStamp
             )
@@ -157,12 +161,13 @@ class MessageRepository(
         messageDao.insertMessage(
             messageEntity = MessageEntity(
                 messageId = messageId.toUUID(),
-                data = message,
-                messageType = MessageType.TEXT,
+                content = message,
+                mediaId = null,
                 userId = userId.toUUID(),
                 isFromPeer = true,
                 messageState = MessageState.RECEIVED,
-                timeStamp = timestamp
+                timeStamp = timestamp,
+                messageType = MessageType.TEXT
             )
         )
     }
@@ -180,7 +185,7 @@ class MessageRepository(
                 prefetchDistance = prefetchDistance,
                 enablePlaceholders = true,
             ),
-            pagingSourceFactory = { messageDao.getMessageByUserPaged(userId.toUUID()) }
+            pagingSourceFactory = { messageDao.getMessagesByUserPaged(userId.toUUID()) }
         ).flow.map { pagingData ->
             pagingData.map { msg -> msg.toMessage() }
         }
@@ -233,10 +238,6 @@ class MessageRepository(
         }
     }
 
-    val file = "hello".toByteArray()
-    val inputStream = ByteArrayInputStream(file)
-    val outputStream = ByteArrayOutputStream()
-
     private suspend fun handlePackets() {
         networkController.packets.collect { packet ->
             when (packet) {
@@ -275,37 +276,38 @@ class MessageRepository(
                         userId = packet.senderId,
                         username = packet.senderUsername
                     )
-
-                    networkController.sendFileHeader(
-                        peerId = packet.senderId.toUUID(),
-                        fileId = UUID.randomUUID(),
-                        filename = "filename.txt",
-                        mimeType = "text.plain",
-                        size = file.size.toLong()
-                    )
                 }
 
                 is Packet.GoodBye -> {}
                 is Packet.FileAccept -> {
                     debug("Got file accept for $packet")
-                    networkController.sendFile(
-                        peerId = packet.senderId.toUUID(),
-                        inputStream = inputStream,
-                        size = file.size.toLong(),
-                        fileAccept = packet
-                    )
+
+                    val size = fileRepository.getFileSize("filename.txt")
+                    fileRepository.useFileInputStream("filename.txt") { inputStream ->
+                        networkController.sendFile(
+                            peerId = packet.senderId.toUUID(),
+                            inputStream = inputStream,
+                            size = size,
+                            fileAccept = packet
+                        )
+                    }
+
+                    debug("sent file")
                 }
 
                 is Packet.FileHeader -> {
                     debug("Got file header: $packet")
-                    networkController.acceptFile(
-                        peerId = packet.senderId.toUUID(),
-                        fileId = packet.fileId,
-                        outputStream = outputStream,
-                        size = file.size.toLong()
-                    )
 
-                    debug("Got file with content: $outputStream")
+                    fileRepository.useFileOutputStream(packet.filename) { outputStream ->
+                        networkController.acceptFile(
+                            peerId = packet.senderId.toUUID(),
+                            fileId = packet.fileId,
+                            outputStream = outputStream,
+                            size = packet.fileSize
+                        )
+                    }
+
+                    debug("received file")
                 }
             }
         }
@@ -321,21 +323,29 @@ class MessageRepository(
 
     private fun MessageEntity.toMessageNotification(): MessageNotification {
         return MessageNotification(
-            text = data.truncate(60),
+            text = content.truncate(60),
             timeStamp = timeStamp
         )
     }
 
-    private fun MessageEntity.toMessage(): Message {
+    private fun MessageWithMedia.toMessage(): Message {
         return Message(
-            messageId = messageId.toString(),
-            text = data,
-            messageType = messageType,
-            metadata = metadata,
-            isFromSelf = !isFromPeer,
-            userId = userId.toString(),
-            messageState = messageState,
-            timeStamp = timeStamp
+            messageId = message.messageId.toString(),
+            text = message.content,
+            media = mediaEntity?.toMedia(),
+            isFromSelf = !message.isFromPeer,
+            userId = message.userId.toString(),
+            messageState = message.messageState,
+            timeStamp = message.timeStamp,
+            messageType = message.messageType
+        )
+    }
+
+    private fun MediaEntity.toMedia(): Media {
+        return Media(
+            uri = uri,
+            mimeType = mimeType,
+            size = fileSize
         )
     }
 

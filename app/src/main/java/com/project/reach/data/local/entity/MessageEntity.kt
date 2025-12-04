@@ -17,15 +17,21 @@ import java.util.UUID
             childColumns = ["userId"],
             onDelete = ForeignKey.CASCADE,
             onUpdate = ForeignKey.CASCADE
+        ),
+        ForeignKey(
+            entity = MediaEntity::class,
+            parentColumns = ["mediaId"],
+            childColumns = ["mediaId"],
+            onDelete = ForeignKey.SET_NULL
         )
     ],
-    indices = [ Index(value = ["userId"]) ]
+    indices = [Index(value = ["userId", "timeStamp"]), Index(value = ["mediaId"])]
 )
 data class MessageEntity(
     @PrimaryKey var messageId: UUID,
+    val content: String,
     val messageType: MessageType,
-    val data: String,
-    val metadata: String? = "",
+    val mediaId: UUID? = null,
     val userId: UUID,
     val isFromPeer: Boolean,
     val messageState: MessageState = MessageState.PENDING,

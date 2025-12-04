@@ -7,11 +7,12 @@ import androidx.room.RoomDatabase
 import com.project.reach.data.local.dao.ContactDao
 import com.project.reach.data.local.dao.MessageDao
 import com.project.reach.data.local.entity.ContactEntity
+import com.project.reach.data.local.entity.MediaEntity
 import com.project.reach.data.local.entity.MessageEntity
 
 @Database(
-    version = 3,
-    entities = [MessageEntity::class, ContactEntity::class],
+    version = 4,
+    entities = [MessageEntity::class, ContactEntity::class, MediaEntity::class],
     exportSchema = false
 )
 abstract class ReachDatabase: RoomDatabase() {
