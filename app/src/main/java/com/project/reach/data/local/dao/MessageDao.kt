@@ -6,6 +6,7 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Transaction
+import com.project.reach.data.local.entity.MediaEntity
 import com.project.reach.data.local.entity.MessageEntity
 import com.project.reach.data.model.MessageWithMedia
 import com.project.reach.domain.models.MessagePreview
@@ -17,6 +18,15 @@ import java.util.UUID
 interface MessageDao {
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertMessage(messageEntity: MessageEntity)
+
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertMedia(mediaEntity: MediaEntity)
+
+    @Transaction
+    suspend fun insertMessageWithMedia(messageEntity: MessageEntity, mediaEntity: MediaEntity) {
+        insertMedia(mediaEntity)
+        insertMessage(messageEntity)
+    }
 
     @Transaction
     @Query("select * from messages where userId = :userId order by timeStamp desc")
@@ -38,8 +48,9 @@ interface MessageDao {
     )
     fun getMessagesPreviewPaged(): PagingSource<Int, MessagePreview>
 
+    @Transaction
     @Query("select * from messages where userId = :userId and messageState = \"PENDING\"")
-    fun getPendingMessagesById(userId: UUID): Flow<List<MessageEntity>>
+    fun getPendingMessagesById(userId: UUID): Flow<List<MessageWithMedia>>
 
     @Query("select distinct userId from messages where messageState = \"PENDING\"")
     fun getUserIdsOfPendingMessages(): Flow<List<UUID>>
@@ -47,6 +58,9 @@ interface MessageDao {
     @Query("update messages set messageState = :messageState where messageId = :messageId")
     suspend fun updateMessageState(messageId: UUID, messageState: MessageState)
 
-    @Query("select * from messages where userId = :userId and messageState = \"RECEIVED\" order by timeStamp")
-    fun getUnreadMessagesById(userId: UUID): Flow<List<MessageEntity>>
+    @Query("select * from messages where userId = :userId and messageState = \"RECEIVED\" order by timeStamp limit :limit")
+    fun getUnreadMessagesById(userId: UUID, limit: Int): Flow<List<MessageEntity>>
+
+    @Query("update messages set messageState = \"RECEIVED\" where userId = :senderId and mediaId = :fileId")
+    suspend fun completeFileTransfer(senderId: UUID, fileId: UUID)
 }

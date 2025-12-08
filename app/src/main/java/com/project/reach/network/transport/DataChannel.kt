@@ -21,7 +21,7 @@ class DataInputChannel(
     private val socket = ServerSocket(0).apply { soTimeout = WAIT_TIMEOUT }
     val port = socket.localPort
 
-    suspend fun readInto(output: OutputStream, size: Long): Boolean {
+    suspend fun readInto(output: OutputStream, size: Long, onProgress: (Long) -> Unit): Boolean {
         if (socket.isClosed) {
             debug("${this::class.simpleName}: Use after close")
             return false
@@ -33,7 +33,7 @@ class DataInputChannel(
             debug("Receiving $size bytes from $peerIp")
             // TODO check if sender is valid
 
-            handleClient(input, output, size)
+            handleClient(input, output, size, onProgress)
             client.close()
             return true
         } catch (_: SocketTimeoutException) {
@@ -42,11 +42,17 @@ class DataInputChannel(
         }
     }
 
-    private suspend fun handleClient(input: InputStream, output: OutputStream, size: Long) =
+    private suspend fun handleClient(
+        input: InputStream,
+        output: OutputStream,
+        size: Long,
+        onProgress: (Long) -> Unit
+    ) =
         withContext(Dispatchers.IO) {
             runInterruptible {
                 val buffer = ByteArray(8192)
                 var totalRead = 0L
+                var lastProgressUpdate = 0L
 
                 // TODO check transfer fails
                 while (totalRead < size) {
@@ -55,8 +61,15 @@ class DataInputChannel(
                     if (receivedBytes <= 0) {
                         throw IOException("Unexpected end of file")
                     }
+
                     output.write(buffer, 0, receivedBytes)
                     totalRead += receivedBytes
+
+                    val time = System.currentTimeMillis()
+                    if (time - lastProgressUpdate >= THROTTLE_TIME) {
+                        onProgress(totalRead)
+                        lastProgressUpdate = time
+                    }
                 }
 
                 output.flush()
@@ -69,6 +82,7 @@ class DataInputChannel(
 
     private companion object {
         private const val WAIT_TIMEOUT = 30_000
+        private const val THROTTLE_TIME = 1000
     }
 }
 
@@ -78,7 +92,7 @@ class DataOutputChannel(
 ): Closeable {
     private val socket = Socket().apply { soTimeout = WAIT_TIMEOUT }
 
-    fun writeFrom(input: InputStream, size: Long): Boolean {
+    fun writeFrom(input: InputStream, size: Long, onProgress: (Long) -> Unit): Boolean {
         if (socket.isClosed) {
             debug("${this::class.simpleName}: Use after close")
             return false
@@ -94,13 +108,23 @@ class DataOutputChannel(
 
         val buffer = ByteArray(8192)
         var totalBytesSent = 0L
+        var lastProgressUpdate = 0L
         try {
             while (totalBytesSent < size) {
                 val bytesToRead = min(buffer.size.toLong(), size - totalBytesSent).toInt()
                 val readBytes = input.read(buffer, 0, bytesToRead)
-                if (readBytes <= 0) throw IOException("Unexpected end of file")
+                if (readBytes <= 0) {
+                    throw IOException("Unexpected end of file")
+                }
+
                 output.write(buffer, 0, bytesToRead)
                 totalBytesSent += readBytes
+
+                val time = System.currentTimeMillis()
+                if (time - lastProgressUpdate >= THROTTLE_TIME) {
+                    onProgress(totalBytesSent)
+                    lastProgressUpdate = time
+                }
             }
             return true
         } catch (e: Exception) {
@@ -115,5 +139,6 @@ class DataOutputChannel(
 
     private companion object {
         private const val WAIT_TIMEOUT = 30_000
+        private const val THROTTLE_TIME = 1000
     }
 }

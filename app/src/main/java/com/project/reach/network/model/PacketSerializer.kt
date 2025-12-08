@@ -7,8 +7,8 @@ import com.reach.project.core.serialization.FileHeader
 import com.reach.project.core.serialization.Goodbye
 import com.reach.project.core.serialization.Heartbeat
 import com.reach.project.core.serialization.Hello
+import com.reach.project.core.serialization.Message
 import com.reach.project.core.serialization.ReachPacket
-import com.reach.project.core.serialization.TextMessage
 import com.reach.project.core.serialization.TypingIndicator
 
 internal object PacketSerializer {
@@ -37,11 +37,20 @@ internal object PacketSerializer {
                     }
 
                     is Packet.Message -> {
-                        textMessage = TextMessage.newBuilder().apply {
+                        message = Message.newBuilder().apply {
                             senderUsername = packet.senderUsername
                             messageId = packet.messageId
-                            messageText = packet.message
+                            text = packet.text
                             timestamp = packet.timeStamp
+
+                            packet.media?.let { media ->
+                                fileHeader = FileHeader.newBuilder().apply {
+                                    fileId = media.fileId
+                                    filename = media.filename
+                                    fileSize = media.fileSize
+                                    mimeType = media.mimeType
+                                }.build()
+                            }
                         }.build()
                     }
 
@@ -53,15 +62,6 @@ internal object PacketSerializer {
                         fileAccept = FileAccept.newBuilder().apply {
                             fileId = packet.fileId
                             port = packet.port
-                        }.build()
-                    }
-
-                    is Packet.FileHeader -> {
-                        fileHeader = FileHeader.newBuilder().apply {
-                            fileId = packet.fileId
-                            filename = packet.filename
-                            mimeType = packet.mimeType
-                            fileSize = packet.fileSize
                         }.build()
                     }
                 }
@@ -82,13 +82,24 @@ internal object PacketSerializer {
 
         val senderId = proto.senderId
         return when (proto.payloadCase) {
-            ReachPacket.PayloadCase.TEXT_MESSAGE -> {
+            ReachPacket.PayloadCase.MESSAGE -> {
                 Packet.Message(
                     senderId = senderId,
-                    senderUsername = proto.textMessage.senderUsername,
-                    messageId = proto.textMessage.messageId,
-                    message = proto.textMessage.messageText,
-                    timeStamp = proto.textMessage.timestamp,
+                    senderUsername = proto.message.senderUsername,
+                    messageId = proto.message.messageId,
+                    text = proto.message.text,
+                    timeStamp = proto.message.timestamp,
+                    media = if (proto.message.hasFileHeader()) {
+                        val header = proto.message.fileHeader
+                        Packet.FileMetadata(
+                            fileId = header.fileId,
+                            filename = header.filename,
+                            mimeType = header.mimeType,
+                            fileSize = header.fileSize
+                        )
+                    } else {
+                        null
+                    }
                 )
             }
 
@@ -118,16 +129,6 @@ internal object PacketSerializer {
 
             ReachPacket.PayloadCase.PAYLOAD_NOT_SET -> {
                 throw IllegalArgumentException("Payload not set")
-            }
-
-            ReachPacket.PayloadCase.FILE_HEADER -> {
-                Packet.FileHeader(
-                    senderId = senderId,
-                    fileId = proto.fileHeader.fileId,
-                    filename = proto.fileHeader.filename,
-                    mimeType = proto.fileHeader.mimeType,
-                    fileSize = proto.fileHeader.fileSize
-                )
             }
 
             ReachPacket.PayloadCase.FILE_ACCEPT -> {

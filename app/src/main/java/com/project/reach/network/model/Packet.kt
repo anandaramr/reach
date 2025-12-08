@@ -7,8 +7,9 @@ sealed class Packet {
         override val senderId: String,
         val messageId: String,
         val senderUsername: String,
-        val message: String,
-        val timeStamp: Long
+        val text: String,
+        val timeStamp: Long,
+        val media: FileMetadata?
     ): Packet()
 
     data class Typing(
@@ -29,13 +30,12 @@ sealed class Packet {
         override val senderId: String
     ): Packet()
 
-    data class FileHeader(
-        override val senderId: String,
+    data class FileMetadata(
         val fileId: String,
         val filename: String,
         val mimeType: String,
         val fileSize: Long
-    ): Packet()
+    )
 
     data class FileAccept(
         override val senderId: String,

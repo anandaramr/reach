@@ -1,10 +1,13 @@
 package com.project.reach.data.respository
 
+import android.net.Uri
+import androidx.core.net.toUri
 import androidx.paging.Pager
 import androidx.paging.PagingConfig
 import androidx.paging.PagingData
 import androidx.paging.map
 import com.project.reach.data.local.IdentityManager
+import com.project.reach.data.local.dao.MediaDao
 import com.project.reach.data.local.dao.MessageDao
 import com.project.reach.data.local.entity.MediaEntity
 import com.project.reach.data.local.entity.MessageEntity
@@ -28,6 +31,7 @@ import com.project.reach.util.truncate
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -45,6 +49,7 @@ import java.util.concurrent.ConcurrentHashMap
 
 class MessageRepository(
     private val messageDao: MessageDao,
+    private val mediaDao: MediaDao,
     private val contactRepository: IContactRepository,
     private val networkController: INetworkController,
     private val fileRepository: IFileRepository,
@@ -82,7 +87,7 @@ class MessageRepository(
 
     // Message dispatcher keeps track of new messages and pending ones
     // and dispatches them if the recipient is discoverable
-    private suspend fun startMessageDispatcher() {
+    private suspend fun startMessageDispatcher() = coroutineScope {
         val pendingFlow = messageDao.getUserIdsOfPendingMessages()
 
         combine(foundDevices, pendingFlow) { onlineUsers, usersWithPendingMessages ->
@@ -90,7 +95,7 @@ class MessageRepository(
         }.distinctUntilChanged()
             .collect { userIds ->
                 userIds.forEach { userId ->
-                    dispatchPendingMessages(userId)
+                    launch { dispatchPendingMessages(userId) }
                 }
             }
     }
@@ -109,67 +114,128 @@ class MessageRepository(
         }
     }
 
-    private suspend fun dispatchMessage(message: MessageEntity) {
-        sendTextMessageToUser(message)
+    private suspend fun dispatchMessage(message: MessageWithMedia) {
+        sendMessageToUser(message)
     }
 
-    override suspend fun sendMessage(userId: String, text: String) {
+    override suspend fun sendMessage(userId: String, text: String, fileUri: Uri?) {
+        saveOutgoingMessage(userId, text, fileUri)
+        // Message dispatcher handles sending the message
+    }
+
+    private suspend fun saveOutgoingMessage(userId: String, text: String, fileUri: Uri?) {
         val messageId = UUID.randomUUID()
+        val timeStamp = System.currentTimeMillis()
+
+        if (fileUri == null) {
+            persistTextMessage(
+                userId = userId,
+                text = text,
+                messageId = messageId,
+                timeStamp = timeStamp,
+                isFromPeer = false,
+                messageState = MessageState.PENDING
+            )
+        } else {
+            val mediaId = UUID.randomUUID()
+            persistMessageWithMedia(
+                userId = userId,
+                caption = text,
+                fileUri = fileUri,
+                isFromPeer = false,
+                messageId = messageId,
+                mediaId = mediaId,
+                mimeType = fileRepository.getMimeType(fileUri),
+                fileSize = fileRepository.getFileSize(fileUri),
+                messageState = MessageState.PENDING
+            )
+        }
+    }
+
+    private suspend fun persistTextMessage(
+        userId: String,
+        text: String,
+        messageId: UUID,
+        timeStamp: Long,
+        isFromPeer: Boolean,
+        messageState: MessageState
+    ) {
         messageDao.insertMessage(
             messageEntity = MessageEntity(
                 messageId = messageId,
                 mediaId = null,
                 content = text,
                 userId = userId.toUUID(),
-                isFromPeer = false,
-                messageState = MessageState.PENDING,
-                messageType = MessageType.TEXT
+                isFromPeer = isFromPeer,
+                messageState = messageState,
+                messageType = MessageType.TEXT,
+                timeStamp = timeStamp
             )
         )
-        // Message dispatcher handles sending the message
     }
 
-    private suspend fun sendTextMessageToUser(
-        message: MessageEntity
+    private suspend fun persistMessageWithMedia(
+        userId: String,
+        caption: String,
+        fileUri: Uri,
+        messageId: UUID,
+        mediaId: UUID,
+        isFromPeer: Boolean,
+        mimeType: String,
+        fileSize: Long,
+        messageState: MessageState
     ) {
-        // reset self typing state so that throttling works as intended
+        messageDao.insertMessageWithMedia(
+            messageEntity = MessageEntity(
+                messageId = messageId,
+                mediaId = mediaId,
+                content = caption,
+                userId = userId.toUUID(),
+                isFromPeer = isFromPeer,
+                messageState = messageState,
+                messageType = MessageType.FILE
+            ),
+            mediaEntity = MediaEntity(
+                mediaId = mediaId,
+                uri = fileUri.toString(),
+                mimeType = mimeType,
+                fileSize = fileSize
+            )
+        )
+    }
+
+    private suspend fun sendMessageToUser(
+        chat: MessageWithMedia
+    ) {
+        // reset typing state timer so that throttling works as intended
         typingStateHandler.resetSelfIsTyping()
 
-        val successful = networkController.sendPacket(
+        val message = chat.messageEntity
+        val media = chat.mediaEntity
+        val result = networkController.sendPacket(
             userId = message.userId,
             Packet.Message(
                 senderId = myUserId,
                 senderUsername = myUsername.value,
-                message = message.content,
+                text = message.content,
                 messageId = message.messageId.toString(),
-                timeStamp = message.timeStamp
+                timeStamp = message.timeStamp,
+                media = media?.let {
+                    Packet.FileMetadata(
+                        fileId = it.mediaId.toString(),
+                        filename = fileRepository.getFilename(it.uri.toUri()),
+                        mimeType = it.mimeType,
+                        fileSize = it.fileSize
+                    )
+                },
             )
         )
-        if (successful) {
+
+        // only mark as sent if the message has no attachments
+        // if there are attachments it should be marked as sent only after file has been sent
+        if (result && media == null) {
             messageDao.updateMessageState(message.messageId, MessageState.SENT)
         }
-    }
-
-    private suspend fun receiveMessage(
-        userId: String,
-        username: String,
-        messageId: String,
-        message: String,
-        timestamp: Long
-    ) {
-        contactRepository.addToContacts(userId, username)
-        messageDao.insertMessage(
-            messageEntity = MessageEntity(
-                messageId = messageId.toUUID(),
-                content = message,
-                mediaId = null,
-                userId = userId.toUUID(),
-                isFromPeer = true,
-                messageState = MessageState.RECEIVED,
-                timeStamp = timestamp,
-                messageType = MessageType.TEXT
-            )
-        )
     }
 
     override fun getMessagesPaged(
@@ -207,16 +273,6 @@ class MessageRepository(
         ).flow
     }
 
-    @Deprecated("Use updateContact from IContactRepository instead")
-    override suspend fun saveNewContact(userId: String, username: String) {
-        return contactRepository.addToContacts(userId, username)
-    }
-
-    @Deprecated("Use updateContact from IContactRepository instead")
-    override fun getUsername(userId: String): Flow<String> {
-        return contactRepository.getUsername(userId)
-    }
-
     override suspend fun onReadMessage(messageId: String) {
         // TODO
     }
@@ -241,28 +297,8 @@ class MessageRepository(
     private suspend fun handlePackets() {
         networkController.packets.collect { packet ->
             when (packet) {
-                is Packet.Message -> {
-                    receiveMessage(
-                        userId = packet.senderId,
-                        username = packet.senderUsername,
-                        messageId = packet.messageId,
-                        message = packet.message,
-                        timestamp = packet.timeStamp
-                    )
-                    _notifications.emit(
-                        NotificationEvent.Message(
-                            userId = packet.senderId,
-                            username = packet.senderUsername,
-                            messages = getUnreadMessagesFromUser(packet.senderId),
-                        )
-                    )
-                    // stop the typing indicator
-                    typingStateHandler.resetPeerIsTyping(packet.senderId)
-                }
-
-                is Packet.Typing -> {
-                    typingStateHandler.setIsTyping(packet.senderId)
-                }
+                is Packet.Message -> handleMessagePacket(packet)
+                is Packet.Typing -> typingStateHandler.setIsTyping(packet.senderId)
 
                 is Packet.Heartbeat -> {
                     contactRepository.updateContactIfItExists(
@@ -279,65 +315,126 @@ class MessageRepository(
                 }
 
                 is Packet.GoodBye -> {}
-                is Packet.FileAccept -> {
-                    debug("Got file accept for $packet")
-
-                    val size = fileRepository.getFileSize("filename.txt")
-                    fileRepository.useFileInputStream("filename.txt") { inputStream ->
-                        networkController.sendFile(
-                            peerId = packet.senderId.toUUID(),
-                            inputStream = inputStream,
-                            size = size,
-                            fileAccept = packet
-                        )
-                    }
-
-                    debug("sent file")
-                }
-
-                is Packet.FileHeader -> {
-                    debug("Got file header: $packet")
-
-                    fileRepository.useFileOutputStream(packet.filename) { outputStream ->
-                        networkController.acceptFile(
-                            peerId = packet.senderId.toUUID(),
-                            fileId = packet.fileId,
-                            outputStream = outputStream,
-                            size = packet.fileSize
-                        )
-                    }
-
-                    debug("received file")
-                }
+                is Packet.FileAccept -> handleFileAccept(packet)
             }
+        }
+    }
+
+    private suspend fun handleMessagePacket(packet: Packet.Message) {
+        contactRepository.addToContacts(packet.senderId, packet.senderUsername)
+        saveIncomingMessage(packet)
+
+        // receive media if attachment exists
+        if (packet.media != null) {
+            handleIncomingFile(packet)
+        }
+
+        // stop typing indicator
+        typingStateHandler.resetPeerIsTyping(packet.senderId)
+        dispatchNewMessageNotification(packet)
+    }
+
+    private suspend fun saveIncomingMessage(packet: Packet.Message) {
+        if (packet.media == null) {
+            persistTextMessage(
+                userId = packet.senderId,
+                text = packet.text,
+                messageId = packet.messageId.toUUID(),
+                timeStamp = packet.timeStamp,
+                isFromPeer = true,
+                messageState = MessageState.RECEIVED
+            )
+        } else {
+            persistMessageWithMedia(
+                userId = packet.senderId,
+                caption = packet.text,
+                fileUri = fileRepository.getFileDestination(packet.media.filename),
+                messageId = packet.messageId.toUUID(),
+                mediaId = packet.media.fileId.toUUID(),
+                isFromPeer = true,
+                mimeType = packet.media.mimeType,
+                fileSize = packet.media.fileSize,
+                messageState = MessageState.RECEIVING
+            )
+        }
+    }
+
+    private suspend fun dispatchNewMessageNotification(packet: Packet.Message) {
+        _notifications.emit(
+            NotificationEvent.Message(
+                userId = packet.senderId,
+                username = packet.senderUsername,
+                messages = getUnreadMessagesFromUser(packet.senderId),
+            )
+        )
+    }
+
+    private suspend fun handleIncomingFile(packet: Packet.Message) {
+        if (packet.media == null) {
+            debug("Couldn't accept file: Missing file metadata")
+            return
+        }
+
+        var result = false
+        fileRepository.useFileOutputStream(packet.media.filename) { fileUri, outputStream ->
+            result = networkController.acceptFile(
+                peerId = packet.senderId.toUUID(),
+                fileId = packet.media.fileId,
+                outputStream = outputStream,
+                size = packet.media.fileSize,
+                onProgress = { debug(it.toString()) }
+            )
+        }
+
+        if (result) {
+            messageDao.updateMessageState(packet.messageId.toUUID(), MessageState.RECEIVED)
+        }
+    }
+
+    private suspend fun handleFileAccept(packet: Packet.FileAccept) {
+        val fileUri = mediaDao.getUriByFileId(packet.fileId.toUUID()).toUri()
+        val size = fileRepository.getFileSize(fileUri)
+
+        var result = false
+        fileRepository.useFileInputStream(fileUri) { inputStream ->
+            result = networkController.sendFile(
+                peerId = packet.senderId.toUUID(),
+                inputStream = inputStream,
+                size = size,
+                fileAccept = packet,
+                onProgress = { debug(it.toString()) }
+            )
+        }
+
+        if (result) {
+            messageDao.completeFileTransfer(packet.senderId.toUUID(), packet.fileId.toUUID())
         }
     }
 
     private suspend fun getUnreadMessagesFromUser(userId: String): List<MessageNotification> {
         return messageDao
-            .getUnreadMessagesById(userId.toUUID())
+            .getUnreadMessagesById(userId.toUUID(), NUM_MESSAGES_IN_NOTIFICATION)
             .first()
-            .takeLast(NUM_MESSAGES_IN_NOTIFICATION)
             .map { entity -> entity.toMessageNotification() }
     }
 
     private fun MessageEntity.toMessageNotification(): MessageNotification {
         return MessageNotification(
-            text = content.truncate(60),
+            text = content.ifBlank { "file" }.truncate(60),
             timeStamp = timeStamp
         )
     }
 
     private fun MessageWithMedia.toMessage(): Message {
         return Message(
-            messageId = message.messageId.toString(),
-            text = message.content,
+            messageId = messageEntity.messageId.toString(),
+            text = messageEntity.content,
             media = mediaEntity?.toMedia(),
-            isFromSelf = !message.isFromPeer,
-            userId = message.userId.toString(),
-            messageState = message.messageState,
-            timeStamp = message.timeStamp,
-            messageType = message.messageType
+            isFromSelf = !messageEntity.isFromPeer,
+            userId = messageEntity.userId.toString(),
+            messageState = messageEntity.messageState,
+            timeStamp = messageEntity.timeStamp,
+            messageType = messageEntity.messageType
         )
     }
 

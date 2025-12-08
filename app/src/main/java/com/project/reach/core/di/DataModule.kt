@@ -72,6 +72,7 @@ object DataModule {
         val database = ReachDatabase.getDatabase(context)
         return MessageRepository(
             messageDao = database.messageDao(),
+            mediaDao = database.mediaDao(),
             contactRepository = contactRepository,
             networkController = networkController,
             identityManager = identityManager,

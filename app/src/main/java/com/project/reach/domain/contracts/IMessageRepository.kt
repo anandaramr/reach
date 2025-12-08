@@ -1,5 +1,6 @@
 package com.project.reach.domain.contracts
 
+import android.net.Uri
 import androidx.paging.PagingData
 import com.project.reach.domain.models.Message
 import com.project.reach.domain.models.MessagePreview
@@ -24,7 +25,7 @@ interface IMessageRepository {
     /**
      * Sends message with content [text] to user with user ID [userId]
      */
-    suspend fun sendMessage(userId: String, text: String)
+    suspend fun sendMessage(userId: String, text: String, fileUri: Uri? = null)
 
     /**
      * Returns a paginated flow of messages for a specific user, ordered in
@@ -122,21 +123,6 @@ interface IMessageRepository {
         initialLoadSize: Int = pageSize,
         prefetchDistance: Int = 5
     ): Flow<PagingData<MessagePreview>>
-
-    /**
-     * Saves contact with credentials [userId] [username]
-     *
-     * Users need to be saved to contacts before any communication
-     * can be performed
-     */
-    @Deprecated("Use addToContacts from IContactRepository instead")
-    suspend fun saveNewContact(userId: String, username: String)
-
-    /**
-     * Get username for user using UserId
-     */
-    @Deprecated("Use getUsername from IContactRepository instead")
-    fun getUsername(userId: String): Flow<String>
 
     /**
      * Mark message as read

@@ -7,21 +7,21 @@ message ReachPacket {
     string service_name = 1;
     string sender_id = 2;
     oneof payload {
-        TextMessage text_message = 3;
+        Message message = 3;
         TypingIndicator typing_indicator = 4;
         Hello hello = 5;
         Heartbeat heartbeat = 6;
         Goodbye goodbye = 7;
-        FileHeader file_header = 8;
         FileAccept file_accept = 9;
     }
 }
 
-message TextMessage {
+message Message {
     string sender_username = 1;
     string message_id = 2;
-    string message_text = 3;
     int64 timestamp = 4;
+    string text = 5;
+    FileHeader file_header = 6;
 }
 
 message TypingIndicator { }
@@ -38,9 +38,9 @@ message Goodbye { }
 
 message FileHeader {
     string file_id = 1;
-    string filename = 2;
-    int64 file_size = 3;
-    string mime_type = 4;
+    string filename = 3;
+    int64 file_size = 4;
+    string mime_type = 5;
 }
 
 message FileAccept {

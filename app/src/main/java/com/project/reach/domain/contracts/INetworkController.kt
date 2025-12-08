@@ -16,26 +16,20 @@ interface INetworkController {
     val foundDevices: StateFlow<List<DeviceInfo>>
     suspend fun sendPacket(userId: UUID, packet: Packet): Boolean
 
-    suspend fun sendFileHeader(
-        peerId: UUID,
-        fileId: UUID,
-        filename: String,
-        mimeType: String,
-        size: Long
-    ): Boolean
-
     suspend fun acceptFile(
         peerId: UUID,
         fileId: String,
         outputStream: OutputStream,
-        size: Long
+        size: Long,
+        onProgress: (Long) -> Unit
     ): Boolean
 
     suspend fun sendFile(
         peerId: UUID,
         inputStream: InputStream,
         size: Long,
-        fileAccept: Packet.FileAccept
+        fileAccept: Packet.FileAccept,
+        onProgress: (Long) -> Unit
     ): Boolean
 
     fun startDiscovery()

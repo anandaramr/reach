@@ -6,7 +6,7 @@ import com.project.reach.data.local.entity.MediaEntity
 import com.project.reach.data.local.entity.MessageEntity
 
 data class MessageWithMedia(
-    @Embedded val message: MessageEntity,
+    @Embedded val messageEntity: MessageEntity,
 
     @Relation(
         parentColumn = "mediaId",

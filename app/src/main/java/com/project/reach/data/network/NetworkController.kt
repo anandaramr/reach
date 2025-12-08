@@ -40,7 +40,7 @@ class NetworkController(
         packet: Packet,
     ): Boolean {
         return when (packet) {
-            is Packet.Message, is Packet.FileAccept, is Packet.FileHeader -> {
+            is Packet.Message, is Packet.FileAccept -> {
                 sendPacketViaStream(userId, packet)
             }
 
@@ -54,32 +54,17 @@ class NetworkController(
         }
     }
 
-    override suspend fun sendFileHeader(
-        peerId: UUID,
-        fileId: UUID,
-        filename: String,
-        mimeType: String,
-        size: Long
-    ): Boolean {
-        return sendPacketViaStream(
-            userId = peerId, Packet.FileHeader(
-                senderId = myUserId,
-                fileId = fileId.toString(),
-                filename = filename,
-                mimeType = mimeType,
-                fileSize = size
-            )
-        )
-    }
-
     override suspend fun acceptFile(
         peerId: UUID,
         fileId: String,
         outputStream: OutputStream,
-        size: Long
+        size: Long,
+        onProgress: (Long) -> Unit
     ): Boolean {
         val dataInputChannel = wifiController.getDataInputChannel(peerId)
-        dataInputChannel?.use { channel ->
+        if (dataInputChannel == null) return false
+
+        dataInputChannel.use { channel ->
             val sendResult = sendPacketViaStream(
                 userId = peerId, Packet.FileAccept(
                     senderId = myUserId,
@@ -89,27 +74,24 @@ class NetworkController(
             )
 
             if (!sendResult) return false
-
-            return channel.readInto(outputStream, size)
+            return channel.readInto(outputStream, size, onProgress)
         }
-
-        return false
     }
 
     override suspend fun sendFile(
         peerId: UUID,
         inputStream: InputStream,
         size: Long,
-        fileAccept: Packet.FileAccept
+        fileAccept: Packet.FileAccept,
+        onProgress: (Long) -> Unit
     ): Boolean {
         val port = fileAccept.port
         val dataOutputChannel = wifiController.getDataOutputChannel(peerId, port)
+        if (dataOutputChannel == null) return false
 
-        dataOutputChannel?.use { channel ->
-            return channel.writeFrom(inputStream, size = size)
+        dataOutputChannel.use { channel ->
+            return channel.writeFrom(inputStream, size = size, onProgress)
         }
-
-        return false
     }
 
     override fun startDiscovery() {
