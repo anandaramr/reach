@@ -4,87 +4,108 @@ import android.content.Context
 import android.net.Uri
 import android.provider.OpenableColumns
 import android.webkit.MimeTypeMap
-import androidx.core.net.toUri
+import com.project.reach.data.utils.IngestResult
 import com.project.reach.domain.contracts.IFileRepository
 import com.project.reach.util.debug
-import java.io.FileNotFoundException
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import java.io.File
+import java.io.FileInputStream
+import java.io.FileOutputStream
 import java.io.InputStream
 import java.io.OutputStream
+import java.security.MessageDigest
 
 class FileRepository(private val context: Context): IFileRepository {
     override suspend fun useFileInputStream(
-        uri: Uri,
+        uri: String,
         callback: suspend (InputStream) -> Unit
     ) {
-        context.contentResolver.openInputStream(uri).use { stream ->
-            if (stream != null) callback(stream)
+        val file = File(context.filesDir, uri)
+        FileInputStream(file).use { stream ->
+            callback(stream)
         }
     }
 
     override suspend fun useFileOutputStream(
-        filename: String,
-        callback: suspend (fileUri: Uri, outputStream: OutputStream) -> Unit
+        fileHash: String,
+        callback: suspend (outputStream: OutputStream) -> Unit
     ) {
-        context.openFileOutput(filename, Context.MODE_PRIVATE).use { stream ->
-            callback(filename.toUri(), stream)
+        context.openFileOutput(fileHash, Context.MODE_PRIVATE).use { stream ->
+            callback(stream)
         }
     }
 
-    override fun getFileSize(uri: Uri): Long {
-        return context.getFileSize(uri)
+    override fun getDownloadLocation(filename: String): String {
+        return filename
     }
 
-    override fun getFilename(uri: Uri): String {
-        return context.getFilename(uri)
+    override suspend fun saveFileToPrivateStorage(uri: Uri): IngestResult {
+        return context.saveFileToPrivateStorage(uri)
     }
 
-    override fun getMimeType(uri: Uri): String {
-        return context.getMimeType(uri)
-    }
-
-    override fun getFileDestination(filename: String): Uri {
-        return filename.toUri()
-    }
-
-    private fun Context.getFileSize(uri: Uri): Long {
-        val cursor = contentResolver.query(uri, null, null, null, null)
-        var size: Long = -1
-        cursor?.use {
-            if (it.moveToFirst()) {
-                val sizeIndex = it.getColumnIndex(OpenableColumns.SIZE)
-                size = it.getLong(sizeIndex)
-            }
-        }
-
-        // fallback in case OpenableColumns does not return expected result
-        if (size <= 0) {
-            try {
-                contentResolver.openFileDescriptor(uri, "r")?.use { fd ->
-                    size = fd.statSize
-                }
-            } catch (e: FileNotFoundException) {
-                debug("Error getting file size: couldn't locate file")
-                throw e
-            }
-        }
-
-        return size
-    }
-
-    private fun Context.getFilename(uri: Uri): String {
+    private fun Context.getFilenameFromContentUri(uri: Uri): String {
         return contentResolver
             .query(uri, null, null, null, null)?.use { cursor ->
                 val nameIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
                 cursor.moveToFirst()
                 cursor.getString(nameIndex)
-            } ?: uri.path?.substringAfterLast('/') ?: "unknown"
+            }
+            ?: uri.path?.substringAfterLast('/')
+            ?: "unknown"
     }
 
-    private fun Context.getMimeType(uri: Uri): String {
+    private fun Context.getMimeTypeFromContentUri(uri: Uri): String {
         val mimeType = contentResolver.getType(uri)
         if (mimeType != null) return mimeType
 
         val extension = MimeTypeMap.getFileExtensionFromUrl(uri.toString())
-        return MimeTypeMap.getSingleton().getMimeTypeFromExtension(extension) ?: "application/octet-stream"
+        return MimeTypeMap.getSingleton().getMimeTypeFromExtension(extension)
+            ?: "application/octet-stream"
+    }
+
+    private suspend fun Context.saveFileToPrivateStorage(
+        uri: Uri,
+    ): IngestResult = withContext(Dispatchers.IO) {
+        val digest = MessageDigest.getInstance("SHA-256")
+        val tempFile = File.createTempFile("temp", ".tmp", cacheDir)
+
+        FileOutputStream(tempFile).use { outputStream ->
+            contentResolver.openInputStream(uri)?.use { inputStream ->
+                val buffer = ByteArray(8192)
+                var bytesRead = 0
+
+                while (inputStream.read(buffer).also { bytesRead = it } != -1) {
+                    outputStream.write(buffer, 0, bytesRead)
+                    digest.update(buffer, 0, bytesRead)
+                }
+            }
+        }
+
+        val hashString = digest.digest().toHexString()
+
+        val targetFile = File(filesDir, hashString)
+        if (targetFile.exists()) {
+            debug("File already exists")
+            tempFile.delete()
+        } else {
+            val result = tempFile.renameTo(targetFile)
+            if (!result) {
+                // fallback
+                tempFile.copyTo(targetFile, overwrite = true)
+                tempFile.delete()
+            }
+        }
+
+        val mimeType = context.getMimeTypeFromContentUri(uri)
+        val filename = context.getFilenameFromContentUri(uri)
+
+        /**
+         * Anti-Corruption Layer
+         *
+         * Prevents unsafe access of `content://` urls
+         */
+        val result = IngestResult(hashString, targetFile, mimeType, filename, hashString)
+        return@withContext result
     }
 }

@@ -1,7 +1,6 @@
 package com.project.reach.data.respository
 
 import android.net.Uri
-import androidx.core.net.toUri
 import androidx.paging.Pager
 import androidx.paging.PagingConfig
 import androidx.paging.PagingData
@@ -137,16 +136,17 @@ class MessageRepository(
                 messageState = MessageState.PENDING
             )
         } else {
-            val mediaId = UUID.randomUUID()
+            val result = fileRepository.saveFileToPrivateStorage(fileUri)
             persistMessageWithMedia(
                 userId = userId,
                 caption = text,
-                fileUri = fileUri,
+                privateUri = result.location,
                 isFromPeer = false,
                 messageId = messageId,
-                mediaId = mediaId,
-                mimeType = fileRepository.getMimeType(fileUri),
-                fileSize = fileRepository.getFileSize(fileUri),
+                mediaId = result.hash,
+                mimeType = result.mimeType,
+                fileSize = result.file.length(),
+                filename = result.filename,
                 messageState = MessageState.PENDING
             )
         }
@@ -177,12 +177,13 @@ class MessageRepository(
     private suspend fun persistMessageWithMedia(
         userId: String,
         caption: String,
-        fileUri: Uri,
+        privateUri: String,
         messageId: UUID,
-        mediaId: UUID,
+        mediaId: String,
         isFromPeer: Boolean,
         mimeType: String,
         fileSize: Long,
+        filename: String,
         messageState: MessageState
     ) {
         messageDao.insertMessageWithMedia(
@@ -197,9 +198,10 @@ class MessageRepository(
             ),
             mediaEntity = MediaEntity(
                 mediaId = mediaId,
-                uri = fileUri.toString(),
+                uri = privateUri,
                 mimeType = mimeType,
-                fileSize = fileSize
+                size = fileSize,
+                filename = filename
             )
         )
     }
@@ -222,10 +224,10 @@ class MessageRepository(
                 timeStamp = message.timeStamp,
                 media = media?.let {
                     Packet.FileMetadata(
-                        fileId = it.mediaId.toString(),
-                        filename = fileRepository.getFilename(it.uri.toUri()),
+                        fileHash = it.mediaId,
+                        filename = it.filename,
                         mimeType = it.mimeType,
-                        fileSize = it.fileSize
+                        fileSize = it.size
                     )
                 },
             )
@@ -348,12 +350,13 @@ class MessageRepository(
             persistMessageWithMedia(
                 userId = packet.senderId,
                 caption = packet.text,
-                fileUri = fileRepository.getFileDestination(packet.media.filename),
+                privateUri = fileRepository.getDownloadLocation(packet.media.filename),
                 messageId = packet.messageId.toUUID(),
-                mediaId = packet.media.fileId.toUUID(),
+                mediaId = packet.media.fileHash,
                 isFromPeer = true,
                 mimeType = packet.media.mimeType,
                 fileSize = packet.media.fileSize,
+                filename = packet.media.filename,
                 messageState = MessageState.RECEIVING
             )
         }
@@ -376,10 +379,10 @@ class MessageRepository(
         }
 
         var result = false
-        fileRepository.useFileOutputStream(packet.media.filename) { fileUri, outputStream ->
+        fileRepository.useFileOutputStream(packet.media.fileHash) { outputStream ->
             result = networkController.acceptFile(
                 peerId = packet.senderId.toUUID(),
-                fileId = packet.media.fileId,
+                fileId = packet.media.fileHash,
                 outputStream = outputStream,
                 size = packet.media.fileSize,
                 onProgress = { debug(it.toString()) }
@@ -392,22 +395,21 @@ class MessageRepository(
     }
 
     private suspend fun handleFileAccept(packet: Packet.FileAccept) {
-        val fileUri = mediaDao.getUriByFileId(packet.fileId.toUUID()).toUri()
-        val size = fileRepository.getFileSize(fileUri)
+        val file = mediaDao.getFileByHash(packet.fileHash)
 
         var result = false
-        fileRepository.useFileInputStream(fileUri) { inputStream ->
+        fileRepository.useFileInputStream(file.uri) { inputStream ->
             result = networkController.sendFile(
                 peerId = packet.senderId.toUUID(),
                 inputStream = inputStream,
-                size = size,
+                size = file.size,
                 fileAccept = packet,
                 onProgress = { debug(it.toString()) }
             )
         }
 
         if (result) {
-            messageDao.completeFileTransfer(packet.senderId.toUUID(), packet.fileId.toUUID())
+            messageDao.completeFileTransfer(packet.senderId.toUUID(), packet.fileHash)
         }
     }
 
@@ -442,7 +444,7 @@ class MessageRepository(
         return Media(
             uri = uri,
             mimeType = mimeType,
-            size = fileSize
+            size = size
         )
     }
 

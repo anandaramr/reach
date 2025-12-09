@@ -2,6 +2,8 @@ package com.project.reach.network.model
 
 import com.google.protobuf.InvalidProtocolBufferException
 import com.project.reach.core.exceptions.UnknownSourceException
+import com.project.reach.util.toHexString
+import com.project.reach.util.toProtoBytes
 import com.reach.project.core.serialization.FileAccept
 import com.reach.project.core.serialization.FileHeader
 import com.reach.project.core.serialization.Goodbye
@@ -45,7 +47,7 @@ internal object PacketSerializer {
 
                             packet.media?.let { media ->
                                 fileHeader = FileHeader.newBuilder().apply {
-                                    fileId = media.fileId
+                                    fileHash = media.fileHash.toProtoBytes()
                                     filename = media.filename
                                     fileSize = media.fileSize
                                     mimeType = media.mimeType
@@ -60,7 +62,7 @@ internal object PacketSerializer {
 
                     is Packet.FileAccept -> {
                         fileAccept = FileAccept.newBuilder().apply {
-                            fileId = packet.fileId
+                            fileHash = packet.fileHash.toProtoBytes()
                             port = packet.port
                         }.build()
                     }
@@ -92,7 +94,7 @@ internal object PacketSerializer {
                     media = if (proto.message.hasFileHeader()) {
                         val header = proto.message.fileHeader
                         Packet.FileMetadata(
-                            fileId = header.fileId,
+                            fileHash = header.fileHash.toHexString(),
                             filename = header.filename,
                             mimeType = header.mimeType,
                             fileSize = header.fileSize
@@ -134,7 +136,7 @@ internal object PacketSerializer {
             ReachPacket.PayloadCase.FILE_ACCEPT -> {
                 Packet.FileAccept(
                     senderId = senderId,
-                    fileId = proto.fileAccept.fileId,
+                    fileHash = proto.fileAccept.fileHash.toHexString(),
                     port = proto.fileAccept.port
                 )
             }

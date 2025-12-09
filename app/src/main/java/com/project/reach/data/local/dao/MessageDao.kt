@@ -61,6 +61,6 @@ interface MessageDao {
     @Query("select * from messages where userId = :userId and messageState = \"RECEIVED\" order by timeStamp limit :limit")
     fun getUnreadMessagesById(userId: UUID, limit: Int): Flow<List<MessageEntity>>
 
-    @Query("update messages set messageState = \"RECEIVED\" where userId = :senderId and mediaId = :fileId")
-    suspend fun completeFileTransfer(senderId: UUID, fileId: UUID)
+    @Query("update messages set messageState = \"SENT\" where userId = :senderId and mediaId = :mediaId")
+    suspend fun completeFileTransfer(senderId: UUID, mediaId: String)
 }

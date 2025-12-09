@@ -68,7 +68,7 @@ class NetworkController(
             val sendResult = sendPacketViaStream(
                 userId = peerId, Packet.FileAccept(
                     senderId = myUserId,
-                    fileId = fileId,
+                    fileHash = fileId,
                     port = channel.port
                 )
             )

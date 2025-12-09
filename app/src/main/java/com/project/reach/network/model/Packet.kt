@@ -31,7 +31,7 @@ sealed class Packet {
     ): Packet()
 
     data class FileMetadata(
-        val fileId: String,
+        val fileHash: String,
         val filename: String,
         val mimeType: String,
         val fileSize: Long
@@ -39,7 +39,7 @@ sealed class Packet {
 
     data class FileAccept(
         override val senderId: String,
-        val fileId: String,
+        val fileHash: String,
         val port: Int,
     ): Packet()
 

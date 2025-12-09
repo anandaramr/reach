@@ -31,7 +31,7 @@ data class MessageEntity(
     @PrimaryKey var messageId: UUID,
     val content: String,
     val messageType: MessageType,
-    val mediaId: UUID? = null,
+    val mediaId: String? = null,
     val userId: UUID,
     val isFromPeer: Boolean,
     val messageState: MessageState = MessageState.PENDING,

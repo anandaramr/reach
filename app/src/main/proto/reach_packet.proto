@@ -37,13 +37,13 @@ message Heartbeat {
 message Goodbye { }
 
 message FileHeader {
-    string file_id = 1;
+    bytes file_hash = 1;
     string filename = 3;
     int64 file_size = 4;
     string mime_type = 5;
 }
 
 message FileAccept {
-    string file_id = 1;
+    bytes file_hash = 1;
     int32 port = 2;
 }

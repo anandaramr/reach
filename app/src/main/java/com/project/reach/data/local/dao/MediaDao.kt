@@ -2,10 +2,10 @@ package com.project.reach.data.local.dao
 
 import androidx.room.Dao
 import androidx.room.Query
-import java.util.UUID
+import com.project.reach.data.local.entity.MediaEntity
 
 @Dao
 interface MediaDao {
-    @Query("select uri from media where mediaId = :fileId")
-    fun getUriByFileId(fileId: UUID): String
+    @Query("select * from media where mediaId = :fileHash")
+    fun getFileByHash(fileHash: String): MediaEntity
 }
