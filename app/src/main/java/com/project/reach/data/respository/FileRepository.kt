@@ -5,13 +5,10 @@ import android.net.Uri
 import android.provider.OpenableColumns
 import android.webkit.MimeTypeMap
 import androidx.core.content.FileProvider
-import com.project.reach.data.utils.IngestResult
+import com.project.reach.data.utils.PrivateFile
 import com.project.reach.domain.contracts.IFileRepository
-import com.project.reach.domain.models.FileTransferState
 import com.project.reach.util.debug
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileInputStream
@@ -22,7 +19,7 @@ import java.security.MessageDigest
 import java.util.concurrent.ConcurrentHashMap
 
 class FileRepository(private val context: Context): IFileRepository {
-    private val activeFileTransfers = ConcurrentHashMap<String, Long>()
+    override val activeFileTransfers = ConcurrentHashMap<String, Long>()
 
     override suspend fun useFileInputStream(
         uri: String,
@@ -44,27 +41,36 @@ class FileRepository(private val context: Context): IFileRepository {
         }
     }
 
-    override fun getDownloadLocation(filename: String): String {
-        return filename
+    override fun getDownloadLocation(fileHash: String): String {
+        return fileHash
     }
 
-    override suspend fun saveFileToPrivateStorage(uri: Uri): IngestResult {
-        return context.saveFileToPrivateStorage(uri)
+    override suspend fun saveFileToPrivateStorage(uri: Uri, onProgress: (progress: Long) -> Unit): PrivateFile {
+        return context.saveFileToPrivateStorage(uri, onProgress)
     }
 
-    override fun getContentUri(relativePath: String): Uri {
+    override fun getContentUri(relativePath: String): Uri? {
         val authority = "${context.packageName}.provider"
-        // TODO handle FileNotFoundException
         val file = File(context.filesDir, relativePath)
-        return FileProvider.getUriForFile(context, authority, file)
+
+        return if (file.exists()){
+            FileProvider.getUriForFile(context, authority, file)
+        } else {
+            null
+        }
     }
 
     override fun updateFileTransferProgress(fileHash: String, progress: Long) {
         activeFileTransfers.put(fileHash, progress)
     }
 
-    override fun markTransferAsComplete(fileHash: String) {
+    override fun markAsNotInProgress(fileHash: String) {
         activeFileTransfers.remove(fileHash)
+    }
+
+    override fun getFileSize(fileHash: String): Long {
+        val file = File(context.filesDir, fileHash)
+        return file.length()
     }
 
     private fun Context.getFilenameFromContentUri(uri: Uri): String {
@@ -89,18 +95,28 @@ class FileRepository(private val context: Context): IFileRepository {
 
     private suspend fun Context.saveFileToPrivateStorage(
         uri: Uri,
-    ): IngestResult = withContext(Dispatchers.IO) {
+        onProgress: (Long) -> Unit
+    ): PrivateFile = withContext(Dispatchers.IO) {
         val digest = MessageDigest.getInstance("SHA-256")
         val tempFile = File.createTempFile("temp", ".tmp", cacheDir)
+        val lastUpdateTimestamp = 0L
 
         FileOutputStream(tempFile).use { outputStream ->
             contentResolver.openInputStream(uri)?.use { inputStream ->
                 val buffer = ByteArray(8192)
                 var bytesRead = 0
+                var totalBytesRead = 0L
+                onProgress(0)
 
                 while (inputStream.read(buffer).also { bytesRead = it } != -1) {
                     outputStream.write(buffer, 0, bytesRead)
                     digest.update(buffer, 0, bytesRead)
+                    totalBytesRead += bytesRead
+
+                    val time = System.currentTimeMillis()
+                    if (time - lastUpdateTimestamp >= THROTTLE_TIME) {
+                        onProgress(totalBytesRead)
+                    }
                 }
             }
         }
@@ -128,7 +144,11 @@ class FileRepository(private val context: Context): IFileRepository {
          *
          * Prevents unsafe access of `content://` urls
          */
-        val result = IngestResult(hashString, targetFile, mimeType, filename, hashString)
+        val result = PrivateFile(hashString, targetFile, mimeType, filename, hashString)
         return@withContext result
+    }
+
+    private companion object {
+        const val THROTTLE_TIME = 500
     }
 }

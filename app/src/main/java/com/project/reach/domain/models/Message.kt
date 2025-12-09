@@ -23,10 +23,17 @@ sealed interface Message {
         override val isFromSelf: Boolean,
         override val timeStamp: Long,
         override val messageState: MessageState,
+
         val fileHash: String,
         val filename: String,
-        val contentUri: Uri,
         val size: Long,
-        val mimeType: String
+        val transferState: TransferState
     ): Message
+}
+
+sealed interface TransferState {
+    object NotFound: TransferState
+    object InProgress: TransferState
+    data class Paused(val currentBytes: Long): TransferState
+    data class Complete(val contentUri: Uri, val mimeType: String): TransferState
 }

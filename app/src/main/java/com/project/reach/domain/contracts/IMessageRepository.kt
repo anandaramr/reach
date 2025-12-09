@@ -1,7 +1,7 @@
 package com.project.reach.domain.contracts
 
-import android.net.Uri
 import androidx.paging.PagingData
+import com.project.reach.data.utils.PrivateFile
 import com.project.reach.domain.models.Message
 import com.project.reach.domain.models.MessagePreview
 import com.project.reach.domain.models.NotificationEvent
@@ -25,7 +25,7 @@ interface IMessageRepository {
     /**
      * Sends message with content [text] to user with user ID [userId]
      */
-    suspend fun sendMessage(userId: String, text: String, fileUri: Uri? = null)
+    suspend fun sendMessage(userId: String, text: String, file: PrivateFile? = null)
 
     /**
      * Returns a paginated flow of messages for a specific user, ordered in

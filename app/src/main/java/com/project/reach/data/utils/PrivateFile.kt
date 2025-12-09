@@ -2,7 +2,7 @@ package com.project.reach.data.utils
 
 import java.io.File
 
-data class IngestResult(
+data class PrivateFile(
     val hash: String,
     val file: File,
     val mimeType: String,

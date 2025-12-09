@@ -1,6 +1,5 @@
 package com.project.reach.data.respository
 
-import android.net.Uri
 import androidx.paging.Pager
 import androidx.paging.PagingConfig
 import androidx.paging.PagingData
@@ -11,6 +10,7 @@ import com.project.reach.data.local.dao.MessageDao
 import com.project.reach.data.local.entity.MediaEntity
 import com.project.reach.data.local.entity.MessageEntity
 import com.project.reach.data.model.MessageWithMedia
+import com.project.reach.data.utils.PrivateFile
 import com.project.reach.data.utils.TypingStateHandler
 import com.project.reach.domain.contracts.IContactRepository
 import com.project.reach.domain.contracts.IFileRepository
@@ -22,6 +22,7 @@ import com.project.reach.domain.models.MessagePreview
 import com.project.reach.domain.models.MessageState
 import com.project.reach.domain.models.MessageType
 import com.project.reach.domain.models.NotificationEvent
+import com.project.reach.domain.models.TransferState
 import com.project.reach.network.model.Packet
 import com.project.reach.util.debug
 import com.project.reach.util.toUUID
@@ -116,16 +117,16 @@ class MessageRepository(
         sendMessageToUser(message)
     }
 
-    override suspend fun sendMessage(userId: String, text: String, fileUri: Uri?) {
-        saveOutgoingMessage(userId, text, fileUri)
+    override suspend fun sendMessage(userId: String, text: String, file: PrivateFile?) {
+        saveOutgoingMessage(userId, text, file)
         // Message dispatcher handles sending the message
     }
 
-    private suspend fun saveOutgoingMessage(userId: String, text: String, fileUri: Uri?) {
+    private suspend fun saveOutgoingMessage(userId: String, text: String, file: PrivateFile?) {
         val messageId = UUID.randomUUID()
         val timeStamp = System.currentTimeMillis()
 
-        if (fileUri == null) {
+        if (file == null) {
             persistTextMessage(
                 userId = userId,
                 text = text,
@@ -135,17 +136,16 @@ class MessageRepository(
                 messageState = MessageState.PENDING
             )
         } else {
-            val result = fileRepository.saveFileToPrivateStorage(fileUri)
             persistMessageWithMedia(
                 userId = userId,
                 caption = text,
-                privateUri = result.location,
+                privateUri = file.location,
                 isFromPeer = false,
                 messageId = messageId,
-                mediaId = result.hash,
-                mimeType = result.mimeType,
-                fileSize = result.file.length(),
-                filename = result.filename,
+                mediaId = file.hash,
+                mimeType = file.mimeType,
+                fileSize = file.file.length(),
+                filename = file.filename,
                 messageState = MessageState.PENDING
             )
         }
@@ -349,7 +349,7 @@ class MessageRepository(
             persistMessageWithMedia(
                 userId = packet.senderId,
                 caption = packet.text,
-                privateUri = fileRepository.getDownloadLocation(packet.media.filename),
+                privateUri = fileRepository.getDownloadLocation(packet.media.fileHash),
                 messageId = packet.messageId.toUUID(),
                 mediaId = packet.media.fileHash,
                 isFromPeer = true,
@@ -389,6 +389,7 @@ class MessageRepository(
                 }
             )
         }
+        fileRepository.markAsNotInProgress(packet.media.fileHash)
 
         if (result) {
             messageDao.updateMessageState(packet.messageId.toUUID(), MessageState.RECEIVED)
@@ -417,10 +418,10 @@ class MessageRepository(
                 }
             )
         }
+        fileRepository.markAsNotInProgress(packet.fileHash)
 
         if (result) {
             messageDao.completeFileTransfer(packet.senderId.toUUID(), packet.fileHash)
-            fileRepository.markTransferAsComplete(packet.fileHash)
         }
     }
 
@@ -445,27 +446,55 @@ class MessageRepository(
         val messageState = messageEntity.messageState
         val timeStamp = messageEntity.timeStamp
 
-        return if (mediaEntity == null) {
-            Message.TextMessage(
+        if (mediaEntity == null) {
+            return Message.TextMessage(
                 messageId = messageId,
                 text = text,
                 isFromSelf = isFromSelf,
                 messageState = messageState,
                 timeStamp = timeStamp
             )
+        }
+
+        val fileHash = mediaEntity.mediaId
+        val relativePath = mediaEntity.uri
+        val size = mediaEntity.size
+        val mimeType = mediaEntity.mimeType
+        val transferState = getTransferState(fileHash, relativePath, size, mimeType)
+
+        return Message.FileMessage(
+            messageId = messageId,
+            text = text,
+            isFromSelf = isFromSelf,
+            timeStamp = timeStamp,
+            messageState = messageState,
+            fileHash = fileHash,
+            filename = mediaEntity.filename,
+            size = size,
+            transferState = transferState
+        )
+    }
+
+    private fun getTransferState(
+        fileHash: String,
+        relativePath: String,
+        size: Long,
+        mimeType: String
+    ): TransferState {
+        if (fileRepository.activeFileTransfers.containsKey(fileHash)) {
+            return TransferState.InProgress
+        }
+
+        val contentUri = fileRepository.getContentUri(relativePath)
+        if (contentUri == null) {
+            return TransferState.NotFound
+        }
+
+        val currentBytes = fileRepository.getFileSize(fileHash)
+        return if (size != currentBytes) {
+            TransferState.Paused(currentBytes)
         } else {
-            Message.FileMessage(
-                messageId = messageId,
-                text = text,
-                isFromSelf = isFromSelf,
-                timeStamp = timeStamp,
-                messageState = messageState,
-                fileHash = mediaEntity.mediaId,
-                filename = mediaEntity.filename,
-                contentUri = fileRepository.getContentUri(mediaEntity.uri),
-                size = mediaEntity.size,
-                mimeType = mediaEntity.mimeType
-            )
+            TransferState.Complete(contentUri, mimeType)
         }
     }
 
