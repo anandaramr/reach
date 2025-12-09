@@ -1,7 +1,10 @@
 package com.project.reach.domain.models
 
+import android.net.Uri
+
 data class Media(
-    val uri: String,
+    val contentUri: Uri,
     val mimeType: String,
-    val size: Long
+    val size: Long,
+    val filename: String
 )

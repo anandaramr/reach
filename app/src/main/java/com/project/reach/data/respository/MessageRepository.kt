@@ -16,7 +16,6 @@ import com.project.reach.domain.contracts.IContactRepository
 import com.project.reach.domain.contracts.IFileRepository
 import com.project.reach.domain.contracts.IMessageRepository
 import com.project.reach.domain.contracts.INetworkController
-import com.project.reach.domain.models.Media
 import com.project.reach.domain.models.Message
 import com.project.reach.domain.models.MessageNotification
 import com.project.reach.domain.models.MessagePreview
@@ -385,13 +384,22 @@ class MessageRepository(
                 fileId = packet.media.fileHash,
                 outputStream = outputStream,
                 size = packet.media.fileSize,
-                onProgress = { debug(it.toString()) }
+                onProgress = { progress ->
+                    updateTransferProgress(packet.media.fileHash, progress)
+                }
             )
         }
 
         if (result) {
             messageDao.updateMessageState(packet.messageId.toUUID(), MessageState.RECEIVED)
         }
+    }
+
+    private fun updateTransferProgress(fileHash: String, progress: Long) {
+        fileRepository.updateFileTransferProgress(
+            fileHash = fileHash,
+            progress = progress
+        )
     }
 
     private suspend fun handleFileAccept(packet: Packet.FileAccept) {
@@ -404,12 +412,15 @@ class MessageRepository(
                 inputStream = inputStream,
                 size = file.size,
                 fileAccept = packet,
-                onProgress = { debug(it.toString()) }
+                onProgress = { progress ->
+                    updateTransferProgress(packet.fileHash, progress)
+                }
             )
         }
 
         if (result) {
             messageDao.completeFileTransfer(packet.senderId.toUUID(), packet.fileHash)
+            fileRepository.markTransferAsComplete(packet.fileHash)
         }
     }
 
@@ -428,24 +439,34 @@ class MessageRepository(
     }
 
     private fun MessageWithMedia.toMessage(): Message {
-        return Message(
-            messageId = messageEntity.messageId.toString(),
-            text = messageEntity.content,
-            media = mediaEntity?.toMedia(),
-            isFromSelf = !messageEntity.isFromPeer,
-            userId = messageEntity.userId.toString(),
-            messageState = messageEntity.messageState,
-            timeStamp = messageEntity.timeStamp,
-            messageType = messageEntity.messageType
-        )
-    }
+        val messageId = messageEntity.messageId.toString()
+        val text = messageEntity.content
+        val isFromSelf = !messageEntity.isFromPeer
+        val messageState = messageEntity.messageState
+        val timeStamp = messageEntity.timeStamp
 
-    private fun MediaEntity.toMedia(): Media {
-        return Media(
-            uri = uri,
-            mimeType = mimeType,
-            size = size
-        )
+        return if (mediaEntity == null) {
+            Message.TextMessage(
+                messageId = messageId,
+                text = text,
+                isFromSelf = isFromSelf,
+                messageState = messageState,
+                timeStamp = timeStamp
+            )
+        } else {
+            Message.FileMessage(
+                messageId = messageId,
+                text = text,
+                isFromSelf = isFromSelf,
+                timeStamp = timeStamp,
+                messageState = messageState,
+                fileHash = mediaEntity.mediaId,
+                filename = mediaEntity.filename,
+                contentUri = fileRepository.getContentUri(mediaEntity.uri),
+                size = mediaEntity.size,
+                mimeType = mediaEntity.mimeType
+            )
+        }
     }
 
     companion object {

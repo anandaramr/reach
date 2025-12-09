@@ -4,10 +4,14 @@ import android.content.Context
 import android.net.Uri
 import android.provider.OpenableColumns
 import android.webkit.MimeTypeMap
+import androidx.core.content.FileProvider
 import com.project.reach.data.utils.IngestResult
 import com.project.reach.domain.contracts.IFileRepository
+import com.project.reach.domain.models.FileTransferState
 import com.project.reach.util.debug
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileInputStream
@@ -15,12 +19,16 @@ import java.io.FileOutputStream
 import java.io.InputStream
 import java.io.OutputStream
 import java.security.MessageDigest
+import java.util.concurrent.ConcurrentHashMap
 
 class FileRepository(private val context: Context): IFileRepository {
+    private val activeFileTransfers = ConcurrentHashMap<String, Long>()
+
     override suspend fun useFileInputStream(
         uri: String,
         callback: suspend (InputStream) -> Unit
     ) {
+        // TODO handle FileNotFoundException
         val file = File(context.filesDir, uri)
         FileInputStream(file).use { stream ->
             callback(stream)
@@ -42,6 +50,21 @@ class FileRepository(private val context: Context): IFileRepository {
 
     override suspend fun saveFileToPrivateStorage(uri: Uri): IngestResult {
         return context.saveFileToPrivateStorage(uri)
+    }
+
+    override fun getContentUri(relativePath: String): Uri {
+        val authority = "${context.packageName}.provider"
+        // TODO handle FileNotFoundException
+        val file = File(context.filesDir, relativePath)
+        return FileProvider.getUriForFile(context, authority, file)
+    }
+
+    override fun updateFileTransferProgress(fileHash: String, progress: Long) {
+        activeFileTransfers.put(fileHash, progress)
+    }
+
+    override fun markTransferAsComplete(fileHash: String) {
+        activeFileTransfers.remove(fileHash)
     }
 
     private fun Context.getFilenameFromContentUri(uri: Uri): String {
