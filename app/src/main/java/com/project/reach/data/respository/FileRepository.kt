@@ -84,11 +84,17 @@ class FileRepository(private val context: Context): IFileRepository {
     }
 
     @OptIn(ExperimentalCoroutinesApi::class)
-    override fun observeTransferState(fileHash: String, fileSize: Long, messageState: MessageState): Flow<TransferState> {
-        debug("message state: $messageState")
-        if (messageState != MessageState.PENDING && messageState != MessageState.RECEIVING) {
-            val contentUri = getContentUri(getDownloadLocation(fileHash))
+    override fun observeTransferState(
+        fileHash: String,
+        fileSize: Long,
+        messageState: MessageState
+    ): Flow<TransferState> {
+        if (messageState == MessageState.DELIVERED) {
             return flowOf(TransferState.Complete)
+        }
+
+        if (messageState == MessageState.PAUSED) {
+            return flowOf(TransferState.Paused)
         }
 
         return activeTransfers
@@ -96,22 +102,11 @@ class FileRepository(private val context: Context): IFileRepository {
             .distinctUntilChanged()
             .flatMapLatest { isActive ->
                 if (isActive) {
-                    progressMap[fileHash] ?: flowOf(TransferState.Paused)
+                    progressMap[fileHash] ?: flowOf(TransferState.Preparing)
                 } else {
-                    flowOf(TransferState.Paused)
+                    flowOf(TransferState.Preparing)
                 }
             }.flowOn(Dispatchers.IO)
-    }
-
-    private fun getDiskState(fileHash: String, fileSize:Long): TransferState {
-        val path = getDownloadLocation(fileHash)
-        val file = File(context.filesDir, path)
-        return if (file.length() == fileSize) {
-            val contentUri = getContentUri(path)
-            TransferState.Complete
-        } else {
-            TransferState.Paused
-        }
     }
 
     override fun getFileSize(relativePath: String): Long {

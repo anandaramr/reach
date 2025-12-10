@@ -86,7 +86,7 @@ class MessageRepository(
     // Message dispatcher keeps track of new messages and pending ones
     // and dispatches them if the recipient is discoverable
     private suspend fun startMessageDispatcher() = coroutineScope {
-        val pendingFlow = messageDao.getUserIdsOfPendingMessages()
+        val pendingFlow = messageDao.getUserIdsOfUnsentMessages()
 
         combine(foundDevices, pendingFlow) { onlineUsers, usersWithPendingMessages ->
             onlineUsers.intersect(usersWithPendingMessages)
@@ -105,7 +105,7 @@ class MessageRepository(
         sendLock.withLock {
             if (userId !in foundDevices.value) return
 
-            val pendingMessages = messageDao.getPendingMessagesById(userId).first()
+            val pendingMessages = messageDao.getUnsentMessagesByUserId(userId).first()
             pendingMessages.forEach { message ->
                 dispatchMessage(message)
             }
@@ -231,10 +231,13 @@ class MessageRepository(
             )
         )
 
-        // only mark as sent if the message has no attachments
-        // if there are attachments it should be marked as sent only after file has been sent
-        if (result && media == null) {
-            messageDao.updateMessageState(message.messageId, MessageState.SENT)
+        if (!result) {
+            messageDao.updateMessageState(message.messageId, MessageState.PAUSED)
+        } else if (media == null) {
+            // only mark as sent if the message has no attachments
+            // if there are attachments its message status should be
+            // updated only after the file has been sent through wire
+            messageDao.updateMessageState(message.messageId, MessageState.DELIVERED)
         }
     }
 
@@ -343,7 +346,7 @@ class MessageRepository(
                 messageId = packet.messageId.toUUID(),
                 timeStamp = packet.timeStamp,
                 isFromPeer = true,
-                messageState = MessageState.RECEIVED
+                messageState = MessageState.DELIVERED
             )
         } else {
             persistMessageWithMedia(
@@ -356,7 +359,7 @@ class MessageRepository(
                 mimeType = packet.media.mimeType,
                 fileSize = packet.media.fileSize,
                 filename = packet.media.filename,
-                messageState = MessageState.RECEIVING
+                messageState = MessageState.PENDING
             )
         }
     }
@@ -377,9 +380,13 @@ class MessageRepository(
             return false
         }
 
-        var result = false
+        // Mark as PENDING to let UI know that an attempt to transfer has started
+        // TODO update transfer state by fileID instead of messageId
+        messageDao.updateMessageState(packet.messageId.toUUID(), MessageState.PENDING)
+
+        var isTransferSuccessful = false
         fileRepository.useFileOutputStream(packet.media.fileHash) { outputStream ->
-            result = networkController.acceptFile(
+            isTransferSuccessful = networkController.acceptFile(
                 peerId = packet.senderId.toUUID(),
                 fileId = packet.media.fileHash,
                 outputStream = outputStream,
@@ -390,11 +397,10 @@ class MessageRepository(
             )
         }
 
-        if (result) {
-            messageDao.updateMessageState(packet.messageId.toUUID(), MessageState.RECEIVED)
-        }
+        val messageState = if (isTransferSuccessful) MessageState.DELIVERED else MessageState.PAUSED
+        messageDao.updateMessageState(packet.messageId.toUUID(), messageState)
         fileRepository.markAsNotInProgress(packet.media.fileHash)
-        return result
+        return isTransferSuccessful
     }
 
     private fun updateTransferProgress(fileHash: String, progress: Long) {

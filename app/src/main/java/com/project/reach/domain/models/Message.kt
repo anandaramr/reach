@@ -31,9 +31,3 @@ sealed interface Message {
         val contentUri: Uri
     ): Message
 }
-
-sealed interface TransferState {
-    data class Progress(val currentBytes: Long): TransferState
-    object Paused: TransferState
-    object Complete: TransferState
-}

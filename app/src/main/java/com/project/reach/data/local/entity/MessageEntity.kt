@@ -34,6 +34,6 @@ data class MessageEntity(
     val mediaId: String? = null,
     val userId: UUID,
     val isFromPeer: Boolean,
-    val messageState: MessageState = MessageState.PENDING,
+    val messageState: MessageState,
     val timeStamp: Long = System.currentTimeMillis()
 )

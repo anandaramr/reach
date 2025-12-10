@@ -49,18 +49,18 @@ interface MessageDao {
     fun getMessagesPreviewPaged(): PagingSource<Int, MessagePreview>
 
     @Transaction
-    @Query("select * from messages where userId = :userId and messageState = \"PENDING\"")
-    fun getPendingMessagesById(userId: UUID): Flow<List<MessageWithMedia>>
+    @Query("select * from messages where userId = :userId and (messageState = \"PENDING\" or messageState = \"PAUSED\") and not isFromPeer")
+    fun getUnsentMessagesByUserId(userId: UUID): Flow<List<MessageWithMedia>>
 
-    @Query("select distinct userId from messages where messageState = \"PENDING\"")
-    fun getUserIdsOfPendingMessages(): Flow<List<UUID>>
+    @Query("select distinct userId from messages where (messageState = \"PENDING\" or messageState = \"PAUSED\") and not isFromPeer")
+    fun getUserIdsOfUnsentMessages(): Flow<List<UUID>>
 
     @Query("update messages set messageState = :messageState where messageId = :messageId")
     suspend fun updateMessageState(messageId: UUID, messageState: MessageState)
 
-    @Query("select * from messages where userId = :userId and messageState = \"RECEIVED\" order by timeStamp limit :limit")
+    @Query("select * from messages where userId = :userId and isFromPeer and messageState = \"DELIVERED\" order by timeStamp limit :limit")
     fun getUnreadMessagesById(userId: UUID, limit: Int): Flow<List<MessageEntity>>
 
-    @Query("update messages set messageState = \"SENT\" where userId = :senderId and mediaId = :mediaId")
+    @Query("update messages set messageState = \"DELIVERED\" where userId = :senderId and mediaId = :mediaId")
     suspend fun completeFileTransfer(senderId: UUID, mediaId: String)
 }
