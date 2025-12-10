@@ -22,7 +22,7 @@ import java.util.UUID
             entity = MediaEntity::class,
             parentColumns = ["mediaId"],
             childColumns = ["mediaId"],
-            onDelete = ForeignKey.SET_NULL
+            onDelete = ForeignKey.CASCADE
         )
     ],
     indices = [Index(value = ["userId", "timeStamp"]), Index(value = ["mediaId"])]
