@@ -7,8 +7,19 @@ import android.webkit.MimeTypeMap
 import androidx.core.content.FileProvider
 import com.project.reach.data.utils.PrivateFile
 import com.project.reach.domain.contracts.IFileRepository
+import com.project.reach.domain.models.MessageState
+import com.project.reach.domain.models.TransferState
 import com.project.reach.util.debug
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileInputStream
@@ -19,13 +30,13 @@ import java.security.MessageDigest
 import java.util.concurrent.ConcurrentHashMap
 
 class FileRepository(private val context: Context): IFileRepository {
-    override val activeFileTransfers = ConcurrentHashMap<String, Long>()
+    private val progressMap = ConcurrentHashMap<String, MutableStateFlow<TransferState>>()
+    private val activeTransfers = MutableStateFlow<Set<String>>(setOf())
 
     override suspend fun useFileInputStream(
         uri: String,
         callback: suspend (InputStream) -> Unit
     ) {
-        // TODO handle FileNotFoundException
         val file = File(context.filesDir, uri)
         FileInputStream(file).use { stream ->
             callback(stream)
@@ -45,31 +56,66 @@ class FileRepository(private val context: Context): IFileRepository {
         return fileHash
     }
 
-    override suspend fun saveFileToPrivateStorage(uri: Uri, onProgress: (progress: Long) -> Unit): PrivateFile {
+    override suspend fun saveFileToPrivateStorage(
+        uri: Uri,
+        onProgress: (progress: Long) -> Unit
+    ): PrivateFile {
         return context.saveFileToPrivateStorage(uri, onProgress)
     }
 
-    override fun getContentUri(relativePath: String): Uri? {
+    override fun getContentUri(relativePath: String): Uri {
         val authority = "${context.packageName}.provider"
         val file = File(context.filesDir, relativePath)
+        return FileProvider.getUriForFile(context, authority, file)
+    }
 
-        return if (file.exists()){
-            FileProvider.getUriForFile(context, authority, file)
+    override suspend fun updateFileTransferProgress(fileHash: String, bytesRead: Long) {
+        val progress = TransferState.Progress(bytesRead)
+        val state = progressMap.getOrPut(fileHash) {
+            activeTransfers.update { it + fileHash }
+            MutableStateFlow(progress)
+        }
+        state.update { progress }
+    }
+
+    override suspend fun markAsNotInProgress(fileHash: String) {
+        progressMap.remove(fileHash)
+        activeTransfers.update { it - fileHash }
+    }
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    override fun observeTransferState(fileHash: String, fileSize: Long, messageState: MessageState): Flow<TransferState> {
+        debug("message state: $messageState")
+        if (messageState != MessageState.PENDING && messageState != MessageState.RECEIVING) {
+            val contentUri = getContentUri(getDownloadLocation(fileHash))
+            return flowOf(TransferState.Complete)
+        }
+
+        return activeTransfers
+            .map { fileHash in it }
+            .distinctUntilChanged()
+            .flatMapLatest { isActive ->
+                if (isActive) {
+                    progressMap[fileHash] ?: flowOf(TransferState.Paused)
+                } else {
+                    flowOf(TransferState.Paused)
+                }
+            }.flowOn(Dispatchers.IO)
+    }
+
+    private fun getDiskState(fileHash: String, fileSize:Long): TransferState {
+        val path = getDownloadLocation(fileHash)
+        val file = File(context.filesDir, path)
+        return if (file.length() == fileSize) {
+            val contentUri = getContentUri(path)
+            TransferState.Complete
         } else {
-            null
+            TransferState.Paused
         }
     }
 
-    override fun updateFileTransferProgress(fileHash: String, progress: Long) {
-        activeFileTransfers.put(fileHash, progress)
-    }
-
-    override fun markAsNotInProgress(fileHash: String) {
-        activeFileTransfers.remove(fileHash)
-    }
-
-    override fun getFileSize(fileHash: String): Long {
-        val file = File(context.filesDir, fileHash)
+    override fun getFileSize(relativePath: String): Long {
+        val file = File(context.filesDir, relativePath)
         return file.length()
     }
 
@@ -94,7 +140,7 @@ class FileRepository(private val context: Context): IFileRepository {
     }
 
     private suspend fun Context.saveFileToPrivateStorage(
-        uri: Uri,
+        contentUri: Uri,
         onProgress: (Long) -> Unit
     ): PrivateFile = withContext(Dispatchers.IO) {
         val digest = MessageDigest.getInstance("SHA-256")
@@ -102,7 +148,7 @@ class FileRepository(private val context: Context): IFileRepository {
         val lastUpdateTimestamp = 0L
 
         FileOutputStream(tempFile).use { outputStream ->
-            contentResolver.openInputStream(uri)?.use { inputStream ->
+            contentResolver.openInputStream(contentUri)?.use { inputStream ->
                 val buffer = ByteArray(8192)
                 var bytesRead = 0
                 var totalBytesRead = 0L
@@ -136,8 +182,8 @@ class FileRepository(private val context: Context): IFileRepository {
             }
         }
 
-        val mimeType = context.getMimeTypeFromContentUri(uri)
-        val filename = context.getFilenameFromContentUri(uri)
+        val mimeType = context.getMimeTypeFromContentUri(contentUri)
+        val filename = context.getFilenameFromContentUri(contentUri)
 
         /**
          * Anti-Corruption Layer
@@ -149,6 +195,6 @@ class FileRepository(private val context: Context): IFileRepository {
     }
 
     private companion object {
-        const val THROTTLE_TIME = 500
+        const val THROTTLE_TIME = 200
     }
 }

@@ -22,7 +22,6 @@ import com.project.reach.domain.models.MessagePreview
 import com.project.reach.domain.models.MessageState
 import com.project.reach.domain.models.MessageType
 import com.project.reach.domain.models.NotificationEvent
-import com.project.reach.domain.models.TransferState
 import com.project.reach.network.model.Packet
 import com.project.reach.util.debug
 import com.project.reach.util.toUUID
@@ -326,13 +325,14 @@ class MessageRepository(
         saveIncomingMessage(packet)
 
         // receive media if attachment exists
+        var showNotification = true
         if (packet.media != null) {
-            handleIncomingFile(packet)
+            showNotification = handleIncomingFile(packet)
         }
 
         // stop typing indicator
         typingStateHandler.resetPeerIsTyping(packet.senderId)
-        dispatchNewMessageNotification(packet)
+        if (showNotification) dispatchNewMessageNotification(packet)
     }
 
     private suspend fun saveIncomingMessage(packet: Packet.Message) {
@@ -371,10 +371,10 @@ class MessageRepository(
         )
     }
 
-    private suspend fun handleIncomingFile(packet: Packet.Message) {
+    private suspend fun handleIncomingFile(packet: Packet.Message): Boolean {
         if (packet.media == null) {
             debug("Couldn't accept file: Missing file metadata")
-            return
+            return false
         }
 
         var result = false
@@ -389,18 +389,21 @@ class MessageRepository(
                 }
             )
         }
-        fileRepository.markAsNotInProgress(packet.media.fileHash)
 
         if (result) {
             messageDao.updateMessageState(packet.messageId.toUUID(), MessageState.RECEIVED)
         }
+        fileRepository.markAsNotInProgress(packet.media.fileHash)
+        return result
     }
 
     private fun updateTransferProgress(fileHash: String, progress: Long) {
-        fileRepository.updateFileTransferProgress(
-            fileHash = fileHash,
-            progress = progress
-        )
+        scope.launch {
+            fileRepository.updateFileTransferProgress(
+                fileHash = fileHash,
+                bytesRead = progress
+            )
+        }
     }
 
     private suspend fun handleFileAccept(packet: Packet.FileAccept) {
@@ -418,11 +421,11 @@ class MessageRepository(
                 }
             )
         }
-        fileRepository.markAsNotInProgress(packet.fileHash)
 
         if (result) {
             messageDao.completeFileTransfer(packet.senderId.toUUID(), packet.fileHash)
         }
+        fileRepository.markAsNotInProgress(packet.fileHash)
     }
 
     private suspend fun getUnreadMessagesFromUser(userId: String): List<MessageNotification> {
@@ -457,10 +460,8 @@ class MessageRepository(
         }
 
         val fileHash = mediaEntity.mediaId
-        val relativePath = mediaEntity.uri
         val size = mediaEntity.size
         val mimeType = mediaEntity.mimeType
-        val transferState = getTransferState(fileHash, relativePath, size, mimeType)
 
         return Message.FileMessage(
             messageId = messageId,
@@ -471,31 +472,9 @@ class MessageRepository(
             fileHash = fileHash,
             filename = mediaEntity.filename,
             size = size,
-            transferState = transferState
+            mimeType = mimeType,
+            contentUri = fileRepository.getContentUri(mediaEntity.uri)
         )
-    }
-
-    private fun getTransferState(
-        fileHash: String,
-        relativePath: String,
-        size: Long,
-        mimeType: String
-    ): TransferState {
-        if (fileRepository.activeFileTransfers.containsKey(fileHash)) {
-            return TransferState.InProgress
-        }
-
-        val contentUri = fileRepository.getContentUri(relativePath)
-        if (contentUri == null) {
-            return TransferState.NotFound
-        }
-
-        val currentBytes = fileRepository.getFileSize(fileHash)
-        return if (size != currentBytes) {
-            TransferState.Paused(currentBytes)
-        } else {
-            TransferState.Complete(contentUri, mimeType)
-        }
     }
 
     companion object {

@@ -39,6 +39,10 @@ class DataInputChannel(
         } catch (_: SocketTimeoutException) {
             debug("Data receive timeout: $peerIp")
             return false
+        } catch (e: Exception) {
+            debug("Error while receiving file: $e")
+            e.printStackTrace()
+            return false
         }
     }
 
@@ -50,6 +54,8 @@ class DataInputChannel(
     ) =
         withContext(Dispatchers.IO) {
             runInterruptible {
+                onProgress(0)
+
                 val buffer = ByteArray(8192)
                 var totalRead = 0L
                 var lastProgressUpdate = 0L
@@ -106,6 +112,7 @@ class DataOutputChannel(
             return false
         }
 
+        onProgress(0)
         val buffer = ByteArray(8192)
         var totalBytesSent = 0L
         var lastProgressUpdate = 0L

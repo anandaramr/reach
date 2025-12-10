@@ -27,13 +27,13 @@ sealed interface Message {
         val fileHash: String,
         val filename: String,
         val size: Long,
-        val transferState: TransferState
+        val mimeType: String,
+        val contentUri: Uri
     ): Message
 }
 
 sealed interface TransferState {
-    object NotFound: TransferState
-    object InProgress: TransferState
-    data class Paused(val currentBytes: Long): TransferState
-    data class Complete(val contentUri: Uri, val mimeType: String): TransferState
+    data class Progress(val currentBytes: Long): TransferState
+    object Paused: TransferState
+    object Complete: TransferState
 }
