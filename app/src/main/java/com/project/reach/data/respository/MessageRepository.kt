@@ -44,6 +44,7 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
+import kotlin.math.max
 
 class MessageRepository(
     private val messageDao: MessageDao,
@@ -318,7 +319,7 @@ class MessageRepository(
                 }
 
                 is Packet.FileComplete -> {
-                    messageDao.completeFileTransfer(packet.senderId.toUUID(), packet.fileHash)
+                    messageDao.completeFileSend(packet.senderId.toUUID(), packet.fileHash)
                 }
 
                 is Packet.GoodBye -> {}
@@ -386,7 +387,6 @@ class MessageRepository(
 
         val relativePath = fileRepository.getDownloadLocation(packet.media.fileHash)
         val fileSizeInStorage = fileRepository.getFileSize(relativePath)
-
         if (fileSizeInStorage == packet.media.fileSize) {
             val fileComplete = Packet.FileComplete(
                 senderId = myUserId,
@@ -403,24 +403,24 @@ class MessageRepository(
         }
 
         // Mark as PENDING to let UI know that an attempt to transfer has started
-        // TODO update transfer state by fileID instead of messageId
-        messageDao.updateMessageState(packet.messageId.toUUID(), MessageState.PENDING)
+        messageDao.updateIncomingFileState(packet.media.fileHash, MessageState.PENDING)
 
         var isTransferSuccessful = false
-        fileRepository.useFileOutputStream(packet.media.fileHash) { outputStream ->
+        val safeOffset = getSafeOffset(fileSizeInStorage)
+        fileRepository.useFileOutputStream(packet.media.fileHash, safeOffset) { outputStream ->
             isTransferSuccessful = networkController.acceptFile(
                 peerId = packet.senderId.toUUID(),
                 fileId = packet.media.fileHash,
                 outputStream = outputStream,
-                size = packet.media.fileSize,
-                onProgress = { progress ->
-                    updateTransferProgress(packet.media.fileHash, progress)
-                }
-            )
+                fileSize = packet.media.fileSize,
+                offset = safeOffset
+            ) { progress ->
+                updateTransferProgress(packet.media.fileHash, progress)
+            }
         }
 
         val messageState = if (isTransferSuccessful) MessageState.DELIVERED else MessageState.PAUSED
-        messageDao.updateMessageState(packet.messageId.toUUID(), messageState)
+        messageDao.updateIncomingFileState(packet.media.fileHash, messageState)
         fileRepository.markAsNotInProgress(packet.media.fileHash)
         return isTransferSuccessful
     }
@@ -437,12 +437,17 @@ class MessageRepository(
     private suspend fun handleFileAccept(packet: Packet.FileAccept) {
         val file = mediaDao.getFileByHash(packet.fileHash)
 
+        if (!messageDao.validateFileRequest(packet.senderId.toUUID(), packet.fileHash)) {
+            debug("Unauthorized file request")
+            return
+        }
+
         var result = false
-        fileRepository.useFileInputStream(file.uri) { inputStream ->
+        fileRepository.useFileInputStream(file.uri, packet.offset) { inputStream ->
             result = networkController.sendFile(
                 peerId = packet.senderId.toUUID(),
                 inputStream = inputStream,
-                size = file.size,
+                bytesToSend = file.size - packet.offset,
                 fileAccept = packet,
                 onProgress = { progress ->
                     updateTransferProgress(packet.fileHash, progress)
@@ -451,7 +456,7 @@ class MessageRepository(
         }
 
         if (result) {
-            messageDao.completeFileTransfer(packet.senderId.toUUID(), packet.fileHash)
+            messageDao.completeFileSend(packet.senderId.toUUID(), packet.fileHash)
         }
         fileRepository.markAsNotInProgress(packet.fileHash)
     }
@@ -505,8 +510,15 @@ class MessageRepository(
         )
     }
 
+    private fun getSafeOffset(fileSize: Long): Long {
+        return max(0, fileSize - SAFETY_BLOCK)
+    }
+
     companion object {
         // represents the number of last unread messages to be shown in notification
         private const val NUM_MESSAGES_IN_NOTIFICATION = 6
+
+        // safe offset to resume file transfer
+        const val SAFETY_BLOCK = 256 * 1024
     }
 }

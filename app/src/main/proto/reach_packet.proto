@@ -47,6 +47,7 @@ message FileHeader {
 message FileAccept {
     bytes file_hash = 1;
     int32 port = 2;
+    int64 offset = 3;
 }
 
 message FileComplete {

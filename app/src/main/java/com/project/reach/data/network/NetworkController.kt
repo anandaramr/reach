@@ -58,7 +58,8 @@ class NetworkController(
         peerId: UUID,
         fileId: String,
         outputStream: OutputStream,
-        size: Long,
+        fileSize: Long,
+        offset: Long,
         onProgress: (Long) -> Unit
     ): Boolean {
         val dataInputChannel = wifiController.getDataInputChannel(peerId)
@@ -69,19 +70,20 @@ class NetworkController(
                 userId = peerId, Packet.FileAccept(
                     senderId = myUserId,
                     fileHash = fileId,
-                    port = channel.port
+                    port = channel.port,
+                    offset = offset
                 )
             )
 
             if (!sendResult) return false
-            return channel.readInto(outputStream, size, onProgress)
+            return channel.readInto(outputStream, fileSize - offset, onProgress)
         }
     }
 
     override suspend fun sendFile(
         peerId: UUID,
         inputStream: InputStream,
-        size: Long,
+        bytesToSend: Long,
         fileAccept: Packet.FileAccept,
         onProgress: (Long) -> Unit
     ): Boolean {
@@ -90,7 +92,7 @@ class NetworkController(
         if (dataOutputChannel == null) return false
 
         dataOutputChannel.use { channel ->
-            return channel.writeFrom(inputStream, size = size, onProgress)
+            return channel.writeFrom(inputStream, bytesToSend, onProgress)
         }
     }
 

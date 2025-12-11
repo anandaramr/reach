@@ -22,10 +22,11 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.withContext
 import java.io.File
-import java.io.FileInputStream
 import java.io.FileOutputStream
 import java.io.InputStream
 import java.io.OutputStream
+import java.io.RandomAccessFile
+import java.nio.channels.Channels
 import java.security.MessageDigest
 import java.util.concurrent.ConcurrentHashMap
 
@@ -35,20 +36,40 @@ class FileRepository(private val context: Context): IFileRepository {
 
     override suspend fun useFileInputStream(
         uri: String,
+        offset: Long,
         callback: suspend (InputStream) -> Unit
     ) {
         val file = File(context.filesDir, uri)
-        FileInputStream(file).use { stream ->
-            callback(stream)
+        RandomAccessFile(file, "r").use { raf ->
+            if (offset > 0) raf.seek(offset)
+            val inputStream = Channels.newInputStream(raf.channel)
+            callback(inputStream)
         }
     }
 
     override suspend fun useFileOutputStream(
         fileHash: String,
+        offset: Long,
         callback: suspend (outputStream: OutputStream) -> Unit
     ) {
-        context.openFileOutput(fileHash, Context.MODE_PRIVATE).use { stream ->
-            callback(stream)
+        val relativePath = getDownloadLocation(fileHash)
+        val file = File(context.filesDir, relativePath)
+        if (offset > file.length()) {
+            debug("Invalid offset value: $offset")
+            return
+        }
+
+        RandomAccessFile(file, "rw").use { raf ->
+            if (offset > 0) {
+                debug("continuing file write from $offset")
+                raf.seek(offset)
+            } else {
+                raf.seek(0)
+                raf.setLength(0)
+            }
+
+            val outputStream = Channels.newOutputStream(raf.channel)
+            callback(outputStream)
         }
     }
 

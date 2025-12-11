@@ -66,6 +66,7 @@ internal object PacketSerializer {
                         fileAccept = FileAccept.newBuilder().apply {
                             fileHash = packet.fileHash.toProtoBytes()
                             port = packet.port
+                            offset = packet.offset
                         }.build()
                     }
 
@@ -146,6 +147,7 @@ internal object PacketSerializer {
                     senderId = senderId,
                     fileHash = proto.fileAccept.fileHash.toHexString(),
                     port = proto.fileAccept.port,
+                    offset = proto.fileAccept.offset
                 )
             }
 

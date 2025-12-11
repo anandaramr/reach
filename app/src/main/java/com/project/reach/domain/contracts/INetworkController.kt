@@ -20,14 +20,15 @@ interface INetworkController {
         peerId: UUID,
         fileId: String,
         outputStream: OutputStream,
-        size: Long,
+        fileSize: Long,
+        offset: Long,
         onProgress: (Long) -> Unit
     ): Boolean
 
     suspend fun sendFile(
         peerId: UUID,
         inputStream: InputStream,
-        size: Long,
+        bytesToSend: Long,
         fileAccept: Packet.FileAccept,
         onProgress: (Long) -> Unit
     ): Boolean

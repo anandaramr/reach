@@ -15,27 +15,35 @@ import java.net.Socket
 import java.net.SocketTimeoutException
 import kotlin.math.min
 
+object DataChannelConfig {
+    const val CHUNK_SIZE = 8192
+    const val WAIT_TIMEOUT = 10_000
+    const val THROTTLE_TIME = 1000
+}
+
 class DataInputChannel(
     private val peerIp: InetAddress,
 ): Closeable {
-    private val socket = ServerSocket(0).apply { soTimeout = WAIT_TIMEOUT }
+    private val socket = ServerSocket(0).apply { soTimeout = DataChannelConfig.WAIT_TIMEOUT }
     val port = socket.localPort
 
-    suspend fun readInto(output: OutputStream, size: Long, onProgress: (Long) -> Unit): Boolean {
+    suspend fun readInto(output: OutputStream, expectedBytes: Long, onProgress: (Long) -> Unit): Boolean {
         if (socket.isClosed) {
             debug("${this::class.simpleName}: Use after close")
             return false
         }
 
         try {
-            val client = socket.accept()
-            val input = client.inputStream
-            debug("Receiving $size bytes from $peerIp")
-            // TODO check if sender is valid
-
-            handleClient(input, output, size, onProgress)
-            client.close()
-            return true
+            while (true) {
+                socket.accept().use { client ->
+                    if (client.inetAddress == peerIp) {
+                        debug("Receiving $expectedBytes bytes from $peerIp")
+                        val input = client.inputStream
+                        handleClient(input, output, expectedBytes, onProgress)
+                        return true
+                    }
+                }
+            }
         } catch (_: SocketTimeoutException) {
             debug("Data receive timeout: $peerIp")
             return false
@@ -49,20 +57,20 @@ class DataInputChannel(
     private suspend fun handleClient(
         input: InputStream,
         output: OutputStream,
-        size: Long,
+        expectedBytes: Long,
         onProgress: (Long) -> Unit
     ) =
         withContext(Dispatchers.IO) {
             runInterruptible {
                 onProgress(0)
 
-                val buffer = ByteArray(8192)
+                val buffer = ByteArray(DataChannelConfig.CHUNK_SIZE)
                 var totalRead = 0L
                 var lastProgressUpdate = 0L
 
                 // TODO check transfer fails
-                while (totalRead < size) {
-                    val bytesToRead = min(buffer.size.toLong(), size - totalRead).toInt()
+                while (totalRead < expectedBytes) {
+                    val bytesToRead = min(buffer.size.toLong(), expectedBytes - totalRead).toInt()
                     val receivedBytes = input.read(buffer, 0, bytesToRead)
                     if (receivedBytes <= 0) {
                         throw IOException("Unexpected end of file")
@@ -72,7 +80,7 @@ class DataInputChannel(
                     totalRead += receivedBytes
 
                     val time = System.currentTimeMillis()
-                    if (time - lastProgressUpdate >= THROTTLE_TIME) {
+                    if (time - lastProgressUpdate >= DataChannelConfig.THROTTLE_TIME) {
                         onProgress(totalRead)
                         lastProgressUpdate = time
                     }
@@ -85,27 +93,22 @@ class DataInputChannel(
     override fun close() {
         socket.close()
     }
-
-    private companion object {
-        private const val WAIT_TIMEOUT = 10_000
-        private const val THROTTLE_TIME = 1000
-    }
 }
 
 class DataOutputChannel(
     private val peerIp: InetAddress,
     private val port: Int
 ): Closeable {
-    private val socket = Socket().apply { soTimeout = WAIT_TIMEOUT }
+    private val socket = Socket().apply { soTimeout = DataChannelConfig.WAIT_TIMEOUT }
 
-    fun writeFrom(input: InputStream, size: Long, onProgress: (Long) -> Unit): Boolean {
+    fun writeFrom(input: InputStream, bytesToSend: Long, onProgress: (Long) -> Unit): Boolean {
         if (socket.isClosed) {
             debug("${this::class.simpleName}: Use after close")
             return false
         }
 
         val output = try {
-            socket.connect(InetSocketAddress(peerIp, port), WAIT_TIMEOUT)
+            socket.connect(InetSocketAddress(peerIp, port), DataChannelConfig.WAIT_TIMEOUT)
             socket.outputStream
         } catch (_: Exception) {
             debug("Error connecting to $peerIp:$port on ${this::class.simpleName}")
@@ -113,12 +116,12 @@ class DataOutputChannel(
         }
 
         onProgress(0)
-        val buffer = ByteArray(8192)
+        val buffer = ByteArray(DataChannelConfig.CHUNK_SIZE)
         var totalBytesSent = 0L
         var lastProgressUpdate = 0L
         try {
-            while (totalBytesSent < size) {
-                val bytesToRead = min(buffer.size.toLong(), size - totalBytesSent).toInt()
+            while (totalBytesSent < bytesToSend) {
+                val bytesToRead = min(buffer.size.toLong(), bytesToSend - totalBytesSent).toInt()
                 val readBytes = input.read(buffer, 0, bytesToRead)
                 if (readBytes <= 0) {
                     throw IOException("Unexpected end of file")
@@ -128,7 +131,7 @@ class DataOutputChannel(
                 totalBytesSent += readBytes
 
                 val time = System.currentTimeMillis()
-                if (time - lastProgressUpdate >= THROTTLE_TIME) {
+                if (time - lastProgressUpdate >= DataChannelConfig.THROTTLE_TIME) {
                     onProgress(totalBytesSent)
                     lastProgressUpdate = time
                 }
@@ -136,16 +139,12 @@ class DataOutputChannel(
             return true
         } catch (e: Exception) {
             debug("Error sending data: $e")
+            e.printStackTrace()
             return false
         }
     }
 
     override fun close() {
         socket.close()
-    }
-
-    private companion object {
-        private const val WAIT_TIMEOUT = 10_000
-        private const val THROTTLE_TIME = 1000
     }
 }

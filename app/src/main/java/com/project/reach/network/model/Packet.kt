@@ -41,6 +41,7 @@ sealed class Packet {
         override val senderId: String,
         val fileHash: String,
         val port: Int,
+        val offset: Long
     ): Packet()
 
     data class FileComplete(

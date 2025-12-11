@@ -62,5 +62,11 @@ interface MessageDao {
     fun getUnreadMessagesById(userId: UUID, limit: Int): Flow<List<MessageEntity>>
 
     @Query("update messages set messageState = \"DELIVERED\" where userId = :senderId and mediaId = :mediaId")
-    suspend fun completeFileTransfer(senderId: UUID, mediaId: String)
+    suspend fun completeFileSend(senderId: UUID, mediaId: String)
+
+    @Query("update messages set messageState = :messageState where mediaId = :mediaId and isFromPeer")
+    suspend fun updateIncomingFileState(mediaId: String, messageState: MessageState)
+
+    @Query("select exists(select 1 from messages where userId = :senderId and mediaId = :mediaId and not isFromPeer limit 1) as isValid")
+    suspend fun validateFileRequest(senderId: UUID, mediaId: String): Boolean
 }
