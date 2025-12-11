@@ -1,7 +1,5 @@
 package com.project.reach.domain.models
 
-import android.net.Uri
-
 sealed interface Message {
     val messageId: String
     val isFromSelf: Boolean
@@ -28,6 +26,6 @@ sealed interface Message {
         val filename: String,
         val size: Long,
         val mimeType: String,
-        val contentUri: Uri
+        val relativePath: String
     ): Message
 }

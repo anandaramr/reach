@@ -466,6 +466,7 @@ class MessageRepository(
             .getUnreadMessagesById(userId.toUUID(), NUM_MESSAGES_IN_NOTIFICATION)
             .first()
             .map { entity -> entity.toMessageNotification() }
+            .reversed()
     }
 
     private fun MessageEntity.toMessageNotification(): MessageNotification {
@@ -506,7 +507,7 @@ class MessageRepository(
             filename = mediaEntity.filename,
             size = size,
             mimeType = mimeType,
-            contentUri = fileRepository.getContentUri(mediaEntity.uri)
+            relativePath = mediaEntity.uri
         )
     }
 
