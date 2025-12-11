@@ -107,10 +107,9 @@ class TCPTransport: NetworkTransport {
     }
 
     override suspend fun send(bytes: ByteArray, ip: InetAddress): Boolean {
-        val socket = getOrCreateSocket(ip)
-        val output = DataOutputStream(socket.outputStream)
-
         try {
+            val socket = getOrCreateSocket(ip)
+            val output = DataOutputStream(socket.outputStream)
             output.writeInt(bytes.size)
             output.write(bytes)
             output.flush()
