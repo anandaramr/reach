@@ -14,8 +14,9 @@ interface IFileRepository {
     fun getDownloadLocation(fileHash: String): String
     suspend fun saveFileToPrivateStorage(uri: Uri, onProgress: (progress: Long) -> Unit): PrivateFile
     fun getContentUri(relativePath: String): Uri
+    fun getFileSize(relativePath: String): Long
+    fun isTransferOngoing(fileHash: String): Boolean
     suspend fun updateFileTransferProgress(fileHash: String, bytesRead: Long)
     suspend fun markAsNotInProgress(fileHash: String)
-    fun getFileSize(relativePath: String): Long
     fun observeTransferState(fileHash: String, fileSize: Long, messageState: MessageState): Flow<TransferState>
 }

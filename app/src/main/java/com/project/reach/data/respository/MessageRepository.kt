@@ -317,6 +317,10 @@ class MessageRepository(
                     )
                 }
 
+                is Packet.FileComplete -> {
+                    messageDao.completeFileTransfer(packet.senderId.toUUID(), packet.fileHash)
+                }
+
                 is Packet.GoodBye -> {}
                 is Packet.FileAccept -> handleFileAccept(packet)
             }
@@ -377,6 +381,24 @@ class MessageRepository(
     private suspend fun handleIncomingFile(packet: Packet.Message): Boolean {
         if (packet.media == null) {
             debug("Couldn't accept file: Missing file metadata")
+            return false
+        }
+
+        val relativePath = fileRepository.getDownloadLocation(packet.media.fileHash)
+        val fileSizeInStorage = fileRepository.getFileSize(relativePath)
+
+        if (fileSizeInStorage == packet.media.fileSize) {
+            val fileComplete = Packet.FileComplete(
+                senderId = myUserId,
+                fileHash = packet.media.fileHash
+            )
+            networkController.sendPacket(packet.senderId.toUUID(), fileComplete)
+            messageDao.updateMessageState(packet.messageId.toUUID(), MessageState.DELIVERED)
+            return true
+        }
+
+        if (fileRepository.isTransferOngoing(packet.media.fileHash)) {
+            debug("Transfer already ongoing")
             return false
         }
 

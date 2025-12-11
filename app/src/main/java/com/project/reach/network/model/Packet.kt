@@ -43,6 +43,11 @@ sealed class Packet {
         val port: Int,
     ): Packet()
 
+    data class FileComplete(
+        override val senderId: String,
+        val fileHash: String
+    ): Packet()
+
     abstract val senderId: String
 
     /**

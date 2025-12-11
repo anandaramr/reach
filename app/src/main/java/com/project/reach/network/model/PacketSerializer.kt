@@ -2,9 +2,11 @@ package com.project.reach.network.model
 
 import com.google.protobuf.InvalidProtocolBufferException
 import com.project.reach.core.exceptions.UnknownSourceException
+import com.project.reach.network.model.Packet.*
 import com.project.reach.util.toHexString
 import com.project.reach.util.toProtoBytes
 import com.reach.project.core.serialization.FileAccept
+import com.reach.project.core.serialization.FileComplete
 import com.reach.project.core.serialization.FileHeader
 import com.reach.project.core.serialization.Goodbye
 import com.reach.project.core.serialization.Heartbeat
@@ -22,7 +24,7 @@ internal object PacketSerializer {
                 senderId = packet.senderId
 
                 when (packet) {
-                    is Packet.GoodBye -> {
+                    is GoodBye -> {
                         goodbye = Goodbye.newBuilder().build()
                     }
 
@@ -56,7 +58,7 @@ internal object PacketSerializer {
                         }.build()
                     }
 
-                    is Packet.Typing -> {
+                    is Typing -> {
                         typingIndicator = TypingIndicator.newBuilder().build()
                     }
 
@@ -64,6 +66,12 @@ internal object PacketSerializer {
                         fileAccept = FileAccept.newBuilder().apply {
                             fileHash = packet.fileHash.toProtoBytes()
                             port = packet.port
+                        }.build()
+                    }
+
+                    is Packet.FileComplete -> {
+                        fileComplete = FileComplete.newBuilder().apply {
+                            fileHash = packet.fileHash.toProtoBytes()
                         }.build()
                     }
                 }
@@ -85,7 +93,7 @@ internal object PacketSerializer {
         val senderId = proto.senderId
         return when (proto.payloadCase) {
             ReachPacket.PayloadCase.MESSAGE -> {
-                Packet.Message(
+                Message(
                     senderId = senderId,
                     senderUsername = proto.message.senderUsername,
                     messageId = proto.message.messageId,
@@ -93,7 +101,7 @@ internal object PacketSerializer {
                     timeStamp = proto.message.timestamp,
                     media = if (proto.message.hasFileHeader()) {
                         val header = proto.message.fileHeader
-                        Packet.FileMetadata(
+                        FileMetadata(
                             fileHash = header.fileHash.toHexString(),
                             filename = header.filename,
                             mimeType = header.mimeType,
@@ -106,25 +114,25 @@ internal object PacketSerializer {
             }
 
             ReachPacket.PayloadCase.TYPING_INDICATOR -> {
-                Packet.Typing(senderId = senderId)
+                Typing(senderId = senderId)
             }
 
             ReachPacket.PayloadCase.HELLO -> {
-                Packet.Hello(
+                Hello(
                     senderId = senderId,
                     senderUsername = proto.hello.senderUsername
                 )
             }
 
             ReachPacket.PayloadCase.HEARTBEAT -> {
-                Packet.Heartbeat(
+                Heartbeat(
                     senderId = senderId,
                     senderUsername = proto.heartbeat.senderUsername
                 )
             }
 
             ReachPacket.PayloadCase.GOODBYE -> {
-                Packet.GoodBye(
+                GoodBye(
                     senderId = senderId
                 )
             }
@@ -134,10 +142,17 @@ internal object PacketSerializer {
             }
 
             ReachPacket.PayloadCase.FILE_ACCEPT -> {
-                Packet.FileAccept(
+                FileAccept(
                     senderId = senderId,
                     fileHash = proto.fileAccept.fileHash.toHexString(),
-                    port = proto.fileAccept.port
+                    port = proto.fileAccept.port,
+                )
+            }
+
+            ReachPacket.PayloadCase.FILE_COMPLETE -> {
+                FileComplete(
+                    senderId = senderId,
+                    fileHash = proto.fileComplete.fileHash.toHexString()
                 )
             }
         }

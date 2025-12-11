@@ -114,6 +114,10 @@ class FileRepository(private val context: Context): IFileRepository {
         return file.length()
     }
 
+    override fun isTransferOngoing(fileHash: String): Boolean {
+        return progressMap.containsKey(fileHash)
+    }
+
     private fun Context.getFilenameFromContentUri(uri: Uri): String {
         return contentResolver
             .query(uri, null, null, null, null)?.use { cursor ->

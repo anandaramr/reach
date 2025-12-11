@@ -13,6 +13,7 @@ message ReachPacket {
         Heartbeat heartbeat = 6;
         Goodbye goodbye = 7;
         FileAccept file_accept = 9;
+        FileComplete file_complete = 10;
     }
 }
 
@@ -46,4 +47,8 @@ message FileHeader {
 message FileAccept {
     bytes file_hash = 1;
     int32 port = 2;
+}
+
+message FileComplete {
+    bytes file_hash = 1;
 }
