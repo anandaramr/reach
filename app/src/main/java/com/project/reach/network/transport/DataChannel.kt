@@ -87,7 +87,7 @@ class DataInputChannel(
     }
 
     private companion object {
-        private const val WAIT_TIMEOUT = 30_000
+        private const val WAIT_TIMEOUT = 10_000
         private const val THROTTLE_TIME = 1000
     }
 }
@@ -145,7 +145,7 @@ class DataOutputChannel(
     }
 
     private companion object {
-        private const val WAIT_TIMEOUT = 30_000
+        private const val WAIT_TIMEOUT = 10_000
         private const val THROTTLE_TIME = 1000
     }
 }
