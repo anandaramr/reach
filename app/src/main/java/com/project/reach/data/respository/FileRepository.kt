@@ -35,11 +35,11 @@ class FileRepository(private val context: Context): IFileRepository {
     private val activeTransfers = MutableStateFlow<Set<String>>(setOf())
 
     override suspend fun useFileInputStream(
-        uri: String,
+        fileHash: String,
         offset: Long,
         callback: suspend (InputStream) -> Unit
     ) {
-        val file = File(context.filesDir, uri)
+        val file = File(context.filesDir, fileHash)
         RandomAccessFile(file, "r").use { raf ->
             if (offset > 0) raf.seek(offset)
             val inputStream = Channels.newInputStream(raf.channel)
@@ -107,7 +107,6 @@ class FileRepository(private val context: Context): IFileRepository {
     @OptIn(ExperimentalCoroutinesApi::class)
     override fun observeTransferState(
         fileHash: String,
-        fileSize: Long,
         messageState: MessageState
     ): Flow<TransferState> {
         if (messageState == MessageState.DELIVERED) {
@@ -130,8 +129,8 @@ class FileRepository(private val context: Context): IFileRepository {
             }.flowOn(Dispatchers.IO)
     }
 
-    override fun getFileSize(relativePath: String): Long {
-        val file = File(context.filesDir, relativePath)
+    override fun getFileSize(fileHash: String): Long {
+        val file = File(context.filesDir, fileHash)
         return file.length()
     }
 

@@ -389,8 +389,7 @@ class MessageRepository(
             return false
         }
 
-        val relativePath = fileRepository.getDownloadLocation(packet.media.fileHash)
-        val fileSizeInStorage = fileRepository.getFileSize(relativePath)
+        val fileSizeInStorage = fileRepository.getFileSize(packet.media.fileHash)
         if (fileSizeInStorage == packet.media.fileSize) {
             val fileComplete = Packet.FileComplete(
                 senderId = myUserId,
@@ -451,7 +450,7 @@ class MessageRepository(
             messageState = MessageState.PENDING
         )
         var isTransferSuccessful = false
-        fileRepository.useFileInputStream(file.uri, packet.offset) { inputStream ->
+        fileRepository.useFileInputStream(file.mediaId, packet.offset) { inputStream ->
             isTransferSuccessful = networkController.sendFile(
                 peerId = packet.senderId.toUUID(),
                 inputStream = inputStream,
