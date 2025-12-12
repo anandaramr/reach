@@ -61,8 +61,8 @@ interface MessageDao {
     @Query("select * from messages where userId = :userId and isFromPeer and messageState = \"DELIVERED\" order by timeStamp desc limit :limit")
     fun getUnreadMessagesById(userId: UUID, limit: Int): Flow<List<MessageEntity>>
 
-    @Query("update messages set messageState = \"DELIVERED\" where userId = :senderId and mediaId = :mediaId")
-    suspend fun completeFileSend(senderId: UUID, mediaId: String)
+    @Query("update messages set messageState = :messageState where userId = :senderId and mediaId = :mediaId")
+    suspend fun updateOutgoingFileState(senderId: UUID, mediaId: String, messageState: MessageState)
 
     @Query("update messages set messageState = :messageState where mediaId = :mediaId and isFromPeer")
     suspend fun updateIncomingFileState(mediaId: String, messageState: MessageState)

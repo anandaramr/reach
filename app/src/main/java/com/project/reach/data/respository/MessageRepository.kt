@@ -146,7 +146,7 @@ class MessageRepository(
                 mimeType = file.mimeType,
                 fileSize = file.file.length(),
                 filename = file.filename,
-                messageState = MessageState.PENDING
+                messageState = MessageState.PAUSED
             )
         }
     }
@@ -319,7 +319,11 @@ class MessageRepository(
                 }
 
                 is Packet.FileComplete -> {
-                    messageDao.completeFileSend(packet.senderId.toUUID(), packet.fileHash)
+                    messageDao.updateOutgoingFileState(
+                        senderId = packet.senderId.toUUID(),
+                        mediaId = packet.fileHash,
+                        messageState = MessageState.DELIVERED
+                    )
                 }
 
                 is Packet.GoodBye -> {}
@@ -402,7 +406,6 @@ class MessageRepository(
             return false
         }
 
-        // Mark as PENDING to let UI know that an attempt to transfer has started
         messageDao.updateIncomingFileState(packet.media.fileHash, MessageState.PENDING)
 
         var isTransferSuccessful = false
@@ -442,9 +445,14 @@ class MessageRepository(
             return
         }
 
-        var result = false
+        messageDao.updateOutgoingFileState(
+            senderId = packet.senderId.toUUID(),
+            mediaId = packet.fileHash,
+            messageState = MessageState.PENDING
+        )
+        var isTransferSuccessful = false
         fileRepository.useFileInputStream(file.uri, packet.offset) { inputStream ->
-            result = networkController.sendFile(
+            isTransferSuccessful = networkController.sendFile(
                 peerId = packet.senderId.toUUID(),
                 inputStream = inputStream,
                 bytesToSend = file.size - packet.offset,
@@ -455,9 +463,8 @@ class MessageRepository(
             )
         }
 
-        if (result) {
-            messageDao.completeFileSend(packet.senderId.toUUID(), packet.fileHash)
-        }
+        val messageState = if (isTransferSuccessful) MessageState.DELIVERED else MessageState.PAUSED
+        messageDao.updateOutgoingFileState(packet.senderId.toUUID(), packet.fileHash, messageState)
         fileRepository.markAsNotInProgress(packet.fileHash)
     }
 
