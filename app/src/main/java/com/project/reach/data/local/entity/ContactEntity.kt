@@ -7,5 +7,6 @@ import java.util.UUID
 @Entity(tableName = "contacts")
 data class ContactEntity(
     @PrimaryKey val userId: UUID,
-    val username: String
+    val username: String,
+    val nickname: String = ""
 )

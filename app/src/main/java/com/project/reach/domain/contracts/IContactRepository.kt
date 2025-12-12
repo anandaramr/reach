@@ -13,15 +13,14 @@ interface IContactRepository {
      *
      * @param userId The string representation of the user's ID (will be converted to UUID)
      * @return A [Flow] that emits the username whenever the contact data changes
-     * @throws IllegalArgumentException if the user is not found in contacts
      */
     fun getUsername(userId: String): Flow<String>
 
     /**
      * Adds a new contact to the database if it doesn't already exist.
      *
-     * This operation is idempotent - calling it multiple times with the same userId
-     * will not create duplicate entries.
+     * This operation is cached in memory - calling it multiple times with
+     * the same userId will not lead to multiple database queries
      *
      * @param userId The string representation of the user's ID
      * @param username The username to associate with this contact

@@ -36,8 +36,9 @@ object NetworkModule {
     @Singleton
     fun provideNetworkController(
         wifiController: IWifiController,
+        identityManager: IdentityManager
     ): INetworkController {
-        return NetworkController(wifiController)
+        return NetworkController(wifiController, identityManager)
     }
 
     @Provides

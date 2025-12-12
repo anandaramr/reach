@@ -5,6 +5,7 @@ import androidx.room.ForeignKey
 import androidx.room.Index
 import androidx.room.PrimaryKey
 import com.project.reach.domain.models.MessageState
+import com.project.reach.domain.models.MessageType
 import java.util.UUID
 
 @Entity(
@@ -16,16 +17,23 @@ import java.util.UUID
             childColumns = ["userId"],
             onDelete = ForeignKey.CASCADE,
             onUpdate = ForeignKey.CASCADE
+        ),
+        ForeignKey(
+            entity = MediaEntity::class,
+            parentColumns = ["mediaId"],
+            childColumns = ["mediaId"],
+            onDelete = ForeignKey.CASCADE
         )
     ],
-    indices = [ Index(value = ["userId"]) ]
+    indices = [Index(value = ["userId", "timeStamp"]), Index(value = ["mediaId"])]
 )
 data class MessageEntity(
-    @PrimaryKey(autoGenerate = true)
-    var messageId: Long = 0,
-    val text: String,
+    @PrimaryKey var messageId: UUID,
+    val content: String,
+    val messageType: MessageType,
+    val mediaId: String? = null,
     val userId: UUID,
     val isFromPeer: Boolean,
-    val messageState: MessageState = MessageState.PENDING,
+    val messageState: MessageState,
     val timeStamp: Long = System.currentTimeMillis()
 )

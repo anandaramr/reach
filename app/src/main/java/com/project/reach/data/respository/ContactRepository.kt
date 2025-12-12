@@ -3,15 +3,14 @@ package com.project.reach.data.respository
 import com.project.reach.data.local.dao.ContactDao
 import com.project.reach.data.local.entity.ContactEntity
 import com.project.reach.domain.contracts.IContactRepository
-import com.project.reach.util.debug
 import com.project.reach.util.toUUID
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.mapNotNull
 import kotlinx.coroutines.flow.stateIn
 
 class ContactRepository(
@@ -23,13 +22,13 @@ class ContactRepository(
         .map { contacts -> contacts.associateBy { it.userId } }
         .stateIn(
             scope = scope,
-            started = SharingStarted.Eagerly,
+            started = SharingStarted.WhileSubscribed(5000),
             initialValue = emptyMap()
         )
 
     override fun getUsername(userId: String): Flow<String> {
-        return contactsList.map { contacts ->
-            contacts[userId.toUUID()]?.username ?: throw IllegalArgumentException("User not found")
+        return contactsList.mapNotNull { contacts ->
+            contacts[userId.toUUID()]?.username
         }
     }
 

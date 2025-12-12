@@ -6,6 +6,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
@@ -24,7 +25,11 @@ import java.util.concurrent.ConcurrentHashMap
 class TCPTransport: NetworkTransport {
     private var socket: ServerSocket? = null
 
-    private val _incomingPackets = MutableSharedFlow<NetworkPacket>()
+    private val _incomingPackets = MutableSharedFlow<NetworkPacket>(
+        replay = 0,
+        extraBufferCapacity = 64,
+        onBufferOverflow = BufferOverflow.SUSPEND
+    )
     override val incomingPackets = _incomingPackets.asSharedFlow()
 
     private val connections = ConcurrentHashMap<InetAddress, Socket>()
@@ -102,10 +107,9 @@ class TCPTransport: NetworkTransport {
     }
 
     override suspend fun send(bytes: ByteArray, ip: InetAddress): Boolean {
-        val socket = getOrCreateSocket(ip)
-        val output = DataOutputStream(socket.outputStream)
-
         try {
+            val socket = getOrCreateSocket(ip)
+            val output = DataOutputStream(socket.outputStream)
             output.writeInt(bytes.size)
             output.write(bytes)
             output.flush()
