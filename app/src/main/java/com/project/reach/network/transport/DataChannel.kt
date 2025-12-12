@@ -16,18 +16,27 @@ import java.net.SocketTimeoutException
 import kotlin.math.min
 
 object DataChannelConfig {
-    const val CHUNK_SIZE = 8192
+    const val CHUNK_SIZE = 64 * 1024
     const val WAIT_TIMEOUT = 10_000
-    const val THROTTLE_TIME = 1000
+    const val TRANSFER_TIMEOUT = 10_000
+    const val THROTTLE_TIME = 500
+    const val KERNEL_BUFFER_SIZE = 1024 * 1024
 }
 
 class DataInputChannel(
     private val peerIp: InetAddress,
 ): Closeable {
-    private val socket = ServerSocket(0).apply { soTimeout = DataChannelConfig.WAIT_TIMEOUT }
+    private val socket = ServerSocket(0).apply {
+        soTimeout = DataChannelConfig.WAIT_TIMEOUT
+        receiveBufferSize = DataChannelConfig.KERNEL_BUFFER_SIZE
+    }
     val port = socket.localPort
 
-    suspend fun readInto(output: OutputStream, expectedBytes: Long, onProgress: (Long) -> Unit): Boolean {
+    suspend fun readInto(
+        output: OutputStream,
+        expectedBytes: Long,
+        onProgress: (Long) -> Unit
+    ): Boolean {
         if (socket.isClosed) {
             debug("${this::class.simpleName}: Use after close")
             return false
@@ -36,8 +45,10 @@ class DataInputChannel(
         try {
             while (true) {
                 socket.accept().use { client ->
-                    if (client.inetAddress == peerIp) {
+                    if (client.inetAddress.hostAddress == peerIp.hostAddress) {
+                        client.soTimeout = DataChannelConfig.TRANSFER_TIMEOUT
                         debug("Receiving $expectedBytes bytes from $peerIp")
+
                         val input = client.inputStream
                         handleClient(input, output, expectedBytes, onProgress)
                         return true
@@ -68,7 +79,6 @@ class DataInputChannel(
                 var totalRead = 0L
                 var lastProgressUpdate = 0L
 
-                // TODO check transfer fails
                 while (totalRead < expectedBytes) {
                     val bytesToRead = min(buffer.size.toLong(), expectedBytes - totalRead).toInt()
                     val receivedBytes = input.read(buffer, 0, bytesToRead)
@@ -85,7 +95,6 @@ class DataInputChannel(
                         lastProgressUpdate = time
                     }
                 }
-
                 output.flush()
             }
         }
@@ -99,49 +108,70 @@ class DataOutputChannel(
     private val peerIp: InetAddress,
     private val port: Int
 ): Closeable {
-    private val socket = Socket().apply { soTimeout = DataChannelConfig.WAIT_TIMEOUT }
+    private val socket = Socket().apply {
+        soTimeout = DataChannelConfig.WAIT_TIMEOUT
+        sendBufferSize = DataChannelConfig.KERNEL_BUFFER_SIZE
+    }
 
-    fun writeFrom(input: InputStream, bytesToSend: Long, onProgress: (Long) -> Unit): Boolean {
-        if (socket.isClosed) {
-            debug("${this::class.simpleName}: Use after close")
-            return false
+    suspend fun writeFrom(
+        input: InputStream,
+        bytesToSend: Long,
+        onProgress: (Long) -> Unit
+    ): Boolean = withContext(Dispatchers.IO) {
+        runInterruptible {
+            if (socket.isClosed) {
+                debug("${this::class.simpleName}: Use after close")
+                return@runInterruptible false
+            }
+
+            val output = try {
+                socket.connect(InetSocketAddress(peerIp, port), DataChannelConfig.WAIT_TIMEOUT)
+                socket.outputStream
+            } catch (_: Exception) {
+                debug("Error connecting to $peerIp:$port on ${this::class.simpleName}")
+                return@runInterruptible false
+            }
+
+            try {
+                handlePeer(onProgress, bytesToSend, input, output)
+                return@runInterruptible true
+            } catch (e: Exception) {
+                debug("Error sending data: $e")
+                e.printStackTrace()
+                return@runInterruptible false
+            }
         }
+    }
 
-        val output = try {
-            socket.connect(InetSocketAddress(peerIp, port), DataChannelConfig.WAIT_TIMEOUT)
-            socket.outputStream
-        } catch (_: Exception) {
-            debug("Error connecting to $peerIp:$port on ${this::class.simpleName}")
-            return false
-        }
-
+    private fun handlePeer(
+        onProgress: (Long) -> Unit,
+        bytesToSend: Long,
+        input: InputStream,
+        output: OutputStream
+    ) {
         onProgress(0)
         val buffer = ByteArray(DataChannelConfig.CHUNK_SIZE)
         var totalBytesSent = 0L
         var lastProgressUpdate = 0L
-        try {
-            while (totalBytesSent < bytesToSend) {
-                val bytesToRead = min(buffer.size.toLong(), bytesToSend - totalBytesSent).toInt()
-                val readBytes = input.read(buffer, 0, bytesToRead)
-                if (readBytes <= 0) {
-                    throw IOException("Unexpected end of file")
-                }
 
-                output.write(buffer, 0, bytesToRead)
-                totalBytesSent += readBytes
-
-                val time = System.currentTimeMillis()
-                if (time - lastProgressUpdate >= DataChannelConfig.THROTTLE_TIME) {
-                    onProgress(totalBytesSent)
-                    lastProgressUpdate = time
-                }
+        while (totalBytesSent < bytesToSend) {
+            val bytesToRead =
+                min(buffer.size.toLong(), bytesToSend - totalBytesSent).toInt()
+            val readBytes = input.read(buffer, 0, bytesToRead)
+            if (readBytes <= 0) {
+                throw IOException("Unexpected end of file")
             }
-            return true
-        } catch (e: Exception) {
-            debug("Error sending data: $e")
-            e.printStackTrace()
-            return false
+
+            output.write(buffer, 0, readBytes)
+            totalBytesSent += readBytes
+
+            val time = System.currentTimeMillis()
+            if (time - lastProgressUpdate >= DataChannelConfig.THROTTLE_TIME) {
+                onProgress(totalBytesSent)
+                lastProgressUpdate = time
+            }
         }
+        output.flush()
     }
 
     override fun close() {
