@@ -34,6 +34,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.paging.compose.collectAsLazyPagingItems
 import com.project.reach.ui.screens.chat.components.ChatBubble
+import com.project.reach.ui.screens.chat.components.FileDisplay
 import com.project.reach.ui.screens.chat.components.MessageTextField
 import com.project.reach.ui.screens.chat.components.TypingBubble
 
@@ -93,6 +94,12 @@ fun ChatScreen(
                 modifier = Modifier
                     .weight(1f),
             ) {
+//              ..............................
+                item { Spacer(modifier = Modifier.size(10.dp)) }
+                item {
+                    FileDisplay("filename.pdf", "message")
+                }
+//              ...............................
                 item { Spacer(modifier = Modifier.size(10.dp)) }
                 item {
                     if (uiState.isTyping) {
@@ -117,6 +124,7 @@ fun ChatScreen(
                         ChatBubble(message = message)
                     }
                 }
+
                 item { Spacer(modifier = Modifier.size(30.dp)) }
             }
             MessageTextField(
@@ -124,15 +132,19 @@ fun ChatScreen(
                 fileUri = uiState.fileUri,
                 fileName = uiState.fileName,
                 imageUri = uiState.imageUri,
+                imageCaption = uiState.imageCaption,
+                fileCaption = uiState.fileCaption,
                 imageName = uiState.imageName,
-                onInputChange = viewModel::onInputChange,
+                sendImage = viewModel::sendImage,
                 sendMessage = viewModel::sendMessage,
                 sendFile = viewModel::sendFile,
+                onInputChange = viewModel::onInputChange,
                 changeFileUri = viewModel::changeFileUri,
                 changeFileName = viewModel::changeFileName,
                 changeImageUri = viewModel::changeImageUri,
                 changeImageName = viewModel::changeImageName,
-                sendImage = viewModel::sendImage
+                onFileInputChange = viewModel::onFileInputChange,
+                onImageInputChange = viewModel::onImageInputChange,
             )
         }
     }

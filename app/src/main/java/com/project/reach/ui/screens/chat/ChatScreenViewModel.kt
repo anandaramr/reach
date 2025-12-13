@@ -40,6 +40,15 @@ class ChatScreenViewModel @Inject constructor(
         messageRepository.emitTyping(_uiState.value.peerId)
     }
 
+    fun onFileInputChange(text: String) {
+        updateFileCaption(text)
+        messageRepository.emitTyping(_uiState.value.peerId)
+    }
+    fun onImageInputChange(text: String) {
+        updateImageCaption(text)
+        messageRepository.emitTyping(_uiState.value.peerId)
+    }
+
     fun sendMessage(text: String) {
         updateMessageText("")
         viewModelScope.launch {
