@@ -4,6 +4,7 @@ import android.net.Uri
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.project.reach.domain.contracts.IContactRepository
 import com.project.reach.domain.contracts.IMessageRepository
 import com.project.reach.util.debug
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -19,27 +20,18 @@ import javax.inject.Inject
 class ChatScreenViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val messageRepository: IMessageRepository,
+    private val contactRepository: IContactRepository
 
 ): ViewModel() {
     private val _uiState = MutableStateFlow(ChatScreenState())
     val uiState: StateFlow<ChatScreenState> = _uiState.asStateFlow()
-    private val peerId: String = savedStateHandle["peerId"]?: ""
+    private val peerId: String = savedStateHandle["peerId"] ?: ""
 
-    val message = messageRepository.getMessagesPaged(peerId);
+    val message = messageRepository.getMessagesPaged(peerId)
 
     private fun updateMessageText(text: String) {
         _uiState.update { currentState ->
             currentState.copy(messageText = text)
-        }
-    }
-    private fun updateFileCaption(text: String) {
-        _uiState.update { currentState ->
-            currentState.copy(fileCaption = text)
-        }
-    }
-    private fun updateImageCaption(text: String) {
-        _uiState.update { currentState ->
-            currentState.copy(imageCaption = text)
         }
     }
 
@@ -63,43 +55,58 @@ class ChatScreenViewModel @Inject constructor(
             messageRepository.sendMessage(_uiState.value.peerId, text)
         }
     }
-//  ---------------------------------------------------------------------------------------
+
+    //  ---------------------------------------------------------------------------------------
     // Public function that can be accessed by UI functions to store File Uri, File name and Image Uri
-    fun changeFileUri(uri: Uri?){
+    fun changeFileUri(uri: Uri?) {
         storeFileUri(uri)
     }
-    fun changeImageUri(uri: Uri?){
+
+    fun changeImageUri(uri: Uri?) {
         debug(uri.toString())
         storeImageUri(uri)
     }
-    fun changeImageName(imageName: String){
+
+    fun changeImageName(imageName: String) {
         storeImageName(imageName)
     }
-    fun changeFileName(fileName: String){
+
+    fun changeFileName(fileName: String) {
         storeFileName(fileName)
     }
-//  ---------------------------------------------------------------------------------------
+
+    //  ---------------------------------------------------------------------------------------
     // Storing File and Image details in state
-    private fun storeFileUri(uri: Uri?){
-        _uiState.update { it.copy(
-            fileUri = uri
-        )}
+    private fun storeFileUri(uri: Uri?) {
+        _uiState.update {
+            it.copy(
+                fileUri = uri
+            )
+        }
     }
-    private fun storeFileName(fileName: String){
+
+    private fun storeFileName(fileName: String) {
         _uiState.update {
             it.copy(
                 fileName = fileName
-            )}
+            )
+        }
     }
-    private fun storeImageUri(uri: Uri?){
-        _uiState.update { it.copy(
-            imageUri = uri
-        )}
+
+    private fun storeImageUri(uri: Uri?) {
+        _uiState.update {
+            it.copy(
+                imageUri = uri
+            )
+        }
     }
-    private fun storeImageName(imageName: String){
-        _uiState.update { it.copy(
-            imageName = imageName
-        )}
+
+    private fun storeImageName(imageName: String) {
+        _uiState.update {
+            it.copy(
+                imageName = imageName
+            )
+        }
     }
 //  ---------------------------------------------------------------------------------------
 
@@ -107,13 +114,14 @@ class ChatScreenViewModel @Inject constructor(
         changeFileUri(null)
         debug(uri.toString())
     }
+
     fun sendImage(uri: Uri?) {
         changeImageUri(null)
         debug(uri.toString())
     }
 
     private suspend fun updateUserState(peerId: String) {
-        val username = messageRepository.getUsername(peerId).first()
+        val username = contactRepository.getUsername(peerId).first()
         _uiState.update {
             it.copy(peerName = username)
         }
@@ -122,7 +130,7 @@ class ChatScreenViewModel @Inject constructor(
     fun initializeChat() {
         viewModelScope.launch {
             messageRepository.isTyping(peerId).collect { typeStatus ->
-                _uiState.update { it.copy( isTyping = typeStatus)}
+                _uiState.update { it.copy(isTyping = typeStatus) }
             }
         }
         _uiState.update { it.copy(peerId = peerId) }

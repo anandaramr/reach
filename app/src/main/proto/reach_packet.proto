@@ -5,9 +5,51 @@ option java_multiple_files = true;
 
 message ReachPacket {
     string service_name = 1;
-    string type = 2;
-    string sender_uuid = 3;
-    string sender_username = 4;
-    int64 timestamp = 5;
-    string payload = 6;
+    string sender_id = 2;
+    oneof payload {
+        Message message = 3;
+        TypingIndicator typing_indicator = 4;
+        Hello hello = 5;
+        Heartbeat heartbeat = 6;
+        Goodbye goodbye = 7;
+        FileAccept file_accept = 9;
+        FileComplete file_complete = 10;
+    }
+}
+
+message Message {
+    string sender_username = 1;
+    string message_id = 2;
+    int64 timestamp = 4;
+    string text = 5;
+    FileHeader file_header = 6;
+}
+
+message TypingIndicator { }
+
+message Hello {
+    string sender_username = 1;
+}
+
+message Heartbeat {
+    string sender_username = 1;
+}
+
+message Goodbye { }
+
+message FileHeader {
+    bytes file_hash = 1;
+    string filename = 3;
+    int64 file_size = 4;
+    string mime_type = 5;
+}
+
+message FileAccept {
+    bytes file_hash = 1;
+    int32 port = 2;
+    int64 offset = 3;
+}
+
+message FileComplete {
+    bytes file_hash = 1;
 }

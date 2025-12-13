@@ -1,9 +1,31 @@
 package com.project.reach.domain.models
 
-data class Message(
-    val text: String ,
-    val isFromSelf: Boolean,
-    val userId: String,
-    val messageState: MessageState,
+sealed interface Message {
+    val messageId: String
+    val isFromSelf: Boolean
+    val messageState: MessageState
+    val text: String
     val timeStamp: Long
-)
+
+    data class TextMessage(
+        override val messageId: String,
+        override val text: String,
+        override val isFromSelf: Boolean,
+        override val messageState: MessageState,
+        override val timeStamp: Long
+    ): Message
+
+    data class FileMessage(
+        override val messageId: String,
+        override val text: String,
+        override val isFromSelf: Boolean,
+        override val timeStamp: Long,
+        override val messageState: MessageState,
+
+        val fileHash: String,
+        val filename: String,
+        val size: Long,
+        val mimeType: String,
+        val relativePath: String
+    ): Message
+}
