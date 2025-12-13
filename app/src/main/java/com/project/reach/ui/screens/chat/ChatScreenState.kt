@@ -11,6 +11,8 @@ data class ChatScreenState(
     var fileUri : Uri? = null,
     var imageUri : Uri? = null,
     var fileName: String = "",
-    var imageName: String = ""
+    var fileCaption: String = "",
+    var imageName: String = "",
+    var imageCaption: String = "",
 )
 

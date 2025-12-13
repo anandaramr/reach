@@ -4,6 +4,7 @@ import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -32,6 +33,8 @@ fun MessageTextField(
     fileName: String,
     imageUri: Uri?,
     imageName: String,
+    fileCaption: String,
+    imageCaption: String,
     onInputChange: (String) -> Unit,
     sendMessage: (String) -> Unit,
     sendFile: (Uri?) -> Unit,
@@ -39,27 +42,34 @@ fun MessageTextField(
     changeFileName: (String) -> Unit,
     changeImageUri: (Uri?) -> Unit,
     changeImageName: (String) -> Unit,
-    sendImage: (Uri?) -> Unit
+    sendImage: (Uri?) -> Unit,
+    onFileInputChange: (String) -> Unit,
+    onImageInputChange: (String) -> Unit
 ) {
     Surface(
         modifier = Modifier.padding(),
     ) {
         if (fileUri != null)
             MediaPreview(
+                cancel = changeFileUri,
                 changeName = changeFileName,
                 send = sendFile,
                 uri = fileUri,
-                name = fileName
+                name = fileName,
+                caption = fileCaption,
+                onCaptionChange = onFileInputChange
             )
         else if (imageUri != null) {
             MediaPreview(
+                cancel = changeImageUri,
                 changeName = changeImageName,
                 send = sendImage,
                 uri = imageUri,
-                name = imageName
+                name = imageName,
+                caption = imageCaption,
+                onCaptionChange = onImageInputChange
             )
-        }
-        else
+        } else
             MessageField(
                 messageText,
                 onInputChange,
@@ -98,17 +108,17 @@ private fun MessageField(
                         contentDescription = "Send",
                     )
                 }
-            else
-                IconButton(
-                    onClick = {
-                    },
-                ) {
-                    Icon(
-                        modifier = Modifier.padding(end = 10.dp),
-                        imageVector = Icons.Default.Mic,
-                        contentDescription = "Record",
-                    )
-                }
+//            else
+//                IconButton(
+//                    onClick = {
+//                    },
+//                ) {
+//                    Icon(
+//                        modifier = Modifier.padding(end = 10.dp),
+//                        imageVector = Icons.Default.Mic,
+//                        contentDescription = "Record",
+//                    )
+//                }
         },
         leadingIcon = {
             Row {
@@ -141,7 +151,7 @@ private fun MessageField(
                         .clickable(
                             onClick = {
                                 imagePickerLauncher.launch(
-                                    PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                                    PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageAndVideo)
                                 )
                             }
                         )

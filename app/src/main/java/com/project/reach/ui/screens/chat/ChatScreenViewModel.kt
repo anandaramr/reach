@@ -32,8 +32,28 @@ class ChatScreenViewModel @Inject constructor(
             currentState.copy(messageText = text)
         }
     }
+    private fun updateFileCaption(text: String) {
+        _uiState.update { currentState ->
+            currentState.copy(fileCaption = text)
+        }
+    }
+    private fun updateImageCaption(text: String) {
+        _uiState.update { currentState ->
+            currentState.copy(imageCaption = text)
+        }
+    }
+
     fun onInputChange(text: String) {
         updateMessageText(text)
+        messageRepository.emitTyping(_uiState.value.peerId)
+    }
+
+    fun onFileInputChange(text: String) {
+        updateFileCaption(text)
+        messageRepository.emitTyping(_uiState.value.peerId)
+    }
+    fun onImageInputChange(text: String) {
+        updateImageCaption(text)
         messageRepository.emitTyping(_uiState.value.peerId)
     }
 
