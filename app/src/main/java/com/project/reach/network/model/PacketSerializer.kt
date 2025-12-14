@@ -88,7 +88,7 @@ internal object PacketSerializer {
         }
 
         if (proto.serviceName != SERVICE_NAME) {
-            throw UnknownSourceException()
+            throw IllegalArgumentException("Got packet from an unknown source: ${proto.serviceName}")
         }
 
         val senderId = proto.senderId
