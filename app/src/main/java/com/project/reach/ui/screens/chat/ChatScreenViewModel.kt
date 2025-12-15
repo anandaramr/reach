@@ -4,7 +4,10 @@ import android.net.Uri
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.paging.cachedIn
+import com.project.reach.data.utils.PrivateFile
 import com.project.reach.domain.contracts.IContactRepository
+import com.project.reach.domain.contracts.IFileRepository
 import com.project.reach.domain.contracts.IMessageRepository
 import com.project.reach.util.debug
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -20,14 +23,15 @@ import javax.inject.Inject
 class ChatScreenViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val messageRepository: IMessageRepository,
-    private val contactRepository: IContactRepository
+    private val contactRepository: IContactRepository,
+    private val fileRepository: IFileRepository
 
 ): ViewModel() {
     private val _uiState = MutableStateFlow(ChatScreenState())
     val uiState: StateFlow<ChatScreenState> = _uiState.asStateFlow()
     private val peerId: String = savedStateHandle["peerId"] ?: ""
 
-    val message = messageRepository.getMessagesPaged(peerId)
+    val message = messageRepository.getMessagesPaged(peerId).cachedIn(viewModelScope)
 
     private fun updateMessageText(text: String) {
         _uiState.update { currentState ->
@@ -44,9 +48,26 @@ class ChatScreenViewModel @Inject constructor(
         updateFileCaption(text)
         messageRepository.emitTyping(_uiState.value.peerId)
     }
+
+    private fun updateFileCaption(text: String) {
+        _uiState.update {
+            it.copy(
+                fileCaption = text
+            )
+        }
+    }
+
     fun onImageInputChange(text: String) {
         updateImageCaption(text)
         messageRepository.emitTyping(_uiState.value.peerId)
+    }
+
+    private fun updateImageCaption(text: String) {
+        _uiState.update {
+            it.copy(
+                imageCaption = text
+            )
+        }
     }
 
     fun sendMessage(text: String) {
@@ -110,14 +131,23 @@ class ChatScreenViewModel @Inject constructor(
     }
 //  ---------------------------------------------------------------------------------------
 
-    fun sendFile(uri: Uri?) {
-        changeFileUri(null)
-        debug(uri.toString())
+     fun sendFile(caption: String) {
+         changeImageUri(null)
+         changeFileUri(null)
+         viewModelScope.launch {
+             messageRepository.sendMessage(_uiState.value.peerId, caption, _uiState.value.file )
+         }
     }
 
-    fun sendImage(uri: Uri?) {
-        changeImageUri(null)
-        debug(uri.toString())
+    fun onMediaSelected(uri: Uri){
+        viewModelScope.launch {
+            val file = fileRepository.saveFileToPrivateStorage(uri, onProgress = {})
+            _uiState.update {
+                it.copy(
+                    file = file
+                )
+            }
+        }
     }
 
     private suspend fun updateUserState(peerId: String) {
@@ -125,6 +155,11 @@ class ChatScreenViewModel @Inject constructor(
         _uiState.update {
             it.copy(peerName = username)
         }
+    }
+
+    fun getFileUri(relativePath: String): Uri{
+        val uri = fileRepository.getContentUri(relativePath)
+        return uri
     }
 
     fun initializeChat() {

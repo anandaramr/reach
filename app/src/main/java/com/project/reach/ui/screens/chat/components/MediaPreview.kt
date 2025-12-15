@@ -3,7 +3,6 @@ package com.project.reach.ui.screens.chat.components
 import android.content.Context
 import android.net.Uri
 import android.provider.OpenableColumns
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -17,6 +16,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.InsertDriveFile
 import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ModalBottomSheet
@@ -26,7 +26,6 @@ import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -36,11 +35,13 @@ import com.project.reach.util.truncate
 fun MediaPreview(
     cancel: (Uri?) -> Unit,
     changeName: (String) -> Unit,
-    send: (Uri?) -> Unit,
+    send: (String) -> Unit,
     name: String,
     uri: Uri?,
     caption: String,
     onCaptionChange: (String) -> Unit,
+    onMediaSelected: (Uri) -> Unit,
+    isSentEnabled: Boolean
 ) {
     val context = LocalContext.current
     Row(
@@ -54,6 +55,7 @@ fun MediaPreview(
         )
         uri?.let { safeUri ->
             getName(context, uri, changeName)
+            onMediaSelected(uri)
             ModalBottomSheet(
                 modifier = Modifier
                     .fillMaxHeight(),
@@ -69,6 +71,7 @@ fun MediaPreview(
                     verticalArrangement = Arrangement.SpaceBetween,
                     horizontalAlignment = Alignment.CenterHorizontally
                 ){
+                    if(!isSentEnabled) CircularProgressIndicator()
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -95,7 +98,8 @@ fun MediaPreview(
                         modifier = Modifier.fillMaxWidth(),
                         trailingIcon = {
                             IconButton(
-                                onClick = { send(uri) }
+                                enabled = isSentEnabled,
+                                onClick = { send(caption) }
                             ) {
                                 Icon(
                                     imageVector = Icons.AutoMirrored.Filled.Send,
