@@ -3,10 +3,8 @@ package com.project.reach.ui.screens.chat.components
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
-import android.provider.DocumentsContract
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -17,6 +15,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.InsertDriveFile
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -25,24 +24,25 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.project.reach.domain.models.Message
-import com.project.reach.util.truncate
+import com.project.reach.domain.models.TransferState
 
 @Composable
 fun FileDisplay(
     message: Message.FileMessage,
-    getFileUri: (String) -> Uri
+    getFileUri: (String) -> Uri,
+    fileTransferState: TransferState
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = if (message.isFromSelf) Arrangement.End
-        else Arrangement.Start
     ) {
         Column(
             modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
-            horizontalAlignment = Alignment.End,
+            horizontalAlignment = if (message.isFromSelf) Alignment.End
+            else Alignment.Start,
 
         ) {
             val context = LocalContext.current
@@ -51,7 +51,7 @@ fun FileDisplay(
                     .fillMaxWidth(0.5f)
                     .clickable(
                         onClick = {
-                            openFile(context, uri = getFileUri(message.relativePath), messagegi)
+                            openFile(context, uri = getFileUri(message.relativePath), message)
                         }
                     )
                 ,
@@ -69,13 +69,16 @@ fun FileDisplay(
                     modifier = Modifier.padding(15.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
+                    if(fileTransferState == TransferState.Preparing) CircularProgressIndicator()
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.InsertDriveFile,
                         contentDescription = "file",
                         modifier = Modifier.size(20.dp)
                     )
                     Text(
-                        text = message.filename.truncate(13),
+                        text = message.filename,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
                         color = MaterialTheme.colorScheme.onSurface,
                         fontSize = 11.sp,
                         fontFamily = FontFamily.Monospace,

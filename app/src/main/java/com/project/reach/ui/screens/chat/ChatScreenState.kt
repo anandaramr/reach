@@ -3,6 +3,7 @@ package com.project.reach.ui.screens.chat
 
 import android.net.Uri
 import com.project.reach.data.utils.PrivateFile
+import com.project.reach.domain.models.TransferState
 
 data class ChatScreenState(
     var messageText: String = "",
@@ -16,5 +17,6 @@ data class ChatScreenState(
     var fileUri : Uri? = null,
     var imageName: String = "",
     var imageCaption: String = "",
+    var fileTransferState: TransferState = TransferState.Preparing
 )
 

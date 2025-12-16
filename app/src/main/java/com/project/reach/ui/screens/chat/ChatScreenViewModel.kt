@@ -9,6 +9,7 @@ import com.project.reach.data.utils.PrivateFile
 import com.project.reach.domain.contracts.IContactRepository
 import com.project.reach.domain.contracts.IFileRepository
 import com.project.reach.domain.contracts.IMessageRepository
+import com.project.reach.domain.models.MessageState
 import com.project.reach.util.debug
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -132,6 +133,8 @@ class ChatScreenViewModel @Inject constructor(
 //  ---------------------------------------------------------------------------------------
 
      fun sendFile(caption: String) {
+         onImageInputChange("")
+         onFileInputChange("")
          changeImageUri(null)
          changeFileUri(null)
          viewModelScope.launch {
@@ -173,6 +176,12 @@ class ChatScreenViewModel @Inject constructor(
             updateUserState(peerId = peerId)
         }
 
+    }
+
+    fun fileTransferState(fileHash: String, messageState: MessageState){
+        fileRepository.observeTransferState(fileHash, messageState).collect {
+
+        }
     }
 }
 

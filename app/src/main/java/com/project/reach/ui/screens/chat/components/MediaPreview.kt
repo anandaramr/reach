@@ -74,8 +74,8 @@ fun MediaPreview(
                     if(!isSentEnabled) CircularProgressIndicator()
                     Column(
                         modifier = Modifier
-                            .fillMaxWidth()
-                            .fillMaxHeight(0.9f),
+                            .fillMaxHeight(0.7f)
+                            .fillMaxWidth(),
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.Center
                     ) {
