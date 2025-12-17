@@ -28,20 +28,17 @@ import com.project.reach.util.toUUID
 import com.project.reach.util.truncate
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.asSharedFlow
-import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.math.max
@@ -66,17 +63,13 @@ class MessageRepository(
     private val myUserId = identityManager.userId
     private val myUsername = identityManager.username
 
-    private val foundDevices = networkController.foundDevices
-        .map { devices -> devices.map { it.uuid }.toSet() }
-        .stateIn(
-            scope = scope,
-            started = SharingStarted.Eagerly,
-            initialValue = emptySet()
-        )
-
     init {
         scope.launch {
             handlePackets()
+        }
+
+        scope.launch {
+            messageRetryHandler()
         }
 
         scope.launch {
@@ -84,37 +77,48 @@ class MessageRepository(
         }
     }
 
-    // Message dispatcher keeps track of new messages and pending ones
-    // and dispatches them if the recipient is discoverable
-    private suspend fun startMessageDispatcher() = coroutineScope {
-        val pendingFlow = messageDao.getUserIdsOfUnsentMessages()
+    private suspend fun messageRetryHandler(): Unit = coroutineScope {
+        networkController.newDevices.collect { device ->
+            messageDao.resetOutgoingPausedMessages(device.uuid)
+        }
+    }
 
-        combine(foundDevices, pendingFlow) { onlineUsers, usersWithPendingMessages ->
-            onlineUsers.intersect(usersWithPendingMessages)
-        }.distinctUntilChanged()
+    private val activeDispatchJobs = ConcurrentHashMap<UUID, Job>()
+
+    private suspend fun startMessageDispatcher() {
+        messageDao.getUserIdsOfPendingMessages()
+            .distinctUntilChanged()
             .collect { userIds ->
                 userIds.forEach { userId ->
-                    launch { dispatchPendingMessages(userId) }
+                    val job = activeDispatchJobs[userId]
+                    if (job != null && job.isActive) return@forEach
+                    activeDispatchJobs[userId] = scope.launch { handlePendingMessages(userId) }
+                }
+
+                val userIdSet = userIds.toSet()
+                activeDispatchJobs.keys.toList().forEach { user ->
+                    if (user !in userIdSet) {
+                        val job = activeDispatchJobs.remove(user)
+                        job?.cancel()
+                    }
                 }
             }
     }
 
-    private val sendLocks = ConcurrentHashMap<UUID, Mutex>()
-    private suspend fun dispatchPendingMessages(userId: UUID) {
-        val sendLock = sendLocks.computeIfAbsent(userId) { Mutex() }
-
-        sendLock.withLock {
-            if (userId !in foundDevices.value) return
-
-            val pendingMessages = messageDao.getUnsentMessagesByUserId(userId).first()
-            pendingMessages.forEach { message ->
-                dispatchMessage(message)
+    private suspend fun handlePendingMessages(userId: UUID) {
+        messageDao.getNextPendingMessage(userId)
+            .filterNotNull()
+            .distinctUntilChanged()
+            .collect { message ->
+                val result = dispatchMessage(message)
+                if (!result) {
+                    return@collect
+                }
             }
-        }
     }
 
-    private suspend fun dispatchMessage(message: MessageWithMedia) {
-        sendMessageToUser(message)
+    private suspend fun dispatchMessage(message: MessageWithMedia): Boolean {
+        return sendMessageToUser(message)
     }
 
     override suspend fun sendMessage(userId: String, text: String, file: PrivateFile?) {
@@ -146,7 +150,7 @@ class MessageRepository(
                 mimeType = file.mimeType,
                 fileSize = file.file.length(),
                 filename = file.filename,
-                messageState = MessageState.PAUSED
+                messageState = MessageState.PENDING
             )
         }
     }
@@ -207,7 +211,7 @@ class MessageRepository(
 
     private suspend fun sendMessageToUser(
         chat: MessageWithMedia
-    ) {
+    ): Boolean {
         // reset typing state timer so that throttling works as intended
         typingStateHandler.resetSelfIsTyping()
 
@@ -240,6 +244,7 @@ class MessageRepository(
             // updated only after the file has been sent through wire
             messageDao.updateMessageState(message.messageId, MessageState.DELIVERED)
         }
+        return result
     }
 
     override fun getMessagesPaged(
@@ -389,6 +394,11 @@ class MessageRepository(
             return false
         }
 
+        if (fileRepository.isTransferOngoing(packet.media.fileHash)) {
+            debug("Transfer already ongoing")
+            return false
+        }
+
         val fileSizeInStorage = fileRepository.getFileSize(packet.media.fileHash)
         if (fileSizeInStorage == packet.media.fileSize) {
             val fileComplete = Packet.FileComplete(
@@ -398,11 +408,6 @@ class MessageRepository(
             networkController.sendPacket(packet.senderId.toUUID(), fileComplete)
             messageDao.updateMessageState(packet.messageId.toUUID(), MessageState.DELIVERED)
             return true
-        }
-
-        if (fileRepository.isTransferOngoing(packet.media.fileHash)) {
-            debug("Transfer already ongoing")
-            return false
         }
 
         messageDao.updateIncomingFileState(packet.media.fileHash, MessageState.PENDING)
