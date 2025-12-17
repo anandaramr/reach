@@ -10,12 +10,15 @@ import com.project.reach.domain.contracts.IContactRepository
 import com.project.reach.domain.contracts.IFileRepository
 import com.project.reach.domain.contracts.IMessageRepository
 import com.project.reach.domain.models.MessageState
+import com.project.reach.domain.models.TransferState
 import com.project.reach.util.debug
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -178,10 +181,14 @@ class ChatScreenViewModel @Inject constructor(
 
     }
 
-    fun fileTransferState(fileHash: String, messageState: MessageState){
-        fileRepository.observeTransferState(fileHash, messageState).collect {
-
-        }
+    fun getTransferState(fileHash: String, messageState: MessageState): StateFlow<TransferState>{
+        return fileRepository
+            .observeTransferState(fileHash, messageState)
+            .stateIn(
+                scope = viewModelScope,
+                started = SharingStarted.WhileSubscribed(5000),
+                initialValue = TransferState.Preparing
+            )
     }
 }
 

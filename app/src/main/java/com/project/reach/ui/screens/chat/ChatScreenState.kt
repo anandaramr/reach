@@ -17,6 +17,5 @@ data class ChatScreenState(
     var fileUri : Uri? = null,
     var imageName: String = "",
     var imageCaption: String = "",
-    var fileTransferState: TransferState = TransferState.Preparing
 )
 

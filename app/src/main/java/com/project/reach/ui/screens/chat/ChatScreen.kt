@@ -118,8 +118,7 @@ fun ChatScreen(
                     messages[idx]?.let { message ->
                         when(message) {
                             is Message.FileMessage -> {
-                                fileTransferState by viewModel.uiState.
-                                FileDisplay(message = message, getFileUri = viewModel::getFileUri)
+                                FileDisplay(message = message, getFileUri = viewModel::getFileUri, getTransferState = viewModel::getTransferState)
                             }
                             is Message.TextMessage -> MessageDisplay(message = message)
                         }
