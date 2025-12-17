@@ -133,7 +133,7 @@ class MessageRepository(
         if (file == null) {
             persistTextMessage(
                 userId = userId,
-                text = text,
+                text = text.trim(),
                 messageId = messageId,
                 timeStamp = timeStamp,
                 isFromPeer = false,
@@ -142,7 +142,7 @@ class MessageRepository(
         } else {
             persistMessageWithMedia(
                 userId = userId,
-                caption = text,
+                caption = text.trim(),
                 privateUri = file.location,
                 isFromPeer = false,
                 messageId = messageId,
@@ -482,7 +482,7 @@ class MessageRepository(
 
     private fun MessageEntity.toMessageNotification(): MessageNotification {
         return MessageNotification(
-            text = content.ifBlank { "file" }.truncate(60),
+            text = content.ifBlank { "${if (isFromPeer) "sent a" else "You sent a"} file" }.truncate(60),
             timeStamp = timeStamp
         )
     }
