@@ -187,7 +187,12 @@ class ChatScreenViewModel @Inject constructor(
             .stateIn(
                 scope = viewModelScope,
                 started = SharingStarted.WhileSubscribed(5000),
-                initialValue = TransferState.Preparing
+                initialValue = when(messageState){
+                    MessageState.DELIVERED -> TransferState.Complete
+                    MessageState.PAUSED -> TransferState.Paused
+                    else -> TransferState.Preparing
+                }
+
             )
     }
 }
