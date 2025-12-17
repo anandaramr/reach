@@ -33,7 +33,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.paging.compose.collectAsLazyPagingItems
-import com.project.reach.ui.screens.chat.components.ChatBubble
+import com.project.reach.domain.models.Message
+import com.project.reach.ui.screens.chat.components.FileDisplay
+import com.project.reach.ui.screens.chat.components.MessageDisplay
 import com.project.reach.ui.screens.chat.components.MessageTextField
 import com.project.reach.ui.screens.chat.components.TypingBubble
 
@@ -112,11 +114,17 @@ fun ChatScreen(
                         }
                     }
                 }
-                items(messages.itemCount) { idx ->
-                    messages[idx]?.let {message ->
-                        ChatBubble(message = message)
+                items(count = messages.itemCount) { idx ->
+                    messages[idx]?.let { message ->
+                        when(message) {
+                            is Message.FileMessage -> {
+                                FileDisplay(message = message, getFileUri = viewModel::getFileUri, getTransferState = viewModel::getTransferState)
+                            }
+                            is Message.TextMessage -> MessageDisplay(message = message)
+                        }
                     }
                 }
+
                 item { Spacer(modifier = Modifier.size(30.dp)) }
             }
             MessageTextField(
@@ -124,15 +132,20 @@ fun ChatScreen(
                 fileUri = uiState.fileUri,
                 fileName = uiState.fileName,
                 imageUri = uiState.imageUri,
+                imageCaption = uiState.imageCaption,
+                fileCaption = uiState.fileCaption,
                 imageName = uiState.imageName,
-                onInputChange = viewModel::onInputChange,
+                isSentEnabled = uiState.file!=null,
                 sendMessage = viewModel::sendMessage,
                 sendFile = viewModel::sendFile,
+                onMediaSelected = viewModel::onMediaSelected,
+                onInputChange = viewModel::onInputChange,
                 changeFileUri = viewModel::changeFileUri,
                 changeFileName = viewModel::changeFileName,
                 changeImageUri = viewModel::changeImageUri,
                 changeImageName = viewModel::changeImageName,
-                sendImage = viewModel::sendImage
+                onFileInputChange = viewModel::onFileInputChange,
+                onImageInputChange = viewModel::onImageInputChange,
             )
         }
     }

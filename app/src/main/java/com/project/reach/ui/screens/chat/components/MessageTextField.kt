@@ -13,7 +13,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Image
-import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
@@ -23,7 +22,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 
-
 @Composable
 fun MessageTextField(
     modifier: Modifier = Modifier,
@@ -32,41 +30,55 @@ fun MessageTextField(
     fileName: String,
     imageUri: Uri?,
     imageName: String,
+    fileCaption: String,
+    imageCaption: String,
+    isSentEnabled: Boolean,
     onInputChange: (String) -> Unit,
     sendMessage: (String) -> Unit,
-    sendFile: (Uri?) -> Unit,
+    sendFile: (String) -> Unit,
     changeFileUri: (Uri?) -> Unit,
     changeFileName: (String) -> Unit,
     changeImageUri: (Uri?) -> Unit,
     changeImageName: (String) -> Unit,
-    sendImage: (Uri?) -> Unit
+    onFileInputChange: (String) -> Unit,
+    onImageInputChange: (String) -> Unit,
+    onMediaSelected: (Uri) -> Unit,
 ) {
     Surface(
         modifier = Modifier.padding(),
     ) {
         if (fileUri != null)
             MediaPreview(
+                cancel = changeFileUri,
                 changeName = changeFileName,
                 send = sendFile,
                 uri = fileUri,
-                name = fileName
+                name = fileName,
+                caption = fileCaption,
+                onCaptionChange = onFileInputChange,
+                onMediaSelected = onMediaSelected,
+                isSentEnabled = isSentEnabled,
             )
         else if (imageUri != null) {
             MediaPreview(
+                cancel = changeImageUri,
                 changeName = changeImageName,
-                send = sendImage,
+                send = sendFile,
                 uri = imageUri,
-                name = imageName
+                name = imageName,
+                caption = imageCaption,
+                onCaptionChange = onImageInputChange,
+                onMediaSelected = onMediaSelected,
+                isSentEnabled = isSentEnabled,
             )
-        }
-        else
+        } else
             MessageField(
                 messageText,
                 onInputChange,
                 modifier,
                 sendMessage,
                 changeFileUri,
-                changeImageUri
+                changeImageUri,
             )
     }
 }
@@ -98,17 +110,6 @@ private fun MessageField(
                         contentDescription = "Send",
                     )
                 }
-            else
-                IconButton(
-                    onClick = {
-                    },
-                ) {
-                    Icon(
-                        modifier = Modifier.padding(end = 10.dp),
-                        imageVector = Icons.Default.Mic,
-                        contentDescription = "Record",
-                    )
-                }
         },
         leadingIcon = {
             Row {
@@ -129,7 +130,7 @@ private fun MessageField(
                         .padding(start = 10.dp, end = 5.dp)
                         .clickable(
                             onClick = {
-                                pdfPickerLauncher.launch(arrayOf("application/pdf"))
+                                pdfPickerLauncher.launch(arrayOf("*/*"))
                             }
                         )
                 )
@@ -141,7 +142,7 @@ private fun MessageField(
                         .clickable(
                             onClick = {
                                 imagePickerLauncher.launch(
-                                    PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                                    PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageAndVideo)
                                 )
                             }
                         )
