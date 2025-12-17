@@ -1,5 +1,9 @@
 package com.project.reach.ui.components
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
@@ -11,36 +15,43 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.graphics.Color
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.currentBackStackEntryAsState
-import com.project.reach.ui.components.BottomNavBarItem
 
 @Composable
-fun BottomBar(navController: NavHostController, items: List<BottomNavBarItem>) {
+fun BottomBar(navController: NavHostController, items: List<BottomNavBarItem>, isVisible: Boolean) {
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentScreen = navBackStackEntry?.destination?.route
 
-    NavigationBar(
-        containerColor = MaterialTheme.colorScheme.background
-    ) {
-        items.forEach { it ->
-            NavigationBarItem(
-                icon = { Icon(it.icon, contentDescription = it.label) },
-                selected = currentScreen == it.route,
-                label = { Text(
-                    text = it.label)
-                        },
-                onClick = {
-                    navController.navigate(it.route) {
-                        popUpTo(navController.graph.startDestinationId) {
-                            inclusive = false
+    AnimatedVisibility(
+        visible = isVisible,
+        enter = fadeIn(tween(180)),
+        exit = fadeOut(tween(180))
+    ){
+        NavigationBar(
+            containerColor = MaterialTheme.colorScheme.background
+        ) {
+            items.forEach { it ->
+                NavigationBarItem(
+                    icon = { Icon(it.icon, contentDescription = it.label) },
+                    selected = currentScreen == it.route,
+                    label = {
+                        Text(
+                            text = it.label
+                        )
+                    },
+                    onClick = {
+                        navController.navigate(it.route) {
+                            popUpTo(navController.graph.startDestinationId) {
+                                inclusive = false
+                            }
+                            launchSingleTop = true
                         }
-                        launchSingleTop = true
-                    }
-                },
-                colors = NavigationBarItemDefaults.colors(
-                    indicatorColor = Color.Transparent,
-                    disabledIconColor = MaterialTheme.colorScheme.primary,
+                    },
+                    colors = NavigationBarItemDefaults.colors(
+                        indicatorColor = Color.Transparent,
+                        disabledIconColor = MaterialTheme.colorScheme.primary,
+                    )
                 )
-            )
+            }
         }
     }
 }
