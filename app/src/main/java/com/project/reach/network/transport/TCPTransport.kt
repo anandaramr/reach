@@ -1,5 +1,9 @@
 package com.project.reach.network.transport
 
+import android.net.Network
+import android.os.ParcelFileDescriptor
+import android.system.Os
+import android.system.OsConstants
 import com.project.reach.network.model.NetworkPacket
 import com.project.reach.util.debug
 import kotlinx.coroutines.CoroutineScope
@@ -24,6 +28,7 @@ import java.util.concurrent.ConcurrentHashMap
 
 class TCPTransport: NetworkTransport {
     private var socket: ServerSocket? = null
+    private var currentNetwork: Network? = null
 
     private val _incomingPackets = MutableSharedFlow<NetworkPacket>(
         replay = 0,
@@ -39,7 +44,11 @@ class TCPTransport: NetworkTransport {
     private var serverJob: Job? = null
 
     private fun listen() {
-        if (serverJob != null) return
+        if (serverJob != null) {
+            debug("server already started")
+            return
+        }
+
         socket?.let { socket ->
             debug("[TCP] listening on ${socket.inetAddress}:${socket.localPort}")
             serverJob = scope.launch {
@@ -64,12 +73,12 @@ class TCPTransport: NetworkTransport {
         clientSocket: Socket
     ) = coroutineScope {
         val clientIp = clientSocket.inetAddress
-        connections.putIfAbsent(clientIp, clientSocket)
-
-        clientSocket.soTimeout = IDLE_TIMEOUT
-        val input = DataInputStream(clientSocket.inputStream)
+        val oldSocket = connections.put(clientIp, clientSocket)
+        oldSocket?.close()
 
         try {
+            val input = DataInputStream(clientSocket.inputStream)
+            clientSocket.soTimeout = IDLE_TIMEOUT
             while (isActive && !clientSocket.isClosed) {
                 try {
                     handleIncomingBytes(clientIp, input)
@@ -83,6 +92,7 @@ class TCPTransport: NetworkTransport {
             }
         } catch (e: Exception) {
             debug("TCP Error handling client: $e")
+            e.printStackTrace()
         } finally {
             debug("Disconnected from $clientIp")
             connections.remove(clientIp, clientSocket)
@@ -108,14 +118,18 @@ class TCPTransport: NetworkTransport {
 
     override suspend fun send(bytes: ByteArray, ip: InetAddress): Boolean {
         try {
-            val socket = getOrCreateSocket(ip)
-            val output = DataOutputStream(socket.outputStream)
-            output.writeInt(bytes.size)
-            output.write(bytes)
-            output.flush()
-            return true
+            currentNetwork?.let { network ->
+                val socket = getOrCreateSocket(ip, network)
+                val output = DataOutputStream(socket.outputStream)
+                output.writeInt(bytes.size)
+                output.write(bytes)
+                output.flush()
+                return true
+            }
+            return false
         } catch (e: Exception) {
             debug("TCP error: couldn't send(): $e")
+            e.printStackTrace()
             return false
         }
     }
@@ -124,34 +138,48 @@ class TCPTransport: NetworkTransport {
      * Retrieves socket of client if already connected, creates
      * a new one otherwise
      */
-    private fun getOrCreateSocket(ip: InetAddress): Socket {
-        return connections.computeIfAbsent(ip) { key ->
-            Socket(key, NetworkTransport.PORT).also { socket ->
-                debug("connected to ${socket.inetAddress}")
-                scope.launch {
-                    handlePeerSocket(socket)
-                }
-            }
+    private fun getOrCreateSocket(ip: InetAddress, network: Network): Socket {
+        connections[ip]?.let { if (!it.isClosed) return it }
+        val clientSocket = network.socketFactory.createSocket(ip, NetworkTransport.PORT)
+        debug("Connected to ${clientSocket.inetAddress.hostAddress}")
+        scope.launch {
+            handlePeerSocket(clientSocket)
         }
+        return clientSocket
     }
 
-    override fun start() {
+    override fun start(hostAddress: InetAddress, network: Network) {
         debug("[TCP] starting")
-        if (socket != null) return
-        socket = ServerSocket(NetworkTransport.PORT)
+        if (socket != null) {
+            debug("[TCP] already started")
+            return
+        }
+
+        socket = ServerSocket(
+            NetworkTransport.PORT,
+            NetworkTransport.BACKLOG,
+            hostAddress
+        )
+        currentNetwork = network
         listen()
     }
 
     override fun close() {
+        debug("[TCP] closing")
         runCatching { serverJob?.cancel() }
         socket?.close()
+
         socket = null
         serverJob = null
+        currentNetwork = null
+
         connections.values.forEach { runCatching { it.close() } }
         connections.clear()
     }
 
-    companion object {
-        private const val IDLE_TIMEOUT = 60_000
+    private companion object {
+        const val IDLE_TIMEOUT = 60_000
+        const val LINUX_TCP_USER_TIMEOUT = 18
+        const val TCP_WRITE_DELAY = 3000
     }
 }

@@ -7,7 +7,6 @@ import com.project.reach.domain.contracts.INetworkController
 import com.project.reach.domain.contracts.IWifiController
 import com.project.reach.network.controllers.WifiController
 import com.project.reach.network.discovery.NsdDiscoveryController
-import com.project.reach.network.transport.NetworkTransport
 import com.project.reach.network.transport.TCPTransport
 import com.project.reach.network.transport.UDPTransport
 import dagger.Module
@@ -25,10 +24,10 @@ object NetworkModule {
     @Singleton
     fun provideWifiController(
         @ApplicationContext context: Context,
-        @UDP udpTransport: NetworkTransport,
-        @TCP tcpTransport: NetworkTransport,
         identityManager: IdentityManager,
     ): IWifiController {
+        val udpTransport = UDPTransport()
+        val tcpTransport = TCPTransport()
         return WifiController(context, udpTransport, tcpTransport, identityManager)
     }
 
@@ -40,16 +39,6 @@ object NetworkModule {
     ): INetworkController {
         return NetworkController(wifiController, identityManager)
     }
-
-    @Provides
-    @Singleton
-    @UDP
-    fun provideUDPTransport(): NetworkTransport = UDPTransport()
-
-    @Provides
-    @Singleton
-    @TCP
-    fun provideTCPTransport(): NetworkTransport = TCPTransport()
 
     @Provides
     @Singleton

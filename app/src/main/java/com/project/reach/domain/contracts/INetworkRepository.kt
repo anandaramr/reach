@@ -10,14 +10,6 @@ import kotlinx.coroutines.flow.StateFlow
 interface INetworkRepository {
 
     /**
-     * A [StateFlow] that represents current WiFi state
-     *
-     * Emits `true` if device is connected to a private network
-     * via WiFi, otherwise emits `false`
-     */
-    val networkState: StateFlow<NetworkState>
-
-    /**
      * List of [StateFlow] objects holding the `uuid` and `username` of the users
      */
     val foundDevices: StateFlow<List<DeviceInfo>>

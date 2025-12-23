@@ -1,5 +1,6 @@
 package com.project.reach.network.transport
 
+import android.net.Network
 import com.project.reach.util.debug
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runInterruptible
@@ -25,8 +26,9 @@ object DataChannelConfig {
 
 class DataInputChannel(
     private val peerIp: InetAddress,
+    localAddress: InetAddress
 ): Closeable {
-    private val socket = ServerSocket(0).apply {
+    private val socket = ServerSocket(0, BACKLOG, localAddress).apply {
         soTimeout = DataChannelConfig.WAIT_TIMEOUT
         receiveBufferSize = DataChannelConfig.KERNEL_BUFFER_SIZE
     }
@@ -35,7 +37,7 @@ class DataInputChannel(
     suspend fun readInto(
         output: OutputStream,
         expectedBytes: Long,
-        onProgress: (Long) -> Unit
+        onProgress: (bytesReceived: Long) -> Unit
     ): Boolean {
         if (socket.isClosed) {
             debug("${this::class.simpleName}: Use after close")
@@ -69,7 +71,7 @@ class DataInputChannel(
         input: InputStream,
         output: OutputStream,
         expectedBytes: Long,
-        onProgress: (Long) -> Unit
+        onProgress: (bytesSent: Long) -> Unit
     ) =
         withContext(Dispatchers.IO) {
             runInterruptible {
@@ -102,11 +104,16 @@ class DataInputChannel(
     override fun close() {
         socket.close()
     }
+
+    private companion object {
+        const val BACKLOG = 10
+    }
 }
 
 class DataOutputChannel(
     private val peerIp: InetAddress,
-    private val port: Int
+    private val port: Int,
+    private val network: Network
 ): Closeable {
     private val socket = Socket().apply {
         soTimeout = DataChannelConfig.WAIT_TIMEOUT
@@ -125,6 +132,7 @@ class DataOutputChannel(
             }
 
             val output = try {
+                network.bindSocket(socket)
                 socket.connect(InetSocketAddress(peerIp, port), DataChannelConfig.WAIT_TIMEOUT)
                 socket.outputStream
             } catch (_: Exception) {
