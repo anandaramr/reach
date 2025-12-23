@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.InsertDriveFile
+import androidx.compose.material.icons.automirrored.filled.Redo
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -47,7 +48,9 @@ fun FileDisplay(
         modifier = Modifier.fillMaxWidth(),
     ) {
         Column(
-            modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 8.dp),
             horizontalAlignment = if (message.isFromSelf) Alignment.End
             else Alignment.Start,
 
@@ -76,19 +79,37 @@ fun FileDisplay(
                     modifier = Modifier.padding(15.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-
-                    debug("hello  $fileTransferState")
-                    debug("hi  ${message.messageState}")
-                    if(fileTransferState == TransferState.Preparing)
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(15.dp),
-                            strokeWidth = 2.dp
-                        )
-                    else Icon(
-                        imageVector = Icons.AutoMirrored.Filled.InsertDriveFile,
-                        contentDescription = "file",
-                        modifier = Modifier.size(20.dp)
-                    )
+                    val fileTransferState = fileTransferState // avoids issue with delegated property access
+                    when (fileTransferState) {
+                        TransferState.Complete -> {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.InsertDriveFile,
+                                contentDescription = "file",
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                        TransferState.Paused -> {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.Redo,
+                                contentDescription = "file",
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                        TransferState.Preparing -> {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(15.dp),
+                                strokeWidth = 2.dp
+                            )
+                        }
+                        is TransferState.Progress -> {
+                            val progress = (fileTransferState.currentBytes.toFloat() / message.size.toFloat())
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(15.dp),
+                                progress = { progress },
+                                strokeWidth = 2.dp
+                            )
+                        }
+                    }
                     Text(
                         text = message.filename,
                         maxLines = 1,
