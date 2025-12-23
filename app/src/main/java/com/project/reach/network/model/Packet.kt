@@ -62,8 +62,6 @@ sealed class Packet {
          *
          * @throws IllegalArgumentException if the provided data cannot be deserialized
          * because it does not conform to the expected packet format.
-         *
-         * @throws UnknownSourceException if the received packet is from an unknown service
          */
         fun deserialize(bytes: ByteArray): Packet = PacketSerializer.deserialize(bytes)
     }

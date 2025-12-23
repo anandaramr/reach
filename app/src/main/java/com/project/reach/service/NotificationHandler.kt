@@ -35,6 +35,7 @@ class NotificationHandler(
         username: String,
         messages: List<MessageNotification>,
     ) {
+        if (messages.isEmpty()) return
         val notificationId = userId.hashCode()
 
         val notification = NotificationCompat.Builder(

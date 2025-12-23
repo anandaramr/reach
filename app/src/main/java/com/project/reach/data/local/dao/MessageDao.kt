@@ -49,11 +49,14 @@ interface MessageDao {
     fun getMessagesPreviewPaged(): PagingSource<Int, MessagePreview>
 
     @Transaction
-    @Query("select * from messages where userId = :userId and (messageState = \"PENDING\" or messageState = \"PAUSED\") and not isFromPeer")
-    fun getUnsentMessagesByUserId(userId: UUID): Flow<List<MessageWithMedia>>
+    @Query("select * from messages where userId = :userId and messageState = \"PENDING\" order by timeStamp asc limit 1")
+    fun getNextPendingMessage(userId: UUID): Flow<MessageWithMedia?>
 
-    @Query("select distinct userId from messages where (messageState = \"PENDING\" or messageState = \"PAUSED\") and not isFromPeer")
-    fun getUserIdsOfUnsentMessages(): Flow<List<UUID>>
+    @Query("select distinct userId from messages where messageState = \"PENDING\" and not isFromPeer")
+    fun getUserIdsOfPendingMessages(): Flow<List<UUID>>
+
+    @Query("update messages set messageState = \"PENDING\" where userId = :userId and not isFromPeer and messageState = \"PAUSED\"")
+    suspend fun resetOutgoingPausedMessages(userId: UUID)
 
     @Query("update messages set messageState = :messageState where messageId = :messageId")
     suspend fun updateMessageState(messageId: UUID, messageState: MessageState)

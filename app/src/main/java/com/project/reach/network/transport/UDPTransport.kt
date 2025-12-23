@@ -1,5 +1,6 @@
 package com.project.reach.network.transport
 
+import android.net.Network
 import com.project.reach.network.model.NetworkPacket
 import com.project.reach.util.debug
 import kotlinx.coroutines.CoroutineScope
@@ -21,6 +22,7 @@ import java.net.SocketException
 class UDPTransport(
 ): NetworkTransport {
     private var socket: DatagramSocket? = null
+    private var currentNetwork: Network? = null
     private val socketLock = Mutex()
 
     private val _incomingPackets = MutableSharedFlow<NetworkPacket>(
@@ -34,6 +36,11 @@ class UDPTransport(
     private var serverJob: Job? = null
 
     private fun listen() {
+        if (serverJob != null) {
+            debug("[UDP] already listening")
+            return
+        }
+
         serverJob = scope.launch {
             debug("[UDP] Listening on ${socket?.localAddress}:${socket?.localPort}")
             while (isActive && socket?.isClosed == false) {
@@ -79,12 +86,18 @@ class UDPTransport(
         }
     }
 
-    override fun start() {
+    override fun start(hostAddress: InetAddress, network: Network) {
         debug("[UDP] Starting")
-        if (socket != null) return
+        if (socket != null) {
+            debug("[UDP] already started")
+            return
+        }
         socket = DatagramSocket(NetworkTransport.PORT).apply {
+            reuseAddress = true
             broadcast = true
         }
+        currentNetwork = network
+        network.bindSocket(socket)
         listen()
     }
 

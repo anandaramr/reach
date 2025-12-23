@@ -14,7 +14,6 @@ import com.project.reach.domain.contracts.IIdentityRepository
 import com.project.reach.domain.contracts.IMessageRepository
 import com.project.reach.domain.contracts.INetworkController
 import com.project.reach.domain.contracts.INetworkRepository
-import com.project.reach.network.transport.NetworkTransport
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -46,10 +45,8 @@ object DataModule {
     @Singleton
     fun provideNetworkRepository(
         networkController: INetworkController,
-        @UDP udpTransport: NetworkTransport,
-        @TCP tcpTransport: NetworkTransport,
     ): INetworkRepository {
-        return NetworkRepository(networkController, udpTransport, tcpTransport)
+        return NetworkRepository(networkController)
     }
 
     @Provides

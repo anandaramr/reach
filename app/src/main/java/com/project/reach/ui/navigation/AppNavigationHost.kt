@@ -31,7 +31,6 @@ import com.project.reach.ui.screens.qrcode.QRCodeScreen
 import com.project.reach.ui.screens.qrcode.QRCodeScreenDestination
 import com.project.reach.ui.screens.settings.SettingsScreen
 import com.project.reach.ui.screens.settings.SettingsScreenDestination
-import com.project.reach.util.debug
 
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
 @Composable
@@ -53,9 +52,7 @@ fun AppNavigationHost(
     Scaffold(
         modifier = Modifier,
         bottomBar = {
-            if (displayBottomBar) {
-                BottomBar(navController, items)
-            }
+            BottomBar(navController, items, isVisible = displayBottomBar)
         }
 
     ) { innerPadding ->

@@ -3,14 +3,7 @@ package com.project.reach.data.network
 import com.project.reach.data.local.IdentityManager
 import com.project.reach.domain.contracts.INetworkController
 import com.project.reach.domain.contracts.IWifiController
-import com.project.reach.domain.models.NetworkState
 import com.project.reach.network.model.Packet
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.stateIn
 import java.io.InputStream
 import java.io.OutputStream
 import java.util.UUID
@@ -19,17 +12,7 @@ class NetworkController(
     private val wifiController: IWifiController,
     identityManager: IdentityManager
 ): INetworkController {
-    private val supervisorJob = SupervisorJob()
-    private val scope = CoroutineScope(Dispatchers.IO + supervisorJob)
-
     private val myUserId = identityManager.userId
-
-    override val networkState =
-        wifiController.isActive.map { if (it) NetworkState.WIFI else NetworkState.NONE }.stateIn(
-            scope = scope,
-            started = SharingStarted.WhileSubscribed(5000),
-            initialValue = NetworkState.NONE
-        )
 
     override val packets = wifiController.packets
     override val newDevices = wifiController.newDevices
@@ -97,15 +80,15 @@ class NetworkController(
     }
 
     override fun startDiscovery() {
-        wifiController.startDiscovery()
+        wifiController.start()
     }
 
     override fun stopDiscovery() {
-        wifiController.stopDiscovery()
+        wifiController.stop()
     }
 
     override fun release() {
-        wifiController.close()
+        wifiController.stop()
     }
 
     private suspend fun sendPacketViaStream(userId: UUID, packet: Packet): Boolean {

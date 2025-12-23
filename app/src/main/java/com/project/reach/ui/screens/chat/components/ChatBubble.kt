@@ -22,33 +22,35 @@ import com.project.reach.domain.models.Message
 fun ChatBubble(
     modifier: Modifier = Modifier, message: Message
 ) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = if (message.isFromSelf) Arrangement.End
-        else Arrangement.Start
-    ) {
-        Card(
-            shape = RoundedCornerShape(30.dp),
-            border = BorderStroke(
-                2.dp,
-                if (message.isFromSelf) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onBackground
-            ),
-            modifier = Modifier
-                .padding(vertical = 6.dp)
-                .widthIn(max = 275.dp),
-            colors = CardDefaults.cardColors(
-                containerColor = Color.Transparent,
-                contentColor = if (message.isFromSelf) MaterialTheme.colorScheme.primary
-                else MaterialTheme.colorScheme.background
-            ),
+    if(message.text!="") {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = if (message.isFromSelf) Arrangement.End
+            else Arrangement.Start
         ) {
-            Text(
-                text = message.text,
-                modifier = Modifier.padding(18.dp, 10.dp),
-                fontSize = 14.sp,
-                color = if (message.isFromSelf) MaterialTheme.colorScheme.primary
-                else MaterialTheme.colorScheme.onBackground
-            )
+            Card(
+                shape = RoundedCornerShape(30.dp),
+                border = BorderStroke(
+                    2.dp,
+                    if (message.isFromSelf) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onBackground
+                ),
+                modifier = Modifier
+                    .padding(vertical = 6.dp)
+                    .widthIn(max = 275.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = Color.Transparent,
+                    contentColor = if (message.isFromSelf) MaterialTheme.colorScheme.primary
+                    else MaterialTheme.colorScheme.background
+                ),
+            ) {
+                Text(
+                    text = message.text,
+                    modifier = Modifier.padding(18.dp, 10.dp),
+                    fontSize = 14.sp,
+                    color = if (message.isFromSelf) MaterialTheme.colorScheme.primary
+                    else MaterialTheme.colorScheme.onBackground
+                )
+            }
         }
     }
 }
