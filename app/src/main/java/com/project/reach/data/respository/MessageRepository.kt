@@ -340,16 +340,11 @@ class MessageRepository(
     private suspend fun handleMessagePacket(packet: Packet.Message) {
         contactRepository.addToContacts(packet.senderId, packet.senderUsername)
         saveIncomingMessage(packet)
-
-        // receive media if attachment exists
-        var showNotification = true
-        if (packet.media != null) {
-            showNotification = handleIncomingFile(packet)
-        }
+        scope.launch { handleIncomingFile(packet) }
 
         // stop typing indicator
         typingStateHandler.resetPeerIsTyping(packet.senderId)
-        if (showNotification) dispatchNewMessageNotification(packet)
+        dispatchNewMessageNotification(packet)
     }
 
     private suspend fun saveIncomingMessage(packet: Packet.Message) {
@@ -388,15 +383,15 @@ class MessageRepository(
         )
     }
 
-    private suspend fun handleIncomingFile(packet: Packet.Message): Boolean {
+    private suspend fun handleIncomingFile(packet: Packet.Message) {
         if (packet.media == null) {
             debug("Couldn't accept file: Missing file metadata")
-            return false
+            return
         }
 
         if (fileRepository.isTransferOngoing(packet.media.fileHash)) {
             debug("Transfer already ongoing")
-            return false
+            return
         }
 
         val fileSizeInStorage = fileRepository.getFileSize(packet.media.fileHash)
@@ -407,7 +402,7 @@ class MessageRepository(
             )
             networkController.sendPacket(packet.senderId.toUUID(), fileComplete)
             messageDao.updateMessageState(packet.messageId.toUUID(), MessageState.DELIVERED)
-            return true
+            return
         }
 
         messageDao.updateIncomingFileState(packet.media.fileHash, MessageState.PENDING)
@@ -421,15 +416,14 @@ class MessageRepository(
                 outputStream = outputStream,
                 fileSize = packet.media.fileSize,
                 offset = safeOffset
-            ) { progress ->
-                updateTransferProgress(packet.media.fileHash, progress)
+            ) { bytesReceived ->
+                updateTransferProgress(packet.media.fileHash, safeOffset + bytesReceived)
             }
         }
 
         val messageState = if (isTransferSuccessful) MessageState.DELIVERED else MessageState.PAUSED
         messageDao.updateIncomingFileState(packet.media.fileHash, messageState)
         fileRepository.markAsNotInProgress(packet.media.fileHash)
-        return isTransferSuccessful
     }
 
     private fun updateTransferProgress(fileHash: String, progress: Long) {
@@ -461,8 +455,8 @@ class MessageRepository(
                 inputStream = inputStream,
                 bytesToSend = file.size - packet.offset,
                 fileAccept = packet,
-                onProgress = { progress ->
-                    updateTransferProgress(packet.fileHash, progress)
+                onProgress = { bytesSent ->
+                    updateTransferProgress(packet.fileHash, packet.offset + bytesSent)
                 }
             )
         }
@@ -482,7 +476,9 @@ class MessageRepository(
 
     private fun MessageEntity.toMessageNotification(): MessageNotification {
         return MessageNotification(
-            text = content.ifBlank { "${if (isFromPeer) "sent a" else "You sent a"} file" }.truncate(60),
+            text = content
+                .ifBlank { "${if (isFromPeer) "sent a" else "You sent a"} file" }
+                .truncate(60),
             timeStamp = timeStamp
         )
     }
