@@ -86,13 +86,13 @@ class UDPTransport(
         }
     }
 
-    override fun start(hostAddress: InetAddress, network: Network) {
+    override fun start(hostAddress: InetAddress, port: Int, network: Network) {
         debug("[UDP] Starting")
         if (socket != null) {
             debug("[UDP] already started")
             return
         }
-        socket = DatagramSocket(NetworkTransport.PORT).apply {
+        socket = DatagramSocket(port).apply {
             reuseAddress = true
             broadcast = true
         }

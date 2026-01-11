@@ -94,8 +94,8 @@ class WifiController(
             linkProperties.getIpAddress()?.let { ip ->
                 this@WifiController.network = network
                 this@WifiController.localIpAddress = ip
-                udpTransport.start(ip, network)
-                tcpTransport.start(ip, network)
+                udpTransport.start(ip, PORT, network)
+                tcpTransport.start(ip, PORT, network)
                 wifiDiscoveryHandler.start()
             }
         }
@@ -222,5 +222,9 @@ class WifiController(
         return linkAddresses
             .map { it.address }
             .firstOrNull { it is Inet4Address && !it.isLoopbackAddress }
+    }
+
+    private companion object {
+        const val PORT = 5000
     }
 }
