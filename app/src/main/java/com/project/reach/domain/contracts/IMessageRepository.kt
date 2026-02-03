@@ -189,4 +189,12 @@ interface IMessageRepository {
      * @see isTyping For observing typing state of other users
      */
     fun emitTyping(userId: String)
+
+    /**
+     * Deletes a message from the database using its unique messageId.
+     *
+     * @param messageId Unique identifier of the message to delete.
+     * @return Number of rows affected (0 if no message found, 1 if deleted).
+     */
+    suspend fun deleteMessage(messageId: String)
 }

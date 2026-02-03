@@ -126,6 +126,10 @@ class MessageRepository(
         // Message dispatcher handles sending the message
     }
 
+    override suspend fun deleteMessage(messageId: String){
+        messageDao.removeMessage(messageId.toUUID())
+    }
+
     private suspend fun saveOutgoingMessage(userId: String, text: String, file: PrivateFile?) {
         val messageId = UUID.randomUUID()
         val timeStamp = System.currentTimeMillis()
