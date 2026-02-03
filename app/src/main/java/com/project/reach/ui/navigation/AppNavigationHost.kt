@@ -78,6 +78,7 @@ fun AppNavigationHost(
             composable(route = HomeScreenDestination.route) {
                 HomeScreen(
                     navigateToChat = { peerId -> navController.navigate(ChatScreenDestination.createRoute(peerId)) },
+                    navigateToDiscover = { navController.navigate(DiscoverScreenDestination.route) },
                     startService = startService
                 )
             }

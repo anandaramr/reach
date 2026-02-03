@@ -17,5 +17,6 @@ data class ChatScreenState(
     var fileUri : Uri? = null,
     var imageName: String = "",
     var imageCaption: String = "",
+    val deleteOption: String? = null
 )
 
