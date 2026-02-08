@@ -39,7 +39,7 @@ class DiscoverViewModel @Inject constructor(
 
     fun saveContact(peer: Peer) {
         viewModelScope.launch {
-            contactRepository.addToContacts(peer.uuid, peer.username)
+            contactRepository.addToContactsIfNotExists(peer.uuid, peer.username)
         }
     }
 }

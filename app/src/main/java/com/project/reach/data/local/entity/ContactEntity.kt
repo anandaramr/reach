@@ -8,5 +8,6 @@ import java.util.UUID
 data class ContactEntity(
     @PrimaryKey val userId: UUID,
     val username: String,
-    val nickname: String = ""
+    val nickname: String? = null,
+    val isSaved: Boolean = false
 )

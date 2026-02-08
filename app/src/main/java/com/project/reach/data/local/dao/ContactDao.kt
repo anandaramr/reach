@@ -11,7 +11,7 @@ import java.util.UUID
 @Dao
 interface ContactDao {
     @Insert(onConflict = OnConflictStrategy.IGNORE)
-    suspend fun insertContact(contact: ContactEntity)
+    suspend fun insertContactEntity(contact: ContactEntity)
 
     @Query("select username from contacts where userId = :userId")
     fun getUsername(userId: UUID): Flow<String>
@@ -21,4 +21,10 @@ interface ContactDao {
 
     @Query("select * from contacts")
     fun getAllContacts(): Flow<List<ContactEntity>>
+
+    @Query("select * from contacts where isSaved = 1 order by nickname")
+    fun getAllSavedContacts(): Flow<List<ContactEntity>>
+
+    @Query("update contacts set nickname = :nickname where userId = :userId")
+    fun updateContactNickname(userId: UUID, nickname: String)
 }

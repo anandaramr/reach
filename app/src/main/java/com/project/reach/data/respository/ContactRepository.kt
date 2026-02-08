@@ -2,6 +2,7 @@ package com.project.reach.data.respository
 
 import com.project.reach.data.local.dao.ContactDao
 import com.project.reach.data.local.entity.ContactEntity
+import com.project.reach.data.model.ContactUser
 import com.project.reach.domain.contracts.IContactRepository
 import com.project.reach.util.toUUID
 import kotlinx.coroutines.CoroutineScope
@@ -32,13 +33,45 @@ class ContactRepository(
         }
     }
 
-    override suspend fun addToContacts(userId: String, username: String) {
+    override fun getSavedContacts(): Flow<List<ContactUser>> {
+        return contactDao.getAllSavedContacts()
+            .map { it.map { contact -> contact.toContactUser() } }
+    }
+
+    override suspend fun saveNewContact(userId: String, username: String, nickname: String) {
+        val userUuid = userId.toUUID()
+        val contact = contactsList.value[userUuid]
+        if (contact?.isSaved == true) {
+            throw IllegalStateException("Contact already saved")
+        }
+
+        contactDao.insertContactEntity(
+            ContactEntity(
+                userId = userUuid,
+                username = username,
+                nickname = nickname,
+                isSaved = true
+            )
+        )
+    }
+
+    override suspend fun updateSavedContactNickname(userId: String, nickname: String) {
+        val userUuid = userId.toUUID()
+        val contact = contactsList.value[userUuid]
+        if (contact?.isSaved != true) {
+            throw IllegalStateException("Contact not saved")
+        }
+
+        contactDao.updateContactNickname(userUuid, nickname)
+    }
+
+    override suspend fun addToContactsIfNotExists(userId: String, username: String) {
         val userUuid = userId.toUUID()
         val contact = contactsList.value[userUuid]
         if (contact != null) return
 
         // only insert if it already doesn't exist
-        contactDao.insertContact(
+        contactDao.insertContactEntity(
             ContactEntity(
                 userId = userUuid,
                 username = username
@@ -51,5 +84,12 @@ class ContactRepository(
         val contact = contactsList.value[userUuid]
         if (contact == null || contact.username == username) return
         contactDao.updateUsername(userUuid, username)
+    }
+
+    private fun ContactEntity.toContactUser(): ContactUser {
+        return ContactUser(
+            userId = userId.toString(),
+            displayName = nickname ?: username
+        )
     }
 }
