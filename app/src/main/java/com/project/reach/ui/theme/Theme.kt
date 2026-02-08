@@ -52,7 +52,7 @@ private val LightColorScheme = lightColorScheme(
     onSurface = Color(0xFF121212),
 
     outline = Color(0xFFD8BEE8),
-    outlineVariant = Color(0x1A000303),      // Same as background
+    outlineVariant = Color(0xB2D8BEE8),      // Same as background
     error = Color(0xFFFF6B6B),        // Same soft red as dark mode
     onError = Color(0xFFFFFFFF)
 )
