@@ -67,7 +67,7 @@ fun ChatPreview(
                 else
                     Text(
                         lastMessage.truncate(35),
-                        fontSize = 13.sp,
+                        fontSize = 12.sp,
                         modifier = Modifier.alpha(0.7f)
                     )
             }

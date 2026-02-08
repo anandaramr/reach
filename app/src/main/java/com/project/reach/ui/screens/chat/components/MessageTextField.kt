@@ -24,7 +24,7 @@ import androidx.compose.ui.unit.dp
 
 @Composable
 fun MessageTextField(
-    modifier: Modifier = Modifier,
+    modifier: Modifier,
     messageText: String,
     fileUri: Uri?,
     fileName: String,
@@ -45,7 +45,7 @@ fun MessageTextField(
     onMediaSelected: (Uri) -> Unit,
 ) {
     Surface(
-        modifier = Modifier.padding(),
+        modifier = modifier,
     ) {
         if (fileUri != null)
             MediaPreview(

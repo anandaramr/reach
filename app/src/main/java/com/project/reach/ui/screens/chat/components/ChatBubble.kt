@@ -54,7 +54,7 @@ fun ChatBubble(
                     if (message.isFromSelf) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onBackground
                 ),
                 modifier = Modifier
-                    .padding(vertical = 6.dp)
+                    .padding(vertical = 2.dp)
                     .widthIn(max = 275.dp)
                     .combinedClickable(
                         onLongClick = { showDeleteOption(message.messageId) },
