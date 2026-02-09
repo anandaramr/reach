@@ -4,7 +4,10 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -15,6 +18,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.InsertDriveFile
 import androidx.compose.material.icons.automirrored.filled.Redo
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -24,6 +29,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -31,21 +37,35 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Popup
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.project.reach.domain.models.Message
 import com.project.reach.domain.models.MessageState
 import com.project.reach.domain.models.TransferState
 import com.project.reach.util.debug
 import kotlinx.coroutines.flow.StateFlow
-
 @Composable
 fun FileDisplay(
     message: Message.FileMessage,
     getFileUri: (String) -> Uri,
-    getTransferState: (String, MessageState) -> StateFlow<TransferState>
+    getTransferState: (String, MessageState) -> StateFlow<TransferState>,
+    deleteMessage: (String) -> Unit,
+    deleteOption: String?,
+    showDeleteOption: (String?) -> Unit
 ) {
     val fileTransferState by getTransferState(message.fileHash, message.messageState).collectAsState()
     Row(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth()
+            .combinedClickable(
+                onLongClick = { showDeleteOption(message.messageId) },
+                onLongClickLabel = "Delete Message",
+                indication = null,
+                interactionSource = remember { MutableInteractionSource() },
+                onClick = {
+                    if (deleteOption != null)
+                        showDeleteOption(null)
+                }
+            ),
     ) {
         Column(
             modifier = Modifier
@@ -55,6 +75,30 @@ fun FileDisplay(
             else Alignment.Start,
 
         ) {
+            if (deleteOption == message.messageId)
+                Popup(
+                    alignment = Alignment.TopCenter,
+                    onDismissRequest = { showDeleteOption(null) }
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth(0.6f)
+                            .background(MaterialTheme.colorScheme.outline, RoundedCornerShape(8.dp))
+                            .padding(10.dp)
+                    ) {
+                        Text("Delete for me",
+                            modifier = Modifier
+                                .clickable(
+                                    onClick = { deleteMessage(message.messageId) },
+                                    onClickLabel = "Delete for me"
+                                )
+                                .padding(5.dp, 10.dp))
+                        Text("Delete for everyone",
+                            modifier = Modifier.padding(5.dp,10.dp))
+                        Text("Copy",
+                            modifier = Modifier.padding(5.dp, 10.dp))
+                    }
+                }
             val context = LocalContext.current
             Card(
                 modifier = Modifier
@@ -79,7 +123,7 @@ fun FileDisplay(
                     modifier = Modifier.padding(15.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    val fileTransferState = fileTransferState // avoids issue with delegated property access
+                    val fileTransferState = fileTransferState
                     when (fileTransferState) {
                         TransferState.Complete -> {
                             Icon(
@@ -90,7 +134,7 @@ fun FileDisplay(
                         }
                         TransferState.Paused -> {
                             Icon(
-                                imageVector = Icons.AutoMirrored.Filled.Redo,
+                                imageVector = Icons.Filled.Pause,
                                 contentDescription = "file",
                                 modifier = Modifier.size(20.dp)
                             )
@@ -129,7 +173,9 @@ fun FileDisplay(
                     messageState = message.messageState,
                     timeStamp = message.timeStamp,
                     messageId = message.messageId,
-                )
+                ),
+                showDeleteOption = showDeleteOption,
+                deleteOption = deleteOption
             )
         }
     }

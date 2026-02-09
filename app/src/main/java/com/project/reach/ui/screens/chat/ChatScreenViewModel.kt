@@ -4,6 +4,7 @@ import android.net.Uri
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.paging.cachedIn
 import com.project.reach.data.utils.PrivateFile
 import com.project.reach.domain.contracts.IContactRepository
@@ -61,9 +62,17 @@ class ChatScreenViewModel @Inject constructor(
         }
     }
 
+    fun showDeleteOption(show: String?) {
+        displayDeleteOption(show)
+    }
+
     fun onImageInputChange(text: String) {
         updateImageCaption(text)
         messageRepository.emitTyping(_uiState.value.peerId)
+    }
+
+    fun deleteMessage(messageId: String){
+        removeMessage(messageId)
     }
 
     private fun updateImageCaption(text: String) {
@@ -71,6 +80,20 @@ class ChatScreenViewModel @Inject constructor(
             it.copy(
                 imageCaption = text
             )
+        }
+    }
+
+    private fun displayDeleteOption(show: String?){
+        _uiState.update {
+            it.copy(
+                deleteOption = show
+            )
+        }
+    }
+
+    private fun removeMessage(messageId: String){
+        viewModelScope.launch {
+            messageRepository.deleteMessage(messageId)
         }
     }
 

@@ -2,6 +2,7 @@ package com.project.reach.data.local.dao
 
 import androidx.paging.PagingSource
 import androidx.room.Dao
+import androidx.room.Delete
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
@@ -21,6 +22,9 @@ interface MessageDao {
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertMedia(mediaEntity: MediaEntity)
+
+    @Query("delete from messages where messageId = :messageId")
+    suspend fun removeMessage(messageId: UUID)
 
     @Transaction
     suspend fun insertMessageWithMedia(messageEntity: MessageEntity, mediaEntity: MediaEntity) {
@@ -72,4 +76,5 @@ interface MessageDao {
 
     @Query("select exists(select 1 from messages where userId = :senderId and mediaId = :mediaId and not isFromPeer limit 1) as isValid")
     suspend fun validateFileRequest(senderId: UUID, mediaId: String): Boolean
+
 }
