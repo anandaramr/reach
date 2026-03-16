@@ -27,9 +27,10 @@ class ContactRepository(
             initialValue = emptyMap()
         )
 
-    override fun getUsername(userId: String): Flow<String> {
+    override fun getDisplayName(userId: String): Flow<String> {
         return contactsList.mapNotNull { contacts ->
-            contacts[userId.toUUID()]?.username
+            val contact = contacts[userId.toUUID()]
+            contact?.nickname?.ifBlank { contact.username }
         }
     }
 

@@ -4,9 +4,7 @@ import android.net.Uri
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.paging.cachedIn
-import com.project.reach.data.utils.PrivateFile
 import com.project.reach.domain.contracts.IContactRepository
 import com.project.reach.domain.contracts.IFileRepository
 import com.project.reach.domain.contracts.IMessageRepository
@@ -180,7 +178,7 @@ class ChatScreenViewModel @Inject constructor(
     }
 
     private suspend fun updateUserState(peerId: String) {
-        val username = contactRepository.getUsername(peerId).first()
+        val username = contactRepository.getDisplayName(peerId).first()
         _uiState.update {
             it.copy(peerName = username)
         }
