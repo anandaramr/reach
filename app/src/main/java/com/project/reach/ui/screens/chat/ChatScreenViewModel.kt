@@ -178,7 +178,7 @@ class ChatScreenViewModel @Inject constructor(
     }
 
     private suspend fun updateUserState(peerId: String) {
-        val username = contactRepository.getDisplayName(peerId).first()
+        val username = contactRepository.getContact(peerId).first()
         _uiState.update {
             it.copy(peerName = username)
         }

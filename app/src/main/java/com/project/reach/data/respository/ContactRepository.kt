@@ -27,10 +27,9 @@ class ContactRepository(
             initialValue = emptyMap()
         )
 
-    override fun getDisplayName(userId: String): Flow<String> {
+    override fun getContact(userId: String): Flow<ContactUser> {
         return contactsList.mapNotNull { contacts ->
-            val contact = contacts[userId.toUUID()]
-            contact?.nickname?.ifBlank { contact.username }
+            contacts[userId.toUUID()]?.toContactUser()
         }
     }
 
@@ -90,7 +89,8 @@ class ContactRepository(
     private fun ContactEntity.toContactUser(): ContactUser {
         return ContactUser(
             userId = userId.toString(),
-            displayName = nickname ?: username
+            username = username,
+            nickname = nickname
         )
     }
 }

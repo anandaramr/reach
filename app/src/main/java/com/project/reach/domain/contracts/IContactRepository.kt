@@ -29,7 +29,7 @@ interface IContactRepository {
      *
      * @see addToContactsIfNotExists to ensure a contact exists before observing
      */
-    fun getDisplayName(userId: String): Flow<String>
+    fun getContact(userId: String): Flow<ContactUser>
 
     /**
      * Retrieves all saved contacts as a reactive stream.
