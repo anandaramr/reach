@@ -107,6 +107,8 @@ dependencies {
     implementation("com.google.protobuf:protobuf-javalite:4.33.0")
     implementation("com.journeyapps:zxing-android-embedded:4.3.0")
 
+    implementation("io.github.webrtc-sdk:android:144.7559.01")
+
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)

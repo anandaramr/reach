@@ -1,18 +1,25 @@
 package com.project.reach.network.model
 
 import com.google.protobuf.InvalidProtocolBufferException
-import com.project.reach.core.exceptions.UnknownSourceException
-import com.project.reach.network.model.Packet.*
 import com.project.reach.util.toHexString
 import com.project.reach.util.toProtoBytes
+import com.reach.project.core.serialization.CallAccept
+import com.reach.project.core.serialization.CallCancel
+import com.reach.project.core.serialization.CallDecline
+import com.reach.project.core.serialization.CallEnd
+import com.reach.project.core.serialization.CallInit
+import com.reach.project.core.serialization.CallSignal
 import com.reach.project.core.serialization.FileAccept
 import com.reach.project.core.serialization.FileComplete
 import com.reach.project.core.serialization.FileHeader
 import com.reach.project.core.serialization.Goodbye
 import com.reach.project.core.serialization.Heartbeat
 import com.reach.project.core.serialization.Hello
+import com.reach.project.core.serialization.IceCandidate
 import com.reach.project.core.serialization.Message
 import com.reach.project.core.serialization.ReachPacket
+import com.reach.project.core.serialization.SdpAnswer
+import com.reach.project.core.serialization.SdpOffer
 import com.reach.project.core.serialization.TypingIndicator
 
 internal object PacketSerializer {
@@ -24,7 +31,7 @@ internal object PacketSerializer {
                 senderId = packet.senderId
 
                 when (packet) {
-                    is GoodBye -> {
+                    is Packet.GoodBye -> {
                         goodbye = Goodbye.newBuilder().build()
                     }
 
@@ -58,7 +65,7 @@ internal object PacketSerializer {
                         }.build()
                     }
 
-                    is Typing -> {
+                    is Packet.Typing -> {
                         typingIndicator = TypingIndicator.newBuilder().build()
                     }
 
@@ -73,6 +80,65 @@ internal object PacketSerializer {
                     is Packet.FileComplete -> {
                         fileComplete = FileComplete.newBuilder().apply {
                             fileHash = packet.fileHash.toProtoBytes()
+                        }.build()
+                    }
+
+                    is Packet.CallSignal.CallAccept -> {
+                        callSignal = CallSignal.newBuilder().apply {
+                            callId = packet.callId
+                            callAccept = CallAccept.newBuilder().build()
+                        }.build()
+                    }
+                    is Packet.CallSignal.CallCancel -> {
+                        callSignal = CallSignal.newBuilder().apply {
+                            callId = packet.callId
+                            callCancel = CallCancel.newBuilder().build()
+                        }.build()
+                    }
+                    is Packet.CallSignal.CallDecline -> {
+                        callSignal = CallSignal.newBuilder().apply {
+                            callId = packet.callId
+                            callDecline = CallDecline.newBuilder().build()
+                        }.build()
+                    }
+                    is Packet.CallSignal.CallEnd -> {
+                        callSignal = CallSignal.newBuilder().apply {
+                            callId = packet.callId
+                            callEnd = CallEnd.newBuilder().build()
+                        }.build()
+                    }
+                    is Packet.CallSignal.CallInit -> {
+                        callSignal = CallSignal.newBuilder().apply {
+                            callId = packet.callId
+                            callInit = CallInit.newBuilder().apply {
+                                senderUsername = packet.senderUsername
+                            }.build()
+                        }.build()
+                    }
+                    is Packet.CallSignal.IceCandidate -> {
+                        callSignal = CallSignal.newBuilder().apply {
+                            callId = packet.callId
+                            iceCandidate = IceCandidate.newBuilder().apply {
+                                candidate = packet.candidate
+                                sdpMid = packet.sdpMid
+                                mLineIndex = packet.mLineIndex
+                            }.build()
+                        }.build()
+                    }
+                    is Packet.CallSignal.SdpAnswer -> {
+                        callSignal = CallSignal.newBuilder().apply {
+                            callId = packet.callId
+                            sdpAnswer = SdpAnswer.newBuilder().apply {
+                                description = packet.description
+                            }.build()
+                        }.build()
+                    }
+                    is Packet.CallSignal.SdpOffer -> {
+                        callSignal = CallSignal.newBuilder().apply {
+                            callId = packet.callId
+                            sdpOffer = SdpOffer.newBuilder().apply {
+                                description = packet.description
+                            }.build()
                         }.build()
                     }
                 }
@@ -94,7 +160,7 @@ internal object PacketSerializer {
         val senderId = proto.senderId
         return when (proto.payloadCase) {
             ReachPacket.PayloadCase.MESSAGE -> {
-                Message(
+                Packet.Message(
                     senderId = senderId,
                     senderUsername = proto.message.senderUsername,
                     messageId = proto.message.messageId,
@@ -102,7 +168,7 @@ internal object PacketSerializer {
                     timeStamp = proto.message.timestamp,
                     media = if (proto.message.hasFileHeader()) {
                         val header = proto.message.fileHeader
-                        FileMetadata(
+                        Packet.FileMetadata(
                             fileHash = header.fileHash.toHexString(),
                             filename = header.filename,
                             mimeType = header.mimeType,
@@ -115,25 +181,25 @@ internal object PacketSerializer {
             }
 
             ReachPacket.PayloadCase.TYPING_INDICATOR -> {
-                Typing(senderId = senderId)
+                Packet.Typing(senderId = senderId)
             }
 
             ReachPacket.PayloadCase.HELLO -> {
-                Hello(
+                Packet.Hello(
                     senderId = senderId,
                     senderUsername = proto.hello.senderUsername
                 )
             }
 
             ReachPacket.PayloadCase.HEARTBEAT -> {
-                Heartbeat(
+                Packet.Heartbeat(
                     senderId = senderId,
                     senderUsername = proto.heartbeat.senderUsername
                 )
             }
 
             ReachPacket.PayloadCase.GOODBYE -> {
-                GoodBye(
+                Packet.GoodBye(
                     senderId = senderId
                 )
             }
@@ -143,7 +209,7 @@ internal object PacketSerializer {
             }
 
             ReachPacket.PayloadCase.FILE_ACCEPT -> {
-                FileAccept(
+                Packet.FileAccept(
                     senderId = senderId,
                     fileHash = proto.fileAccept.fileHash.toHexString(),
                     port = proto.fileAccept.port,
@@ -152,10 +218,74 @@ internal object PacketSerializer {
             }
 
             ReachPacket.PayloadCase.FILE_COMPLETE -> {
-                FileComplete(
+                Packet.FileComplete(
                     senderId = senderId,
                     fileHash = proto.fileComplete.fileHash.toHexString()
                 )
+            }
+
+            ReachPacket.PayloadCase.CALL_SIGNAL -> {
+                val callId = proto.callSignal.callId
+
+                when (proto.callSignal.payloadCase) {
+                    CallSignal.PayloadCase.CALL_ACCEPT -> {
+                        Packet.CallSignal.CallAccept(
+                            callId = callId,
+                            senderId = senderId,
+                        )
+                    }
+                    CallSignal.PayloadCase.CALL_CANCEL -> {
+                        Packet.CallSignal.CallCancel(
+                            callId = callId,
+                            senderId = senderId,
+                        )
+                    }
+                    CallSignal.PayloadCase.CALL_DECLINE -> {
+                        Packet.CallSignal.CallDecline(
+                            callId = callId,
+                            senderId = senderId,
+                        )
+                    }
+                    CallSignal.PayloadCase.CALL_END -> {
+                        Packet.CallSignal.CallEnd(
+                            callId = callId,
+                            senderId = senderId,
+                        )
+                    }
+                    CallSignal.PayloadCase.CALL_INIT -> {
+                        Packet.CallSignal.CallInit(
+                            callId = callId,
+                            senderId = senderId,
+                            senderUsername = proto.callSignal.callInit.senderUsername,
+                        )
+                    }
+                    CallSignal.PayloadCase.SDP_ANSWER -> {
+                        Packet.CallSignal.SdpAnswer(
+                            callId = callId,
+                            senderId = senderId,
+                            description = proto.callSignal.sdpAnswer.description,
+                        )
+                    }
+                    CallSignal.PayloadCase.SDP_OFFER -> {
+                        Packet.CallSignal.SdpOffer(
+                            callId = callId,
+                            senderId = senderId,
+                            description = proto.callSignal.sdpOffer.description,
+                        )
+                    }
+                    CallSignal.PayloadCase.ICE_CANDIDATE -> {
+                        Packet.CallSignal.IceCandidate(
+                            callId = callId,
+                            senderId = senderId,
+                            candidate = proto.callSignal.iceCandidate.candidate,
+                            sdpMid = proto.callSignal.iceCandidate.sdpMid,
+                            mLineIndex = proto.callSignal.iceCandidate.mLineIndex,
+                        )
+                    }
+                    CallSignal.PayloadCase.PAYLOAD_NOT_SET -> {
+                        throw IllegalArgumentException("CallSignal: Payload not set")
+                    }
+                }
             }
         }
     }

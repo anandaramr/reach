@@ -14,6 +14,7 @@ message ReachPacket {
         Goodbye goodbye = 7;
         FileAccept file_accept = 9;
         FileComplete file_complete = 10;
+        CallSignal call_signal = 11;
     }
 }
 
@@ -52,4 +53,45 @@ message FileAccept {
 
 message FileComplete {
     bytes file_hash = 1;
+}
+
+message CallSignal {
+    string call_id = 1;
+
+    oneof payload {
+        CallAccept call_accept = 2;
+        CallCancel call_cancel = 3;
+        CallDecline call_decline = 4;
+        CallEnd call_end = 5;
+        CallInit call_init = 6;
+        SdpAnswer sdp_answer = 7;
+        SdpOffer sdp_offer = 8;
+        IceCandidate ice_candidate = 9;
+    }
+}
+
+message CallInit {
+    string sender_username = 2;
+}
+
+message CallAccept {}
+
+message CallCancel {}
+
+message CallDecline {}
+
+message CallEnd {}
+
+message SdpOffer {
+    string description = 1;
+}
+
+message SdpAnswer {
+    string description = 1;
+}
+
+message IceCandidate {
+    string candidate = 1;
+    string sdp_mid = 2;
+    int32 m_line_index = 3;
 }

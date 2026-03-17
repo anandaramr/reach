@@ -1,7 +1,5 @@
 package com.project.reach.network.model
 
-import com.project.reach.core.exceptions.UnknownSourceException
-
 sealed class Packet {
     data class Message(
         override val senderId: String,
@@ -50,6 +48,56 @@ sealed class Packet {
     ): Packet()
 
     abstract val senderId: String
+
+    sealed class CallSignal: Packet() {
+        abstract val callId: String
+
+        data class CallInit(
+            override val callId: String,
+            override val senderId: String,
+            val senderUsername: String
+        ): CallSignal()
+
+        data class CallAccept(
+            override val callId: String,
+            override val senderId: String
+        ): CallSignal()
+
+        data class CallDecline(
+            override val callId: String,
+            override val senderId: String
+        ): CallSignal()
+
+        data class CallCancel(
+            override val callId: String,
+            override val senderId: String
+        ): CallSignal()
+
+        data class CallEnd(
+            override val callId: String,
+            override val senderId: String
+        ): CallSignal()
+
+        data class SdpOffer(
+            override val callId: String,
+            override val senderId: String,
+            val description: String
+        ): CallSignal()
+
+        data class SdpAnswer(
+            override val callId: String,
+            override val senderId: String,
+            val description: String
+        ): CallSignal()
+
+        data class IceCandidate(
+            override val callId: String,
+            override val senderId: String,
+            val candidate: String,
+            val sdpMid: String,
+            val mLineIndex: Int
+        ): CallSignal()
+    }
 
     /**
      * Serializes the packet and returns a [ByteArray] object

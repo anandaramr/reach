@@ -335,8 +335,9 @@ class MessageRepository(
                     )
                 }
 
-                is Packet.GoodBye -> {}
                 is Packet.FileAccept -> handleFileAccept(packet)
+
+                else -> {}
             }
         }
     }
