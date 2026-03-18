@@ -3,11 +3,13 @@ package com.project.reach.core.di
 import android.content.Context
 import com.project.reach.data.local.IdentityManager
 import com.project.reach.data.local.database.ReachDatabase
+import com.project.reach.data.respository.CallRepository
 import com.project.reach.data.respository.ContactRepository
 import com.project.reach.data.respository.FileRepository
 import com.project.reach.data.respository.IdentityRepository
 import com.project.reach.data.respository.MessageRepository
 import com.project.reach.data.respository.NetworkRepository
+import com.project.reach.domain.contracts.ICallRepository
 import com.project.reach.domain.contracts.IContactRepository
 import com.project.reach.domain.contracts.IFileRepository
 import com.project.reach.domain.contracts.IIdentityRepository
@@ -75,6 +77,12 @@ object DataModule {
             identityManager = identityManager,
             fileRepository = fileRepository
         )
+    }
+
+    @Provides
+    @Singleton
+    fun provideCallRepository(): ICallRepository {
+        return CallRepository()
     }
 
     @Provides
