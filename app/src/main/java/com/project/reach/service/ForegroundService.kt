@@ -3,10 +3,23 @@ package com.project.reach.service
 import android.app.PendingIntent
 import android.app.Service
 import android.content.Intent
+import android.content.pm.ServiceInfo
+import android.media.AudioAttributes
+import android.media.AudioFocusRequest
+import android.media.AudioManager
+import android.media.MediaPlayer
+import android.media.RingtoneManager
+import android.os.Build
 import android.os.IBinder
+import android.os.VibrationEffect
+import android.os.Vibrator
+import android.os.VibratorManager
+import com.project.reach.domain.contracts.ICallRepository
 import com.project.reach.domain.contracts.IMessageRepository
 import com.project.reach.domain.contracts.INetworkRepository
+import com.project.reach.domain.models.CallState
 import com.project.reach.domain.models.NotificationEvent
+import com.project.reach.util.debug
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -23,6 +36,9 @@ class ForegroundService: Service() {
 
     @Inject
     lateinit var messageRepository: IMessageRepository
+
+    @Inject
+    lateinit var callRepository: ICallRepository
 
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
@@ -47,10 +63,122 @@ class ForegroundService: Service() {
                 }
             }
         }
+
+        scope.launch {
+            callRepository.callState.collect { state ->
+                debug("new state: $state")
+                when (state) {
+                    is CallState.Incoming -> {
+                        startRinging()
+                        onStartCall(state.username, isIncoming = true)
+                    }
+
+                    is CallState.Outgoing -> {
+                        stopRinging()
+                        onStartCall(state.username, isIncoming = false)
+                    }
+
+                    CallState.Idle -> {
+                        stopRinging()
+                        startForegroundOperations()
+                    }
+
+                    else -> {
+                        stopRinging()
+                    }
+                }
+            }
+        }
+    }
+
+    private fun onStartCall(username: String, isIncoming: Boolean) {
+        val notification = notificationHandler.getCallNotification(username, isIncoming)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            startForeground(
+                NotificationHandler.CALL_NOTIFICATION_ID,
+                notification,
+                ServiceInfo.FOREGROUND_SERVICE_TYPE_PHONE_CALL
+            )
+        } else {
+            startForeground(NotificationHandler.CALL_NOTIFICATION_ID, notification)
+        }
+    }
+
+    private fun startRinging() {
+        requestAudioFocus()
+        startVibration()
+        startRingtone()
+    }
+
+    private fun stopRinging() {
+        stopVibration()
+        stopRingtone()
+    }
+
+    var mediaPlayer: MediaPlayer? = null
+    private fun startRingtone() {
+        if (mediaPlayer != null) {
+            debug("Ringtone already playing")
+            return
+        }
+
+        try {
+            val ringtoneUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE)
+            mediaPlayer = MediaPlayer().apply {
+                setDataSource(this@ForegroundService, ringtoneUri)
+                setAudioAttributes(
+                    AudioAttributes.Builder()
+                        .setUsage(AudioAttributes.USAGE_NOTIFICATION_RINGTONE)
+                        .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                        .build()
+                )
+                isLooping = true
+                prepare()
+                start()
+            }
+        } catch (e: Exception) {
+            debug("Failed to start ringtone: ${e.message}")
+        }
+    }
+
+    private fun stopRingtone() {
+        mediaPlayer?.stop()
+        mediaPlayer?.release()
+        mediaPlayer = null
+    }
+
+    private fun startVibration() {
+        val vibrator = getVibrator()
+        val pattern = longArrayOf(0, 1000, 1000)
+        vibrator.vibrate(VibrationEffect.createWaveform(pattern, 0))
+    }
+
+    private fun getVibrator(): Vibrator = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+        val vibratorManager = getSystemService(VIBRATOR_MANAGER_SERVICE) as VibratorManager
+        vibratorManager.defaultVibrator
+    } else {
+        getSystemService(VIBRATOR_SERVICE) as Vibrator
+    }
+
+    private fun stopVibration() {
+        getVibrator().cancel()
+    }
+
+    private fun requestAudioFocus() {
+        val audioManager = getSystemService(AUDIO_SERVICE) as AudioManager
+        val focusRequest = AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK)
+            .setAudioAttributes(
+                AudioAttributes.Builder()
+                    .setUsage(AudioAttributes.USAGE_NOTIFICATION_RINGTONE)
+                    .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                    .build()
+            )
+            .build()
+        audioManager.requestAudioFocus(focusRequest)
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        val action  = intent?.action
+        val action = intent?.action
 
         if (action == null) {
             start()
@@ -67,7 +195,11 @@ class ForegroundService: Service() {
     private fun start() {
         if (ForegroundServiceManager.isRunning()) return
         ForegroundServiceManager.setServiceState(true)
+        startForegroundOperations()
+        networkRepository.startDiscovery()
+    }
 
+    private fun startForegroundOperations() {
         val stopIntent = Intent(this, ForegroundService::class.java).apply {
             action = ACTION_STOP
         }
@@ -78,8 +210,6 @@ class ForegroundService: Service() {
 
         val notification = notificationHandler.getForegroundNotification(stopPendingIntent)
         startForeground(NotificationHandler.FOREGROUND_NOTIFICATION_ID, notification)
-
-        networkRepository.startDiscovery()
     }
 
     private fun stop() {
