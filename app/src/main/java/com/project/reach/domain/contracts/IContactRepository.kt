@@ -2,6 +2,7 @@ package com.project.reach.domain.contracts
 
 import com.project.reach.data.model.ContactUser
 import kotlinx.coroutines.flow.Flow
+import java.util.UUID
 
 /**
  * Repository for managing contact data with reactive updates.
@@ -40,6 +41,16 @@ interface IContactRepository {
      * @return A [Flow] emitting lists of [ContactUser] with display names (nickname or username)
      */
     fun getSavedContacts(): Flow<List<ContactUser>>
+
+    /**
+     * Checks whether a user entry exists in the database
+     */
+    suspend fun userEntryExists(userId: UUID): Boolean
+
+    /**
+     * Checks whether a contact is saved by the user
+     */
+    suspend fun isContactSaved(userId: UUID): Boolean
 
     /**
      * Promotes an existing contact to "saved" status with a nickname.

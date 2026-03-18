@@ -27,4 +27,10 @@ interface ContactDao {
 
     @Query("update contacts set nickname = :nickname where userId = :userId")
     fun updateContactNickname(userId: UUID, nickname: String)
+
+    @Query("select exists(select userId from contacts where userId = :userId)")
+    suspend fun entryExists(userId: UUID): Boolean
+
+    @Query("select exists(select userId from contacts where userId = :userId and nickname is not null)")
+    suspend fun isContactSaved(userId: UUID): Boolean
 }

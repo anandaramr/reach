@@ -13,6 +13,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.mapNotNull
 import kotlinx.coroutines.flow.stateIn
+import java.util.UUID
 
 class ContactRepository(
     private val contactDao: ContactDao
@@ -36,6 +37,14 @@ class ContactRepository(
     override fun getSavedContacts(): Flow<List<ContactUser>> {
         return contactDao.getAllSavedContacts()
             .map { it.map { contact -> contact.toContactUser() } }
+    }
+
+    override suspend fun userEntryExists(userId: UUID): Boolean {
+        return contactDao.entryExists(userId)
+    }
+
+    override suspend fun isContactSaved(userId: UUID): Boolean {
+        return contactDao.isContactSaved(userId)
     }
 
     override suspend fun saveNewContact(userId: String, username: String, nickname: String) {
