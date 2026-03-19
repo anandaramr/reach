@@ -61,7 +61,7 @@ object SettingsScreenDestination : NavigationDestination {
 @Composable
 fun SettingsScreen(
     viewModel: SettingViewModel = hiltViewModel(),
-    navigateToQRCode: (String) -> Unit
+    navigateToQRCode: (String, String) -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val focusManager = LocalFocusManager.current
@@ -128,7 +128,7 @@ fun SettingsScreen(
                     ),
                 )
             }
-            AccountDetails(navigateToQRCode, uiState.userId)
+            AccountDetails(navigateToQRCode, uiState.userId, username = uiState.username)
             Spacer(modifier = Modifier.size(10.dp))
             NotificationChannel()
         }
@@ -173,8 +173,9 @@ private fun NotificationChannel() {
 }
 @Composable
 private fun AccountDetails(
-    navigateToQRCode: (String) -> Unit,
-    userId: String
+    navigateToQRCode: (String,String) -> Unit,
+    userId: String,
+    username: String
 ) {
         Column(
             modifier = Modifier.padding(10.dp)
@@ -198,10 +199,8 @@ private fun AccountDetails(
                         contentDescription = "QR Code",
                         modifier = Modifier
                             .size(23.dp)
-                            .clickable(onClick = { navigateToQRCode(userId) })
+                            .clickable(onClick = { navigateToQRCode(userId, username) })
                     )
-                    Spacer(modifier = Modifier.width(10.dp))
-                    ShareId(userId)
                 }
             }
             Row(
@@ -229,24 +228,4 @@ private fun ColumnScope.Divider() {
     )
 }
 
-@Composable
-fun ShareId(userId: String) {
-    val sendIndent: Intent = Intent().apply {
-        action = Intent.ACTION_SEND
-        putExtra(Intent.EXTRA_TEXT, userId)
-        type = "text/plain"
-    }
-    val shareIntent = Intent.createChooser(sendIndent, null)
-    val context = LocalContext.current
-    Icon(
-        imageVector = Icons.Default.Share,
-        contentDescription = "Share",
-        modifier = Modifier
-            .size(23.dp)
-            .clickable(
-                onClick = {
-                    context.startActivity(shareIntent)
-                }
-            )
-    )
-}
+

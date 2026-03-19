@@ -69,7 +69,7 @@ class ChatScreenViewModel @Inject constructor(
         messageRepository.emitTyping(_uiState.value.peerId)
     }
 
-    fun deleteMessage(messageId: String){
+    fun deleteMessage(messageId: String) {
         removeMessage(messageId)
     }
 
@@ -81,7 +81,7 @@ class ChatScreenViewModel @Inject constructor(
         }
     }
 
-    private fun displayDeleteOption(show: String?){
+    private fun displayDeleteOption(show: String?) {
         _uiState.update {
             it.copy(
                 deleteOption = show
@@ -89,7 +89,7 @@ class ChatScreenViewModel @Inject constructor(
         }
     }
 
-    private fun removeMessage(messageId: String){
+    private fun removeMessage(messageId: String) {
         viewModelScope.launch {
             messageRepository.deleteMessage(messageId)
         }
@@ -156,17 +156,22 @@ class ChatScreenViewModel @Inject constructor(
     }
 //  ---------------------------------------------------------------------------------------
 
-     fun sendFile(caption: String) {
-         onImageInputChange("")
-         onFileInputChange("")
-         changeImageUri(null)
-         changeFileUri(null)
-         viewModelScope.launch {
-             messageRepository.sendMessage(_uiState.value.peerId, caption, _uiState.value.file )
-         }
+    fun sendFile(caption: String) {
+        onImageInputChange("")
+        onFileInputChange("")
+        changeImageUri(null)
+        changeFileUri(null)
+        viewModelScope.launch {
+            messageRepository.sendMessage(_uiState.value.peerId, caption, _uiState.value.file)
+            _uiState.update{
+                it.copy(
+                    file = null
+                )
+            }
+        }
     }
 
-    fun onMediaSelected(uri: Uri){
+    fun onMediaSelected(uri: Uri) {
         viewModelScope.launch {
             val file = fileRepository.saveFileToPrivateStorage(uri, onProgress = {})
             _uiState.update {
@@ -178,13 +183,16 @@ class ChatScreenViewModel @Inject constructor(
     }
 
     private suspend fun updateUserState(peerId: String) {
-        val username = contactRepository.getContact(peerId).first()
+        val user = contactRepository.getContact(peerId).first()
         _uiState.update {
-            it.copy(peerName = username)
+            it.copy(
+                peerName = user.nickname ?: user.username,
+                username = user.username
+            )
         }
     }
 
-    fun getFileUri(relativePath: String): Uri{
+    fun getFileUri(relativePath: String): Uri {
         val uri = fileRepository.getContentUri(relativePath)
         return uri
     }
@@ -202,13 +210,13 @@ class ChatScreenViewModel @Inject constructor(
 
     }
 
-    fun getTransferState(fileHash: String, messageState: MessageState): StateFlow<TransferState>{
+    fun getTransferState(fileHash: String, messageState: MessageState): StateFlow<TransferState> {
         return fileRepository
             .observeTransferState(fileHash, messageState)
             .stateIn(
                 scope = viewModelScope,
                 started = SharingStarted.WhileSubscribed(5000),
-                initialValue = when(messageState){
+                initialValue = when (messageState) {
                     MessageState.DELIVERED -> TransferState.Complete
                     MessageState.PAUSED -> TransferState.Paused
                     else -> TransferState.Preparing

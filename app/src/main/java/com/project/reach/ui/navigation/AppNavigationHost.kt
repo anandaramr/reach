@@ -22,15 +22,21 @@ import com.project.reach.ui.components.BottomBar
 import com.project.reach.ui.components.BottomNavBarItem
 import com.project.reach.ui.screens.chat.ChatScreen
 import com.project.reach.ui.screens.chat.ChatScreenDestination
+import com.project.reach.ui.screens.contacts.ContactScreen
+import com.project.reach.ui.screens.contacts.ContactScreenDestination
 import com.project.reach.ui.screens.discover.DiscoverScreenDestination
 import com.project.reach.ui.screens.discover.DiscoveryScreen
 import com.project.reach.ui.screens.home.HomeScreen
 import com.project.reach.ui.screens.home.HomeScreenDestination
+import com.project.reach.ui.screens.newContact.NewContactScreen
+import com.project.reach.ui.screens.newContact.NewContactScreenDestination
 import com.project.reach.ui.screens.onboarding.OnboardingScreen
 import com.project.reach.ui.screens.qrcode.QRCodeScreen
 import com.project.reach.ui.screens.qrcode.QRCodeScreenDestination
 import com.project.reach.ui.screens.settings.SettingsScreen
 import com.project.reach.ui.screens.settings.SettingsScreenDestination
+import com.project.reach.ui.screens.viewContact.ViewContactScreen
+import com.project.reach.ui.screens.viewContact.ViewContactScreenDestination
 
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
 @Composable
@@ -65,6 +71,14 @@ fun AppNavigationHost(
                     navigateToChat = { peerId -> navController.navigate(ChatScreenDestination.createRoute(peerId)); }
                 )
             }
+            composable(route = ContactScreenDestination.route) {
+                ContactScreen (
+                    navigateToChat = { peerId -> navController.navigate(ChatScreenDestination.createRoute(peerId)); },
+                    navigateBack = { navController.popBackStack(route = HomeScreenDestination.route, inclusive = false) },
+                    navigateToNewContact = { userId,username ->  navController.navigate(NewContactScreenDestination.createRoute(userId, username))}
+                )
+            }
+
             composable(route = OnboardingScreen.route, exitTransition = { ExitTransition.None }) {
                 OnboardingScreen(
                     onOnboardingComplete = { navController.navigate(route = HomeScreenDestination.route) }
@@ -72,13 +86,14 @@ fun AppNavigationHost(
             }
             composable(route = SettingsScreenDestination.route) {
                 SettingsScreen(
-                    navigateToQRCode = { userId ->  navController.navigate(QRCodeScreenDestination.createRoute(userId))},
+                    navigateToQRCode = { userId,username ->  navController.navigate(QRCodeScreenDestination.createRoute(userId, username))},
                 )
             }
             composable(route = HomeScreenDestination.route) {
                 HomeScreen(
                     navigateToChat = { peerId -> navController.navigate(ChatScreenDestination.createRoute(peerId)) },
                     navigateToDiscover = { navController.navigate(DiscoverScreenDestination.route) },
+                    navigateToContact = { navController.navigate(ContactScreenDestination.route) },
                     startService = startService
                 )
             }
@@ -87,18 +102,64 @@ fun AppNavigationHost(
                 arguments = listOf(navArgument("peerId") { type = NavType.StringType })
             ) {
                 ChatScreen(
-                    navigateBack = { navController.popBackStack(route = HomeScreenDestination.route, inclusive = false) }
+                    navigateBack = { navController.popBackStack(route = HomeScreenDestination.route, inclusive = false) },
+                    navigateToViewContact = { userId,username,nickname ->  navController.navigate(
+                        ViewContactScreenDestination.createRoute(userId, username, nickname))}
                 )
-            }
+             }
             composable(
                 route = QRCodeScreenDestination.route,
-                arguments = listOf(navArgument("userId") { type = NavType.StringType })
+                arguments = listOf(
+                    navArgument("userId") { type = NavType.StringType },
+                    navArgument("username") { type = NavType.StringType }
+                )
             ){ backStackEntry ->
                 val userId = backStackEntry.arguments?.getString("userId")?:""
+                val username = backStackEntry.arguments?.getString("username")?:""
                 QRCodeScreen(
                     modifier = Modifier.padding(innerPadding),
                     navigateBack = { navController.navigate(SettingsScreenDestination.route) },
-                    userId = userId
+                    userId = userId,
+                    username = username,
+                )
+            }
+            composable(
+                route = NewContactScreenDestination.route,
+                arguments = listOf(
+                    navArgument("userId") { type = NavType.StringType },
+                    navArgument("username") { type = NavType.StringType }
+                )
+            ) {
+                backStackEntry ->
+                val userId = backStackEntry.arguments?.getString("userId")?:""
+                val username = backStackEntry.arguments?.getString("username")?:""
+
+                NewContactScreen(
+                    navigateToChat = { peerId -> navController.navigate(ChatScreenDestination.createRoute(peerId)); },
+                    navigateBack = { navController.popBackStack(route = HomeScreenDestination.route, inclusive = false) },
+                    userId = userId,
+                    username = username,
+                )
+            }
+            composable(
+                route = ViewContactScreenDestination.route,
+                arguments = listOf(
+                    navArgument("userId") { type = NavType.StringType },
+                    navArgument("username") { type = NavType.StringType },
+                    navArgument("nickname") { type = NavType.StringType }
+                )
+            ) {
+                    backStackEntry ->
+                val userId = backStackEntry.arguments?.getString("userId")?:""
+                val username = backStackEntry.arguments?.getString("username")?:""
+                val nickname = backStackEntry.arguments?.getString("nickname")?:""
+
+                ViewContactScreen(
+                    navigateToChat = { peerId -> navController.navigate(ChatScreenDestination.createRoute(peerId)); },
+                    navigateBack = { navController.popBackStack(route = HomeScreenDestination.route, inclusive = false) },
+                    userId = userId,
+                    username = username,
+                    nickname =  nickname
                 )
             }
         }

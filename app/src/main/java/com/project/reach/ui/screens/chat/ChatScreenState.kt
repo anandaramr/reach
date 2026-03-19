@@ -6,17 +6,18 @@ import com.project.reach.data.utils.PrivateFile
 import com.project.reach.domain.models.TransferState
 
 data class ChatScreenState(
-    var messageText: String = "",
-    var peerName : String = "User",
-    var peerId : String = "",
-    var isTyping : Boolean = false,
-    var imageUri : Uri? = null,
-    var fileName: String = "",
-    var fileCaption: String = "",
-    var file: PrivateFile? = null,
-    var fileUri : Uri? = null,
-    var imageName: String = "",
-    var imageCaption: String = "",
+    val messageText: String = "",
+    val peerName : String = "User",
+    val peerId : String = "",
+    val username: String = "",
+    val isTyping : Boolean = false,
+    val imageUri : Uri? = null,
+    val fileName: String = "",
+    val fileCaption: String = "",
+    val file: PrivateFile? = null,
+    val fileUri : Uri? = null,
+    val imageName: String = "",
+    val imageCaption: String = "",
     val deleteOption: String? = null
 )
 

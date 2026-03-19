@@ -32,7 +32,7 @@ fun MessageTextField(
     imageName: String,
     fileCaption: String,
     imageCaption: String,
-    isSentEnabled: Boolean,
+    isFileAttached: Boolean,
     onInputChange: (String) -> Unit,
     sendMessage: (String) -> Unit,
     sendFile: (String) -> Unit,
@@ -57,7 +57,7 @@ fun MessageTextField(
                 caption = fileCaption,
                 onCaptionChange = onFileInputChange,
                 onMediaSelected = onMediaSelected,
-                isSentEnabled = isSentEnabled,
+                isSentEnabled = isFileAttached,
             )
         else if (imageUri != null) {
             MediaPreview(
@@ -69,7 +69,7 @@ fun MessageTextField(
                 caption = imageCaption,
                 onCaptionChange = onImageInputChange,
                 onMediaSelected = onMediaSelected,
-                isSentEnabled = isSentEnabled,
+                isSentEnabled = isFileAttached,
             )
         } else
             MessageField(

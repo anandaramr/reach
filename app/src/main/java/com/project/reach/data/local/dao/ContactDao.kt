@@ -17,7 +17,7 @@ interface ContactDao {
     fun getUsername(userId: UUID): Flow<String>
 
     @Query("update contacts set username = :username where userId = :userId")
-    fun updateUsername(userId: UUID, username: String)
+    suspend fun updateUsername(userId: UUID, username: String)
 
     @Query("select * from contacts")
     fun getAllContacts(): Flow<List<ContactEntity>>
@@ -26,7 +26,7 @@ interface ContactDao {
     fun getAllSavedContacts(): Flow<List<ContactEntity>>
 
     @Query("update contacts set nickname = :nickname where userId = :userId")
-    fun updateContactNickname(userId: UUID, nickname: String)
+    suspend fun updateContactNickname(userId: UUID, nickname: String)
 
     @Query("select exists(select userId from contacts where userId = :userId)")
     suspend fun entryExists(userId: UUID): Boolean

@@ -38,7 +38,7 @@ interface MessageDao {
 
     @Query(
         value = """
-            SELECT m.userId, c.username, m.messageType, m.content as "lastMessage", m.timeStamp, m.messageState
+            SELECT m.userId, c.username, m.messageType, m.content as "lastMessage", m.timeStamp, m.messageState, c.nickname
             FROM messages AS m
             JOIN
             contacts AS c ON c.userId = m.userId

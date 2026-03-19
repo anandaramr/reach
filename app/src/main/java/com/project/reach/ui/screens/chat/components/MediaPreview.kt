@@ -54,15 +54,17 @@ fun MediaPreview(
             skipPartiallyExpanded = true
         )
         uri?.let { safeUri ->
-            getName(context, uri, changeName)
-            onMediaSelected(uri)
+            if (!isSentEnabled) {
+                getName(context, uri, changeName)
+                onMediaSelected(uri)
+            }
             ModalBottomSheet(
                 modifier = Modifier
                     .fillMaxHeight(),
                 onDismissRequest = { cancel(null) },
                 sheetState = sheetState
             ) {
-                Column (
+                Column(
                     modifier = Modifier
                         .fillMaxWidth()
                         .fillMaxHeight()
@@ -70,8 +72,8 @@ fun MediaPreview(
                         .imePadding(),
                     verticalArrangement = Arrangement.SpaceBetween,
                     horizontalAlignment = Alignment.CenterHorizontally
-                ){
-                    if(!isSentEnabled) CircularProgressIndicator()
+                ) {
+                    if (!isSentEnabled) CircularProgressIndicator()
                     Column(
                         modifier = Modifier
                             .fillMaxHeight(0.7f)
