@@ -23,7 +23,10 @@ class NetworkController(
         packet: Packet,
     ): Boolean {
         return when (packet) {
-            is Packet.Message, is Packet.FileAccept, is Packet.FileComplete -> {
+            is Packet.Message,
+            is Packet.FileAccept,
+            is Packet.FileComplete,
+            is Packet.CallSignal -> {
                 sendPacketViaStream(userId, packet)
             }
 

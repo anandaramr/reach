@@ -335,14 +335,15 @@ class MessageRepository(
                     )
                 }
 
-                is Packet.GoodBye -> {}
                 is Packet.FileAccept -> handleFileAccept(packet)
+
+                else -> {}
             }
         }
     }
 
     private suspend fun handleMessagePacket(packet: Packet.Message) {
-        contactRepository.addToContacts(packet.senderId, packet.senderUsername)
+        contactRepository.addToContactsIfNotExists(packet.senderId, packet.senderUsername)
         saveIncomingMessage(packet)
         scope.launch { handleIncomingFile(packet) }
 

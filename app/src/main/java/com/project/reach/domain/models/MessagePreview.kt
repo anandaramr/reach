@@ -5,6 +5,7 @@ import java.util.UUID
 data class MessagePreview(
     val userId: UUID,
     val username: String,
+    val nickname: String,
     val messageType: MessageType,
     val lastMessage: String,
     val messageState: MessageState,

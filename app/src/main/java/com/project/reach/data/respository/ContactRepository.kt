@@ -2,6 +2,7 @@ package com.project.reach.data.respository
 
 import com.project.reach.data.local.dao.ContactDao
 import com.project.reach.data.local.entity.ContactEntity
+import com.project.reach.data.model.ContactUser
 import com.project.reach.domain.contracts.IContactRepository
 import com.project.reach.util.toUUID
 import kotlinx.coroutines.CoroutineScope
@@ -12,6 +13,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.mapNotNull
 import kotlinx.coroutines.flow.stateIn
+import java.util.UUID
 
 class ContactRepository(
     private val contactDao: ContactDao
@@ -26,19 +28,59 @@ class ContactRepository(
             initialValue = emptyMap()
         )
 
-    override fun getUsername(userId: String): Flow<String> {
+    override fun getContact(userId: String): Flow<ContactUser> {
         return contactsList.mapNotNull { contacts ->
-            contacts[userId.toUUID()]?.username
+            contacts[userId.toUUID()]?.toContactUser()
         }
     }
 
-    override suspend fun addToContacts(userId: String, username: String) {
+    override fun getSavedContacts(): Flow<List<ContactUser>> {
+        return contactDao.getAllSavedContacts()
+            .map { it.map { contact -> contact.toContactUser() } }
+    }
+
+    override suspend fun userEntryExists(userId: UUID): Boolean {
+        return contactDao.entryExists(userId)
+    }
+
+    override suspend fun isContactSaved(userId: UUID): Boolean {
+        return contactDao.isContactSaved(userId)
+    }
+
+    override suspend fun saveNewContact(userId: String, username: String, nickname: String) {
+        val userUuid = userId.toUUID()
+        val contact = contactsList.value[userUuid]
+        if (contact?.isSaved == true) {
+            throw IllegalStateException("Contact already saved")
+        }
+
+        contactDao.insertContactEntity(
+            ContactEntity(
+                userId = userUuid,
+                username = username,
+                nickname = nickname,
+                isSaved = true
+            )
+        )
+    }
+
+    override suspend fun updateSavedContactNickname(userId: String, nickname: String) {
+        val userUuid = userId.toUUID()
+        val contact = contactsList.value[userUuid]
+        if (contact?.isSaved != true) {
+            throw IllegalStateException("Contact not saved")
+        }
+
+        contactDao.updateContactNickname(userUuid, nickname)
+    }
+
+    override suspend fun addToContactsIfNotExists(userId: String, username: String) {
         val userUuid = userId.toUUID()
         val contact = contactsList.value[userUuid]
         if (contact != null) return
 
         // only insert if it already doesn't exist
-        contactDao.insertContact(
+        contactDao.insertContactEntity(
             ContactEntity(
                 userId = userUuid,
                 username = username
@@ -51,5 +93,13 @@ class ContactRepository(
         val contact = contactsList.value[userUuid]
         if (contact == null || contact.username == username) return
         contactDao.updateUsername(userUuid, username)
+    }
+
+    private fun ContactEntity.toContactUser(): ContactUser {
+        return ContactUser(
+            userId = userId.toString(),
+            username = username,
+            nickname = nickname
+        )
     }
 }

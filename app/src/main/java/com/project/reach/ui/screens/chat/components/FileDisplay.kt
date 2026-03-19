@@ -25,7 +25,9 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -53,6 +55,9 @@ fun FileDisplay(
     deleteOption: String?,
     showDeleteOption: (String?) -> Unit
 ) {
+    val sheetState = rememberModalBottomSheetState(
+        skipPartiallyExpanded = false
+    )
     val fileTransferState by getTransferState(message.fileHash, message.messageState).collectAsState()
     Row(
         modifier = Modifier.fillMaxWidth()
@@ -76,27 +81,31 @@ fun FileDisplay(
 
         ) {
             if (deleteOption == message.messageId)
-                Popup(
-                    alignment = Alignment.TopCenter,
-                    onDismissRequest = { showDeleteOption(null) }
+                ModalBottomSheet(
+                    onDismissRequest = { showDeleteOption(null) },
+                    sheetState = sheetState
                 ) {
                     Column(
                         modifier = Modifier
-                            .fillMaxWidth(0.6f)
-                            .background(MaterialTheme.colorScheme.outline, RoundedCornerShape(8.dp))
-                            .padding(10.dp)
+                            .padding(20.dp)
                     ) {
-                        Text("Delete for me",
+                        Text(
+                            "Delete for me",
                             modifier = Modifier
                                 .clickable(
                                     onClick = { deleteMessage(message.messageId) },
                                     onClickLabel = "Delete for me"
                                 )
-                                .padding(5.dp, 10.dp))
-                        Text("Delete for everyone",
-                            modifier = Modifier.padding(5.dp,10.dp))
-                        Text("Copy",
-                            modifier = Modifier.padding(5.dp, 10.dp))
+                                .fillMaxWidth()
+                                .padding(5.dp, 10.dp),
+                            fontSize = 14.sp
+                        )
+
+                        Text(
+                            "Copy",
+                            modifier = Modifier.padding(5.dp, 10.dp),
+                            fontSize = 14.sp
+                        )
                     }
                 }
             val context = LocalContext.current

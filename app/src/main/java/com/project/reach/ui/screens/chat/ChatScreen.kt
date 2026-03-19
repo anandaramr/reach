@@ -15,7 +15,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
@@ -32,26 +31,19 @@ import androidx.compose.ui.Modifier
 import com.project.reach.ui.navigation.NavigationDestination
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBackIosNew
-import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.outlined.SearchOff
 import androidx.compose.material.icons.outlined.WavingHand
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.zIndex
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.paging.compose.collectAsLazyPagingItems
 import com.project.reach.domain.models.Message
@@ -59,7 +51,6 @@ import com.project.reach.ui.screens.chat.components.FileDisplay
 import com.project.reach.ui.screens.chat.components.MessageDisplay
 import com.project.reach.ui.screens.chat.components.MessageTextField
 import com.project.reach.ui.screens.chat.components.TypingBubble
-import kotlinx.coroutines.launch
 
 object ChatScreenDestination : NavigationDestination {
     override val route: String = "chat/{peerId}"
@@ -71,7 +62,8 @@ object ChatScreenDestination : NavigationDestination {
 fun ChatScreen(
     modifier: Modifier = Modifier,
     viewModel: ChatScreenViewModel = hiltViewModel(),
-    navigateBack: () -> Unit
+    navigateBack: () -> Unit,
+    navigateToViewContact: (String,String,String) -> Unit,
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val scrollState = rememberLazyListState()
@@ -89,6 +81,9 @@ fun ChatScreen(
                     title = {
                         Text(
                             text = uiState.peerName,
+                            modifier = Modifier.clickable(
+                                onClick = { navigateToViewContact(uiState.peerId, uiState.username, uiState.peerName) }
+                            )
                         )
                     },
 
@@ -124,7 +119,9 @@ fun ChatScreen(
             LazyColumn(
                 reverseLayout = true,
                 state = scrollState,
-                modifier = Modifier.fillMaxSize().padding(bottom = 72.dp)
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(bottom = 72.dp)
             ) {
                 item { Spacer(modifier = Modifier.size(10.dp)) }
                 item {
@@ -162,7 +159,9 @@ fun ChatScreen(
 
             if(messages.itemCount == 0){
                 Column (
-                    modifier = Modifier.fillMaxWidth().fillMaxHeight(0.8f),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .fillMaxHeight(0.8f),
                     verticalArrangement = Arrangement.Center,
                     horizontalAlignment = Alignment.CenterHorizontally
                 ){
@@ -203,23 +202,23 @@ fun ChatScreen(
                     )
                 }
             }
-            IconButton(
-                onClick = {
-                    scope.launch {
-                        scrollState.animateScrollToItem(0)
-                    }
-                },
-                modifier = Modifier
-                    .align(Alignment.BottomEnd)
-                    .padding(bottom = 88.dp, end = 16.dp)
-                    .zIndex(1f)
-                    .background(color = MaterialTheme.colorScheme.outlineVariant, shape = CircleShape)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.KeyboardArrowDown,
-                    contentDescription = "Scroll to bottom"
-                )
-            }
+//            IconButton(
+//                onClick = {
+//                    scope.launch {
+//                        scrollState.animateScrollToItem(0)
+//                    }
+//                },
+//                modifier = Modifier
+//                    .align(Alignment.BottomEnd)
+//                    .padding(bottom = 88.dp, end = 16.dp)
+//                    .zIndex(1f)
+//                    .background(color = MaterialTheme.colorScheme.outlineVariant, shape = CircleShape)
+//            ) {
+//                Icon(
+//                    imageVector = Icons.Default.KeyboardArrowDown,
+//                    contentDescription = "Scroll to bottom"
+//                )
+//            }
             MessageTextField(
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
@@ -231,7 +230,7 @@ fun ChatScreen(
                 imageCaption = uiState.imageCaption,
                 fileCaption = uiState.fileCaption,
                 imageName = uiState.imageName,
-                isSentEnabled = uiState.file!=null,
+                isFileAttached = uiState.file!=null,
                 sendMessage = viewModel::sendMessage,
                 sendFile = viewModel::sendFile,
                 onMediaSelected = viewModel::onMediaSelected,

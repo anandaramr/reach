@@ -12,7 +12,7 @@ import com.project.reach.data.local.entity.MediaEntity
 import com.project.reach.data.local.entity.MessageEntity
 
 @Database(
-    version = 7,
+    version = 8,
     entities = [MessageEntity::class, ContactEntity::class, MediaEntity::class],
     exportSchema = false
 )

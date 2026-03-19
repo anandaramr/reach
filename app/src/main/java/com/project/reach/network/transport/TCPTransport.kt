@@ -1,9 +1,6 @@
 package com.project.reach.network.transport
 
 import android.net.Network
-import android.os.ParcelFileDescriptor
-import android.system.Os
-import android.system.OsConstants
 import com.project.reach.network.model.NetworkPacket
 import com.project.reach.util.debug
 import kotlinx.coroutines.CoroutineScope
@@ -148,18 +145,14 @@ class TCPTransport: NetworkTransport {
         return clientSocket
     }
 
-    override fun start(hostAddress: InetAddress, network: Network) {
+    override fun start(hostAddress: InetAddress, port: Int, network: Network) {
         debug("[TCP] starting")
         if (socket != null) {
             debug("[TCP] already started")
             return
         }
 
-        socket = ServerSocket(
-            NetworkTransport.PORT,
-            NetworkTransport.BACKLOG,
-            hostAddress
-        )
+        socket = ServerSocket(port, NetworkTransport.BACKLOG, hostAddress)
         currentNetwork = network
         listen()
     }
@@ -179,6 +172,8 @@ class TCPTransport: NetworkTransport {
 
     private companion object {
         const val IDLE_TIMEOUT = 60_000
+
+        // TODO add timeout for writes
         const val LINUX_TCP_USER_TIMEOUT = 18
         const val TCP_WRITE_DELAY = 3000
     }

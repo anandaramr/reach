@@ -1,6 +1,5 @@
 package com.project.reach.ui.screens.home
 
-import android.graphics.drawable.Icon
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -8,20 +7,16 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.Message
-import androidx.compose.material.icons.filled.ChatBubble
-import androidx.compose.material.icons.filled.Message
+import androidx.compose.material.icons.filled.Contacts
 import androidx.compose.material.icons.outlined.ChatBubbleOutline
-import androidx.compose.material3.Button
 import androidx.compose.material3.CenterAlignedTopAppBar
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -33,7 +28,6 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -52,6 +46,7 @@ fun HomeScreen(
     viewModel: HomeScreenViewModel = hiltViewModel(),
     navigateToChat: (String) -> Unit,
     navigateToDiscover: ()-> Unit,
+    navigateToContact: ()-> Unit,
     startService: () -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -63,40 +58,24 @@ fun HomeScreen(
     }
 
     Scaffold(
-        topBar = { TopBar() },
+        topBar = { TopBar(navigateToContact) },
+        floatingActionButton = {
+            FloatingActionButton(
+                onClick = { navigateToContact() }
+            ) {
+                Icon(Icons.Default.Contacts, contentDescription = "Contact")
+            }
+        },
         modifier = Modifier.fillMaxSize()
     ) { innerPadding ->
-        Column(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(
-                space = 40.dp,
-                alignment = Alignment.CenterVertically
-            ),
         ) {
-            LazyColumn(
-                modifier = Modifier
-                    .padding(top = 25.dp)
-                    .weight(1f),
-            ) {
-                items(preview.itemCount) { idx ->
-                    preview[idx]?.let { preview ->
-                        ChatPreview(
-                            navigateToChat = { peerId -> navigateToChat(peerId) },
-                            username = preview.username,
-                            userId = preview.userId.toString(),
-                            lastMessage = preview.lastMessage,
-                            isTyping = preview.userId.toString() in typingUsers
-                        )
-                    }
-                }
-            }
             if(preview.itemCount == 0){
                 Column (
-                    modifier = Modifier
-                        .fillMaxSize(),
+                    modifier = Modifier.fillMaxSize(),
                     verticalArrangement = Arrangement.Center,
                     horizontalAlignment = Alignment.CenterHorizontally
                 ){
@@ -138,14 +117,40 @@ fun HomeScreen(
                     )
                 }
             }
+            else
+                LazyColumn(
+                    modifier = Modifier
+                        .padding(top = 25.dp)
+                ) {
+                    items(preview.itemCount) { idx ->
+                        preview[idx]?.let { preview ->
+                            ChatPreview(
+                                navigateToChat = { peerId -> navigateToChat(peerId) },
+                                username = preview.nickname,
+                                userId = preview.userId.toString(),
+                                lastMessage = preview.lastMessage,
+                                isTyping = preview.userId.toString() in typingUsers
+                            )
+                        }
+                    }
+                }
         }
 
     }
 }
 
 @Composable
-fun TopBar() {
+fun TopBar(
+    navigateToContact: ()-> Unit,
+) {
     CenterAlignedTopAppBar(
+        actions = {
+            IconButton(
+                onClick = { navigateToContact() }
+            ) {
+                Icon(Icons.Default.Contacts, contentDescription = "Contact")
+            }
+        },
         modifier = Modifier.padding(horizontal = 20.dp),
         title = { Text(text = "REACH") }
     )

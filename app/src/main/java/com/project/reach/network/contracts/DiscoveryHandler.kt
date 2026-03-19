@@ -1,7 +1,5 @@
 package com.project.reach.network.contracts
 
-import com.project.reach.network.model.DeviceInfo
-import kotlinx.coroutines.flow.SharedFlow
 import java.net.InetAddress
 
 interface DiscoveryHandler {

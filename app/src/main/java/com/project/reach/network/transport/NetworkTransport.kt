@@ -10,7 +10,7 @@ interface NetworkTransport {
 
     suspend fun send(bytes: ByteArray, ip: InetAddress): Boolean
 
-    fun start(hostAddress: InetAddress, network: Network)
+    fun start(hostAddress: InetAddress, port: Int, network: Network)
 
     fun close()
 

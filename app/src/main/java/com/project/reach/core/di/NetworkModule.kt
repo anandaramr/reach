@@ -6,7 +6,6 @@ import com.project.reach.data.network.NetworkController
 import com.project.reach.domain.contracts.INetworkController
 import com.project.reach.domain.contracts.IWifiController
 import com.project.reach.network.controllers.WifiController
-import com.project.reach.network.discovery.NsdDiscoveryController
 import com.project.reach.network.transport.TCPTransport
 import com.project.reach.network.transport.UDPTransport
 import dagger.Module
@@ -38,14 +37,5 @@ object NetworkModule {
         identityManager: IdentityManager
     ): INetworkController {
         return NetworkController(wifiController, identityManager)
-    }
-
-    @Provides
-    @Singleton
-    fun provideDiscoveryController(
-        @ApplicationContext context: Context,
-        identityManager: IdentityManager
-    ): NsdDiscoveryController {
-        return NsdDiscoveryController(context, identityManager)
     }
 }

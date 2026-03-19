@@ -18,6 +18,13 @@ class AndroidApplication: Application() {
             NotificationManager.IMPORTANCE_LOW
         )
 
+        val callNotification = NotificationChannel(
+            NotificationHandler.CALL_CHANNEL_ID,
+            "Calls channel",
+            NotificationManager.IMPORTANCE_HIGH
+        )
+        callNotification.setSound(null, null)
+
         val messageNotification = NotificationChannel(
             NotificationHandler.MESSAGE_NOTIFICATION_CHANNEL,
             "Notify new messages",
@@ -26,7 +33,9 @@ class AndroidApplication: Application() {
 
         val notificationManager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
         notificationManager.createNotificationChannel(foregroundNotification)
+        notificationManager.createNotificationChannel(callNotification)
         notificationManager.createNotificationChannel(messageNotification)
+
     }
 
 }

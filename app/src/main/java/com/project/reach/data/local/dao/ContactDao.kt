@@ -10,15 +10,27 @@ import java.util.UUID
 
 @Dao
 interface ContactDao {
-    @Insert(onConflict = OnConflictStrategy.IGNORE)
-    suspend fun insertContact(contact: ContactEntity)
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertContactEntity(contact: ContactEntity)
 
     @Query("select username from contacts where userId = :userId")
     fun getUsername(userId: UUID): Flow<String>
 
     @Query("update contacts set username = :username where userId = :userId")
-    fun updateUsername(userId: UUID, username: String)
+    suspend fun updateUsername(userId: UUID, username: String)
 
     @Query("select * from contacts")
     fun getAllContacts(): Flow<List<ContactEntity>>
+
+    @Query("select * from contacts where isSaved = 1 order by nickname")
+    fun getAllSavedContacts(): Flow<List<ContactEntity>>
+
+    @Query("update contacts set nickname = :nickname where userId = :userId")
+    suspend fun updateContactNickname(userId: UUID, nickname: String)
+
+    @Query("select exists(select userId from contacts where userId = :userId)")
+    suspend fun entryExists(userId: UUID): Boolean
+
+    @Query("select exists(select userId from contacts where userId = :userId and nickname is not null)")
+    suspend fun isContactSaved(userId: UUID): Boolean
 }

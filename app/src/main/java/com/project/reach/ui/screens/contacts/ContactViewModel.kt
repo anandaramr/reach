@@ -1,4 +1,8 @@
-package com.project.reach.ui.screens.discover
+package com.project.reach.ui.screens.contacts
+
+import com.project.reach.ui.screens.discover.DiscoveryState
+import com.project.reach.ui.screens.discover.Peer
+
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.project.reach.data.respository.ContactRepository
@@ -8,6 +12,7 @@ import com.project.reach.domain.contracts.IMessageRepository
 import com.project.reach.domain.contracts.INetworkRepository
 import com.project.reach.network.model.DeviceInfo
 import com.project.reach.util.debug
+import com.project.reach.util.toUUID
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -17,29 +22,34 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
-class DiscoverViewModel @Inject constructor(
-   private val networkRepository: INetworkRepository,
-   private val messageRepository: IMessageRepository,
-   private val contactRepository: IContactRepository
+class ContactViewModel @Inject constructor(
+    private val contactRepository: IContactRepository
 ): ViewModel() {
-    private val _uiState = MutableStateFlow(DiscoveryState())
-    val uiState : StateFlow<DiscoveryState> = _uiState.asStateFlow()
+    private val _uiState = MutableStateFlow(ContactState())
+    val uiState: StateFlow<ContactState> = _uiState.asStateFlow()
 
     init {
         viewModelScope.launch {
-            networkRepository.foundDevices.collect { devices ->
+            contactRepository.getSavedContacts().collect { contacts ->
                 _uiState.update {
                     it.copy(
-                        devices.map { device -> Peer(device.username, device.uuid.toString()) }
+                        contacts.map { contact ->
+                            Contact(
+                                userId = contact.userId,
+                                nickname = contact.nickname ?: contact.username
+                            )
+                        }
                     )
                 }
             }
         }
     }
 
-    fun saveContact(peer: Peer) {
+    fun isSaved(userId: String, cb: (Boolean) -> Unit) {
         viewModelScope.launch {
-            contactRepository.addToContactsIfNotExists(peer.uuid, peer.username)
+            val saved = contactRepository.isContactSaved(userId.toUUID())
+            cb(saved)
         }
     }
 }
+
