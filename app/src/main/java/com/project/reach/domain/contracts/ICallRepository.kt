@@ -1,20 +1,22 @@
 package com.project.reach.domain.contracts
 
 import com.project.reach.domain.models.CallState
+import com.project.reach.network.model.Packet
 import kotlinx.coroutines.flow.StateFlow
 import java.util.UUID
 
 interface ICallRepository {
     val callState: StateFlow<CallState>
 
-    fun startCall(peerId: UUID)
-    fun onCallReceive(callId: UUID, peerId: UUID)
+    suspend fun startCall(peerId: UUID)
+    fun acceptCall()
+    suspend fun rejectCall()
+    fun endCall()
+
+    suspend fun onIceCandidateReceived(callId: UUID, candidate: Packet.CallSignal.IceCandidate)
+    suspend fun onCallReceive(callId: UUID, peerId: UUID, peerUsername: String)
     fun onPeerAccept(callId: UUID)
     fun onPeerDecline(callId: UUID)
     fun onPeerDisconnect(callId: UUID)
     fun onPeerCancel(callId: UUID)
-
-    fun acceptCall()
-    fun rejectCall()
-    fun endCall()
 }
