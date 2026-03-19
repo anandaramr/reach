@@ -72,7 +72,7 @@ class NotificationHandler(
             .setOngoing(true)
             .setAutoCancel(false)
             .setStyle(style)
-            .setFullScreenIntent(fullScreenPendingIntent, true)
+            .setFullScreenIntent(fullScreenPendingIntent, true) // TODO: Handle permission
             .build()
     }
 

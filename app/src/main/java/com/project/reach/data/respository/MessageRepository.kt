@@ -12,6 +12,7 @@ import com.project.reach.data.local.entity.MessageEntity
 import com.project.reach.data.model.MessageWithMedia
 import com.project.reach.data.utils.PrivateFile
 import com.project.reach.data.utils.TypingStateHandler
+import com.project.reach.domain.contracts.ICallRepository
 import com.project.reach.domain.contracts.IContactRepository
 import com.project.reach.domain.contracts.IFileRepository
 import com.project.reach.domain.contracts.IMessageRepository
@@ -48,6 +49,7 @@ class MessageRepository(
     private val mediaDao: MediaDao,
     private val contactRepository: IContactRepository,
     private val networkController: INetworkController,
+    private val callRepository: ICallRepository,
     private val fileRepository: IFileRepository,
     identityManager: IdentityManager
 ): IMessageRepository {
@@ -126,7 +128,7 @@ class MessageRepository(
         // Message dispatcher handles sending the message
     }
 
-    override suspend fun deleteMessage(messageId: String){
+    override suspend fun deleteMessage(messageId: String) {
         messageDao.removeMessage(messageId.toUUID())
     }
 
@@ -336,6 +338,14 @@ class MessageRepository(
                 }
 
                 is Packet.FileAccept -> handleFileAccept(packet)
+
+                is Packet.CallSignal.CallInit -> callRepository.onCallReceive(
+                    callId = packet.callId.toUUID(),
+                    peerId = packet.senderId.toUUID(),
+                    peerUsername = packet.senderUsername
+                )
+
+                is Packet.CallSignal.CallDecline -> callRepository.onPeerDecline(packet.callId.toUUID())
 
                 else -> {}
             }

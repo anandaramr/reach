@@ -23,6 +23,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -32,7 +33,7 @@ import com.project.reach.domain.contracts.ICallRepository
 import com.project.reach.domain.models.CallState
 import com.project.reach.ui.theme.REACHTheme
 import dagger.hilt.android.AndroidEntryPoint
-import java.util.UUID
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -48,14 +49,17 @@ class CallActivity: ComponentActivity() {
 
         setContent {
             val currentState by callRepository.callState.collectAsState()
+            val scope = rememberCoroutineScope()
 
             REACHTheme {
                 CallScreen(
                     state = currentState,
                     onAccept = { callRepository.acceptCall() },
                     onReject = {
-                        callRepository.rejectCall()
-                        finish()
+                        scope.launch() {
+                            callRepository.rejectCall()
+                            finish()
+                        }
                     },
                     onHangUp = {
                         callRepository.endCall()
@@ -143,11 +147,11 @@ fun CallScreen(
     }
 }
 
-@Preview
+@Preview(showBackground = false, showSystemUi = false)
 @Composable
 fun CallPreview() {
     CallScreen(
-        state = CallState.Incoming(callId = UUID.randomUUID(), username = "blah"),
+        state = CallState.Idle,
         onAccept = {},
         onReject = {},
         onHangUp = {},
