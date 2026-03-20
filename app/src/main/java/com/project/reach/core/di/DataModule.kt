@@ -66,7 +66,8 @@ object DataModule {
         contactRepository: IContactRepository,
         networkController: INetworkController,
         fileRepository: IFileRepository,
-        identityManager: IdentityManager
+        identityManager: IdentityManager,
+        callRepository: ICallRepository
     ): IMessageRepository {
         val database = ReachDatabase.getDatabase(context)
         return MessageRepository(
@@ -75,14 +76,23 @@ object DataModule {
             contactRepository = contactRepository,
             networkController = networkController,
             identityManager = identityManager,
-            fileRepository = fileRepository
+            fileRepository = fileRepository,
+            callRepository = callRepository
         )
     }
 
     @Provides
     @Singleton
-    fun provideCallRepository(): ICallRepository {
-        return CallRepository()
+    fun provideCallRepository(
+        contactRepository: IContactRepository,
+        networkController: INetworkController,
+        @ApplicationContext context: Context
+    ): ICallRepository {
+        return CallRepository(
+            contactRepository = contactRepository,
+            networkController = networkController,
+            context = context,
+        )
     }
 
     @Provides

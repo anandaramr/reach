@@ -55,12 +55,14 @@ sealed class Packet {
         data class CallInit(
             override val callId: String,
             override val senderId: String,
-            val senderUsername: String
+            val senderUsername: String,
+            val offerSdp: String
         ): CallSignal()
 
         data class CallAccept(
             override val callId: String,
-            override val senderId: String
+            override val senderId: String,
+            val answerSdp: String
         ): CallSignal()
 
         data class CallDecline(
@@ -76,18 +78,6 @@ sealed class Packet {
         data class CallEnd(
             override val callId: String,
             override val senderId: String
-        ): CallSignal()
-
-        data class SdpOffer(
-            override val callId: String,
-            override val senderId: String,
-            val description: String
-        ): CallSignal()
-
-        data class SdpAnswer(
-            override val callId: String,
-            override val senderId: String,
-            val description: String
         ): CallSignal()
 
         data class IceCandidate(

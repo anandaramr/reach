@@ -64,31 +64,24 @@ message CallSignal {
         CallDecline call_decline = 4;
         CallEnd call_end = 5;
         CallInit call_init = 6;
-        SdpAnswer sdp_answer = 7;
-        SdpOffer sdp_offer = 8;
-        IceCandidate ice_candidate = 9;
+        IceCandidate ice_candidate = 7;
     }
 }
 
 message CallInit {
-    string sender_username = 2;
+    string sender_username = 1;
+    string offer_sdp = 2;
 }
 
-message CallAccept {}
+message CallAccept {
+    string answer_sdp = 1;
+}
 
 message CallCancel {}
 
 message CallDecline {}
 
 message CallEnd {}
-
-message SdpOffer {
-    string description = 1;
-}
-
-message SdpAnswer {
-    string description = 1;
-}
 
 message IceCandidate {
     string candidate = 1;

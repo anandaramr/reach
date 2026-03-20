@@ -19,6 +19,7 @@ import com.project.reach.domain.contracts.IMessageRepository
 import com.project.reach.domain.contracts.INetworkRepository
 import com.project.reach.domain.models.CallState
 import com.project.reach.domain.models.NotificationEvent
+import com.project.reach.ui.app.CallActivity
 import com.project.reach.util.debug
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
@@ -76,6 +77,7 @@ class ForegroundService: Service() {
                     is CallState.Outgoing -> {
                         stopRinging()
                         onStartCall(state.username, isIncoming = false)
+                        launchCallActivity()
                     }
 
                     CallState.Idle -> {
@@ -94,11 +96,19 @@ class ForegroundService: Service() {
     private fun onStartCall(username: String, isIncoming: Boolean) {
         val notification = notificationHandler.getCallNotification(username, isIncoming)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            startForeground(
-                NotificationHandler.CALL_NOTIFICATION_ID,
-                notification,
-                ServiceInfo.FOREGROUND_SERVICE_TYPE_PHONE_CALL
-            )
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                startForeground(
+                    NotificationHandler.CALL_NOTIFICATION_ID,
+                    notification,
+                    ServiceInfo.FOREGROUND_SERVICE_TYPE_PHONE_CALL or ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE
+                )
+            } else {
+                startForeground(
+                    NotificationHandler.CALL_NOTIFICATION_ID,
+                    notification,
+                    ServiceInfo.FOREGROUND_SERVICE_TYPE_PHONE_CALL
+                )
+            }
         } else {
             startForeground(NotificationHandler.CALL_NOTIFICATION_ID, notification)
         }
@@ -157,6 +167,7 @@ class ForegroundService: Service() {
         val vibratorManager = getSystemService(VIBRATOR_MANAGER_SERVICE) as VibratorManager
         vibratorManager.defaultVibrator
     } else {
+        @Suppress("Deprecation")
         getSystemService(VIBRATOR_SERVICE) as Vibrator
     }
 
@@ -166,15 +177,23 @@ class ForegroundService: Service() {
 
     private fun requestAudioFocus() {
         val audioManager = getSystemService(AUDIO_SERVICE) as AudioManager
-        val focusRequest = AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK)
-            .setAudioAttributes(
-                AudioAttributes.Builder()
-                    .setUsage(AudioAttributes.USAGE_NOTIFICATION_RINGTONE)
-                    .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
-                    .build()
-            )
-            .build()
+        val focusRequest =
+            AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK)
+                .setAudioAttributes(
+                    AudioAttributes.Builder()
+                        .setUsage(AudioAttributes.USAGE_NOTIFICATION_RINGTONE)
+                        .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                        .build()
+                )
+                .build()
         audioManager.requestAudioFocus(focusRequest)
+    }
+
+    private fun launchCallActivity() {
+        val intent = Intent(this, CallActivity::class.java).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        startActivity(intent)
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
