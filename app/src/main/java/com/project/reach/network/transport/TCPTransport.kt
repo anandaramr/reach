@@ -13,6 +13,8 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import java.io.DataInputStream
 import java.io.DataOutputStream
 import java.io.EOFException
@@ -52,6 +54,10 @@ class TCPTransport: NetworkTransport {
                 while (isActive) {
                     try {
                         val clientSocket = socket.accept()
+                        val clientIp = clientSocket.inetAddress
+                        val oldSocket = connections.put(clientIp, clientSocket)
+                        oldSocket?.close()
+
                         debug("Accepted connection from ${clientSocket.inetAddress}")
                         launch {
                             handlePeerSocket(clientSocket)
@@ -70,8 +76,6 @@ class TCPTransport: NetworkTransport {
         clientSocket: Socket
     ) = coroutineScope {
         val clientIp = clientSocket.inetAddress
-        val oldSocket = connections.put(clientIp, clientSocket)
-        oldSocket?.close()
 
         try {
             val input = DataInputStream(clientSocket.inputStream)
@@ -131,18 +135,27 @@ class TCPTransport: NetworkTransport {
         }
     }
 
+    private val connectionLocks = ConcurrentHashMap<InetAddress, Mutex>()
+
     /**
      * Retrieves socket of client if already connected, creates
      * a new one otherwise
      */
-    private fun getOrCreateSocket(ip: InetAddress, network: Network): Socket {
-        connections[ip]?.let { if (!it.isClosed) return it }
-        val clientSocket = network.socketFactory.createSocket(ip, NetworkTransport.PORT)
-        debug("Connected to ${clientSocket.inetAddress.hostAddress}")
-        scope.launch {
-            handlePeerSocket(clientSocket)
+    private suspend fun getOrCreateSocket(ip: InetAddress, network: Network): Socket {
+        val lock = connectionLocks.getOrPut(ip) { Mutex() }
+        // TODO: return existing connection immediately and double check inside the CS
+
+        lock.withLock {
+            connections[ip]?.let { if (!it.isClosed && it.isConnected) return it }
+            val clientSocket = network.socketFactory.createSocket(ip, NetworkTransport.PORT)
+            val oldSocket = connections.put(ip, clientSocket)
+            oldSocket?.close()
+            debug("Connected to ${clientSocket.inetAddress.hostAddress}")
+            scope.launch {
+                handlePeerSocket(clientSocket)
+            }
+            return clientSocket
         }
-        return clientSocket
     }
 
     override fun start(hostAddress: InetAddress, port: Int, network: Network) {
@@ -172,9 +185,5 @@ class TCPTransport: NetworkTransport {
 
     private companion object {
         const val IDLE_TIMEOUT = 60_000
-
-        // TODO add timeout for writes
-        const val LINUX_TCP_USER_TIMEOUT = 18
-        const val TCP_WRITE_DELAY = 3000
     }
 }
