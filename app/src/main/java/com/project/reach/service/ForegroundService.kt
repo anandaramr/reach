@@ -96,11 +96,19 @@ class ForegroundService: Service() {
     private fun onStartCall(username: String, isIncoming: Boolean) {
         val notification = notificationHandler.getCallNotification(username, isIncoming)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            startForeground(
-                NotificationHandler.CALL_NOTIFICATION_ID,
-                notification,
-                ServiceInfo.FOREGROUND_SERVICE_TYPE_PHONE_CALL
-            )
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                startForeground(
+                    NotificationHandler.CALL_NOTIFICATION_ID,
+                    notification,
+                    ServiceInfo.FOREGROUND_SERVICE_TYPE_PHONE_CALL or ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE
+                )
+            } else {
+                startForeground(
+                    NotificationHandler.CALL_NOTIFICATION_ID,
+                    notification,
+                    ServiceInfo.FOREGROUND_SERVICE_TYPE_PHONE_CALL
+                )
+            }
         } else {
             startForeground(NotificationHandler.CALL_NOTIFICATION_ID, notification)
         }
@@ -159,6 +167,7 @@ class ForegroundService: Service() {
         val vibratorManager = getSystemService(VIBRATOR_MANAGER_SERVICE) as VibratorManager
         vibratorManager.defaultVibrator
     } else {
+        @Suppress("Deprecation")
         getSystemService(VIBRATOR_SERVICE) as Vibrator
     }
 
