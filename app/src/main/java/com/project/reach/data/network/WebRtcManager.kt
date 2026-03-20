@@ -10,7 +10,9 @@ import org.webrtc.MediaConstraints
 import org.webrtc.MediaStream
 import org.webrtc.PeerConnection
 import org.webrtc.PeerConnectionFactory
+import org.webrtc.RtpReceiver
 import org.webrtc.RtpTransceiver
+import org.webrtc.SdpObserver
 import org.webrtc.SessionDescription
 import org.webrtc.audio.JavaAudioDeviceModule
 
@@ -35,76 +37,131 @@ class WebRtcSessionManager(
     private var localAudioTrack: AudioTrack? = null
     private var localAudioSource: AudioSource? = null
     fun initPeerConnection() {
-        val rtcConfig = PeerConnection.RTCConfiguration(emptyList())
+        if (peerConnection != null) {
+            debug("[WebRTC] attempt to call duplicate initPeerConnection()")
+            return
+        }
+        val rtcConfig = PeerConnection.RTCConfiguration(emptyList()).apply {
+            sdpSemantics = PeerConnection.SdpSemantics.UNIFIED_PLAN
+            iceTransportsType = PeerConnection.IceTransportsType.ALL
+        }
+
         peerConnection = factory.createPeerConnection(rtcConfig, object: PeerConnection.Observer {
-            override fun onIceCandidate(candidate: IceCandidate?) {
-                candidate?.let { onIceCandidateFound(it) }
+            override fun onIceCandidate(candidate: IceCandidate) {
+                onIceCandidateFound(candidate)
             }
 
-            override fun onTrack(transceiver: RtpTransceiver?) {
-                val track = transceiver?.receiver?.track()
-                if (track is AudioTrack) {
-                    onTrackReceived(track)
-                }
+            override fun onTrack(transceiver: RtpTransceiver) {
+                val track = transceiver.receiver.track()
+                if (track is AudioTrack) onTrackReceived(track)
             }
 
-            override fun onSignalingChange(s: PeerConnection.SignalingState?) {}
-            override fun onIceConnectionChange(s: PeerConnection.IceConnectionState?) {}
-            override fun onIceConnectionReceivingChange(b: Boolean) {}
-            override fun onIceGatheringChange(s: PeerConnection.IceGatheringState?) {}
-            override fun onIceCandidatesRemoved(a: Array<out IceCandidate>?) {}
-            override fun onAddStream(stream: MediaStream?) {}
-            override fun onRemoveStream(s: MediaStream?) {}
-            override fun onDataChannel(d: DataChannel?) {}
+            override fun onIceConnectionChange(state: PeerConnection.IceConnectionState) {
+                debug("IceConnectionState: $state")
+            }
+            override fun onSignalingChange(state: PeerConnection.SignalingState) {}
+            override fun onIceGatheringChange(state: PeerConnection.IceGatheringState) {}
+            override fun onIceCandidatesRemoved(candidates: Array<out IceCandidate>) {}
+            override fun onAddStream(stream: MediaStream) {}
+            override fun onRemoveStream(stream: MediaStream) {}
+            override fun onDataChannel(channel: DataChannel) {}
             override fun onRenegotiationNeeded() {}
+            override fun onIceConnectionReceivingChange(receiving: Boolean) {}
+            override fun onAddTrack(receiver: RtpReceiver, streams: Array<out MediaStream>) {}
         })
 
-        localAudioSource = factory.createAudioSource(MediaConstraints())
-        localAudioTrack = factory.createAudioTrack("ARDAMSa0", localAudioSource)
-        peerConnection?.addTrack(localAudioTrack, listOf("ARDAMS"))
+        // Add local audio track
+        val audioConstraints = MediaConstraints()
+        localAudioSource = factory.createAudioSource(audioConstraints)
+        localAudioTrack = factory.createAudioTrack("audio0", localAudioSource)
+        localAudioTrack?.setEnabled(true)
+        peerConnection?.addTrack(localAudioTrack, listOf("stream0"))
     }
 
     fun createOffer(callback: (SessionDescription) -> Unit) {
-        peerConnection?.createOffer(object: SimpleSdpObserver() {
+        val constraints = MediaConstraints().apply {
+            mandatory.add(MediaConstraints.KeyValuePair("OfferToReceiveAudio", "true"))
+        }
+        peerConnection?.createOffer(object: SdpObserver {
             override fun onCreateSuccess(sdp: SessionDescription) {
-                peerConnection?.setLocalDescription(SimpleSdpObserver(), sdp)
-                callback(sdp)
+                peerConnection?.setLocalDescription(object: SdpObserver {
+                    override fun onSetSuccess() = callback(sdp)
+                    override fun onSetFailure(error: String) {}
+                    override fun onCreateSuccess(sdp: SessionDescription) {}
+                    override fun onCreateFailure(error: String) {}
+                }, sdp)
             }
-        }, MediaConstraints())
+
+            override fun onCreateFailure(error: String) {}
+            override fun onSetSuccess() {}
+            override fun onSetFailure(error: String) {}
+        }, constraints)
     }
 
-    fun onOfferReceived(remoteSdp: String, callback: (SessionDescription) -> Unit) {
-        val remoteDesc = SessionDescription(SessionDescription.Type.OFFER, remoteSdp)
-        peerConnection?.setRemoteDescription(object: SimpleSdpObserver() {
+    fun onOfferReceived(remoteSdp: String) {
+        val sdp = SessionDescription(SessionDescription.Type.OFFER, remoteSdp)
+        peerConnection?.setRemoteDescription(object: SdpObserver {
             override fun onSetSuccess() {
-                createAnswer(callback)
+                debug("[WebRTC] Set remote offer description")
+                pendingCandidates.forEach { peerConnection?.addIceCandidate(it) }
+                pendingCandidates.clear()
             }
 
             override fun onSetFailure(error: String) {
-                debug("WebRTC: Failed to set remote description after receiving offer: $error")
+                debug("[WebRTC] Failed to set remote offer: $error")
             }
-        }, remoteDesc)
+            override fun onCreateSuccess(sdp: SessionDescription) {}
+            override fun onCreateFailure(error: String) {}
+        }, sdp)
     }
 
-    private fun createAnswer(callback: (SessionDescription) -> Unit) {
-        peerConnection?.createAnswer(object: SimpleSdpObserver() {
+    fun createAnswer(callback: (SessionDescription) -> Unit) {
+        val constraints = MediaConstraints()
+        peerConnection?.createAnswer(object: SdpObserver {
             override fun onCreateSuccess(sdp: SessionDescription) {
-                peerConnection?.setLocalDescription(SimpleSdpObserver(), sdp)
-                callback(sdp)
+                peerConnection?.setLocalDescription(object: SdpObserver {
+                    override fun onSetSuccess() = callback(sdp)
+                    override fun onSetFailure(error: String) {}
+                    override fun onCreateSuccess(sdp: SessionDescription) {}
+                    override fun onCreateFailure(error: String) {}
+                }, sdp)
             }
-        }, MediaConstraints())
+
+            override fun onCreateFailure(error: String) {}
+            override fun onSetSuccess() {}
+            override fun onSetFailure(error: String) {}
+        }, constraints)
     }
 
     fun onAnswerReceived(remoteSdp: String) {
-        val remoteDesc = SessionDescription(SessionDescription.Type.ANSWER, remoteSdp)
-        peerConnection?.setRemoteDescription(SimpleSdpObserver(), remoteDesc)
+        val sdp = SessionDescription(SessionDescription.Type.ANSWER, remoteSdp)
+        peerConnection?.setRemoteDescription(object: SdpObserver {
+            override fun onSetSuccess() {
+                debug("[WebRTC] Set remote answer description")
+                pendingCandidates.forEach { peerConnection?.addIceCandidate(it) }
+                pendingCandidates.clear()
+            }
+
+            override fun onSetFailure(error: String) {
+                debug("[WebRTC] Failed to set remote answer. Reason: $error")
+            }
+            override fun onCreateSuccess(sdp: SessionDescription) {}
+            override fun onCreateFailure(error: String) {}
+        }, sdp)
     }
 
+    private val pendingCandidates = mutableListOf<IceCandidate>()
+
     fun addIceCandidate(candidate: IceCandidate) {
-        peerConnection?.addIceCandidate(candidate)
+        if (peerConnection?.remoteDescription == null) {
+            pendingCandidates.add(candidate)
+        } else {
+            peerConnection?.addIceCandidate(candidate)
+        }
     }
 
     fun disconnect() {
+        peerConnection?.close()
         peerConnection?.dispose()
         localAudioTrack?.dispose()
         localAudioSource?.dispose()

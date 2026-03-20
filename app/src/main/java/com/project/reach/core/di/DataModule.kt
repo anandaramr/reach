@@ -86,12 +86,12 @@ object DataModule {
     fun provideCallRepository(
         contactRepository: IContactRepository,
         networkController: INetworkController,
-        identityManager: IdentityManager
+        @ApplicationContext context: Context
     ): ICallRepository {
         return CallRepository(
             contactRepository = contactRepository,
             networkController = networkController,
-            identityManager = identityManager,
+            context = context,
         )
     }
 
