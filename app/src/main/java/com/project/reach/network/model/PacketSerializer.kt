@@ -18,8 +18,6 @@ import com.reach.project.core.serialization.Hello
 import com.reach.project.core.serialization.IceCandidate
 import com.reach.project.core.serialization.Message
 import com.reach.project.core.serialization.ReachPacket
-import com.reach.project.core.serialization.SdpAnswer
-import com.reach.project.core.serialization.SdpOffer
 import com.reach.project.core.serialization.TypingIndicator
 
 internal object PacketSerializer {
@@ -86,35 +84,43 @@ internal object PacketSerializer {
                     is Packet.CallSignal.CallAccept -> {
                         callSignal = CallSignal.newBuilder().apply {
                             callId = packet.callId
-                            callAccept = CallAccept.newBuilder().build()
+                            callAccept = CallAccept.newBuilder().apply {
+                                answerSdp = packet.answerSdp
+                            }.build()
                         }.build()
                     }
+
                     is Packet.CallSignal.CallCancel -> {
                         callSignal = CallSignal.newBuilder().apply {
                             callId = packet.callId
                             callCancel = CallCancel.newBuilder().build()
                         }.build()
                     }
+
                     is Packet.CallSignal.CallDecline -> {
                         callSignal = CallSignal.newBuilder().apply {
                             callId = packet.callId
                             callDecline = CallDecline.newBuilder().build()
                         }.build()
                     }
+
                     is Packet.CallSignal.CallEnd -> {
                         callSignal = CallSignal.newBuilder().apply {
                             callId = packet.callId
                             callEnd = CallEnd.newBuilder().build()
                         }.build()
                     }
+
                     is Packet.CallSignal.CallInit -> {
                         callSignal = CallSignal.newBuilder().apply {
                             callId = packet.callId
                             callInit = CallInit.newBuilder().apply {
                                 senderUsername = packet.senderUsername
+                                offerSdp = packet.offerSdp
                             }.build()
                         }.build()
                     }
+
                     is Packet.CallSignal.IceCandidate -> {
                         callSignal = CallSignal.newBuilder().apply {
                             callId = packet.callId
@@ -122,22 +128,6 @@ internal object PacketSerializer {
                                 candidate = packet.candidate
                                 sdpMid = packet.sdpMid
                                 mLineIndex = packet.mLineIndex
-                            }.build()
-                        }.build()
-                    }
-                    is Packet.CallSignal.SdpAnswer -> {
-                        callSignal = CallSignal.newBuilder().apply {
-                            callId = packet.callId
-                            sdpAnswer = SdpAnswer.newBuilder().apply {
-                                description = packet.description
-                            }.build()
-                        }.build()
-                    }
-                    is Packet.CallSignal.SdpOffer -> {
-                        callSignal = CallSignal.newBuilder().apply {
-                            callId = packet.callId
-                            sdpOffer = SdpOffer.newBuilder().apply {
-                                description = packet.description
                             }.build()
                         }.build()
                     }
@@ -232,47 +222,40 @@ internal object PacketSerializer {
                         Packet.CallSignal.CallAccept(
                             callId = callId,
                             senderId = senderId,
+                            answerSdp = proto.callSignal.callAccept.answerSdp,
                         )
                     }
+
                     CallSignal.PayloadCase.CALL_CANCEL -> {
                         Packet.CallSignal.CallCancel(
                             callId = callId,
                             senderId = senderId,
                         )
                     }
+
                     CallSignal.PayloadCase.CALL_DECLINE -> {
                         Packet.CallSignal.CallDecline(
                             callId = callId,
                             senderId = senderId,
                         )
                     }
+
                     CallSignal.PayloadCase.CALL_END -> {
                         Packet.CallSignal.CallEnd(
                             callId = callId,
                             senderId = senderId,
                         )
                     }
+
                     CallSignal.PayloadCase.CALL_INIT -> {
                         Packet.CallSignal.CallInit(
                             callId = callId,
                             senderId = senderId,
                             senderUsername = proto.callSignal.callInit.senderUsername,
+                            offerSdp = proto.callSignal.callInit.offerSdp,
                         )
                     }
-                    CallSignal.PayloadCase.SDP_ANSWER -> {
-                        Packet.CallSignal.SdpAnswer(
-                            callId = callId,
-                            senderId = senderId,
-                            description = proto.callSignal.sdpAnswer.description,
-                        )
-                    }
-                    CallSignal.PayloadCase.SDP_OFFER -> {
-                        Packet.CallSignal.SdpOffer(
-                            callId = callId,
-                            senderId = senderId,
-                            description = proto.callSignal.sdpOffer.description,
-                        )
-                    }
+
                     CallSignal.PayloadCase.ICE_CANDIDATE -> {
                         Packet.CallSignal.IceCandidate(
                             callId = callId,
@@ -282,6 +265,7 @@ internal object PacketSerializer {
                             mLineIndex = proto.callSignal.iceCandidate.mLineIndex,
                         )
                     }
+
                     CallSignal.PayloadCase.PAYLOAD_NOT_SET -> {
                         throw IllegalArgumentException("CallSignal: Payload not set")
                     }
