@@ -35,6 +35,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.paging.compose.collectAsLazyPagingItems
 import com.project.reach.ui.navigation.NavigationDestination
 import com.project.reach.ui.screens.home.components.ChatPreview
+import com.project.reach.util.debug
 
 object HomeScreenDestination: NavigationDestination {
     override val route: String
@@ -126,7 +127,7 @@ fun HomeScreen(
                         preview[idx]?.let { preview ->
                             ChatPreview(
                                 navigateToChat = { peerId -> navigateToChat(peerId) },
-                                username = preview.nickname,
+                                username = preview.nickname ?: preview.username,
                                 userId = preview.userId.toString(),
                                 lastMessage = preview.lastMessage,
                                 isTyping = preview.userId.toString() in typingUsers
