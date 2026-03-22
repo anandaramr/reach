@@ -73,7 +73,7 @@ interface IMessageRepository {
     fun getMessagesPaged(
         userId: String,
         pageSize: Int = 20,
-        initialLoadSize: Int = 60,
+        initialLoadSize: Int = 40,
         prefetchDistance: Int = 5
     ): Flow<PagingData<Message>>
 

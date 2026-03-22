@@ -1,14 +1,17 @@
 package com.project.reach.service
 
+import android.annotation.SuppressLint
 import android.app.Notification
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.os.Build
 import androidx.core.app.NotificationCompat
 import androidx.core.app.Person
 import com.project.reach.domain.models.MessageNotification
 import com.project.reach.ui.app.CallActivity
+import com.project.reach.util.debug
 
 class NotificationHandler(
     private val context: Context
@@ -17,7 +20,7 @@ class NotificationHandler(
         context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
     }
 
-    fun getForegroundNotification(stopServicePendingIntent: PendingIntent): Notification {
+    fun getForegroundNotification(onStopService: PendingIntent): Notification {
         return NotificationCompat.Builder(context, FOREGROUND_CHANNEL_ID)
             .setContentTitle("REACH is running")
             .setContentText("Listening for incoming messages")
@@ -27,7 +30,7 @@ class NotificationHandler(
             .addAction(
                 android.R.drawable.ic_media_pause,
                 "Stop Listening",
-                stopServicePendingIntent
+                onStopService
             )
             .build()
     }
@@ -65,15 +68,26 @@ class NotificationHandler(
             )
         }
 
-        return NotificationCompat.Builder(context, CALL_CHANNEL_ID)
+        val builder = NotificationCompat.Builder(context, CALL_CHANNEL_ID)
             .setSmallIcon(android.R.drawable.sym_action_call)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setCategory(NotificationCompat.CATEGORY_CALL)
             .setOngoing(true)
             .setAutoCancel(false)
             .setStyle(style)
-            .setFullScreenIntent(fullScreenPendingIntent, true) // TODO: Handle permission
-            .build()
+
+        @SuppressLint("FullScreenIntentPolicy")
+        if (isIncoming) {
+            val canUseFullScreen =
+                Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE || notificationManager.canUseFullScreenIntent()
+            if (canUseFullScreen) {
+                builder.setFullScreenIntent(fullScreenPendingIntent, true)
+            } else {
+                debug("[Notification] Unable to use setFullScreenIntent during call")
+                builder.setContentIntent(fullScreenPendingIntent)
+            }
+        }
+        return builder.build()
     }
 
     fun pushMessageNotification(

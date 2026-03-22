@@ -311,6 +311,7 @@ class MessageRepository(
 
     private suspend fun handlePackets() {
         networkController.packets.collect { packet ->
+            debug("Received packet: ${packet.javaClass.simpleName}")
             when (packet) {
                 is Packet.Message -> handleMessagePacket(packet)
                 is Packet.Typing -> typingStateHandler.setIsTyping(packet.senderId)
@@ -342,12 +343,25 @@ class MessageRepository(
                 is Packet.CallSignal.CallInit -> callRepository.onCallReceive(
                     callId = packet.callId.toUUID(),
                     peerId = packet.senderId.toUUID(),
-                    peerUsername = packet.senderUsername
+                    peerUsername = packet.senderUsername,
+                    sdpOffer = packet.offerSdp,
                 )
 
                 is Packet.CallSignal.CallDecline -> callRepository.onPeerDecline(packet.callId.toUUID())
+                is Packet.CallSignal.CallAccept -> callRepository.onPeerAccept(
+                    callId = packet.callId.toUUID(),
+                    peerId = packet.senderId.toUUID(),
+                    sdpAnswer = packet.answerSdp
+                )
 
-                else -> {}
+                is Packet.CallSignal.CallCancel -> TODO()
+                is Packet.CallSignal.CallEnd -> callRepository.onPeerDisconnect(packet.callId.toUUID())
+                is Packet.CallSignal.IceCandidate -> callRepository.onIceCandidateReceived(
+                    callId = packet.callId.toUUID(),
+                    candidate = packet
+                )
+
+                is Packet.GoodBye -> {}
             }
         }
     }

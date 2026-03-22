@@ -4,6 +4,9 @@ import com.project.reach.data.local.IdentityManager
 import com.project.reach.domain.contracts.INetworkController
 import com.project.reach.domain.contracts.IWifiController
 import com.project.reach.network.model.Packet
+import com.project.reach.util.debug
+import org.webrtc.IceCandidate
+import org.webrtc.SessionDescription
 import java.io.InputStream
 import java.io.OutputStream
 import java.util.UUID
@@ -13,6 +16,7 @@ class NetworkController(
     identityManager: IdentityManager
 ): INetworkController {
     private val myUserId = identityManager.userId
+    private val myUsername = identityManager.username
 
     override val packets = wifiController.packets
     override val newDevices = wifiController.newDevices
@@ -22,6 +26,7 @@ class NetworkController(
         userId: UUID,
         packet: Packet,
     ): Boolean {
+        debug("Sending packet: ${packet.javaClass.simpleName}")
         return when (packet) {
             is Packet.Message,
             is Packet.FileAccept,
@@ -80,6 +85,62 @@ class NetworkController(
         dataOutputChannel.use { channel ->
             return channel.writeFrom(inputStream, bytesToSend, onProgress)
         }
+    }
+
+    override suspend fun initiateCall(peerId: UUID, callId: UUID, sdpOffer: SessionDescription): Boolean {
+        return sendPacket(
+            userId = peerId,
+            Packet.CallSignal.CallInit(
+                callId = callId.toString(),
+                senderId = myUserId,
+                senderUsername = myUsername.value,
+                offerSdp = sdpOffer.description,
+            )
+        )
+    }
+
+    override suspend fun sendIceCandidate(peerId: UUID, callId: UUID, candidate: IceCandidate): Boolean {
+        return sendPacket(
+            userId = peerId,
+            packet = Packet.CallSignal.IceCandidate(
+                callId = callId.toString(),
+                senderId = myUserId,
+                candidate = candidate.sdp,
+                sdpMid = candidate.sdpMid,
+                mLineIndex = candidate.sdpMLineIndex
+            )
+        )
+    }
+
+    override suspend fun acceptCall(peerId: UUID, callId: UUID, sdpAnswer: SessionDescription): Boolean {
+        return sendPacket(
+            userId = peerId,
+            packet = Packet.CallSignal.CallAccept(
+                callId = callId.toString(),
+                senderId = myUserId,
+                answerSdp = sdpAnswer.description,
+            )
+        )
+    }
+
+    override suspend fun declineCall(peerId: UUID, callId: UUID) {
+        sendPacket(
+            userId = peerId,
+            packet = Packet.CallSignal.CallDecline(
+                callId = callId.toString(),
+                senderId = myUserId
+            )
+        )
+    }
+
+    override suspend fun endCall(peerId: UUID, callId: UUID) {
+        sendPacket(
+            userId = peerId,
+            packet = Packet.CallSignal.CallEnd(
+                callId = callId.toString(),
+                senderId = myUserId
+            )
+        )
     }
 
     override fun startDiscovery() {

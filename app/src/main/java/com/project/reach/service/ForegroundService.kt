@@ -71,21 +71,29 @@ class ForegroundService: Service() {
                 when (state) {
                     is CallState.Incoming -> {
                         startRinging()
+                        requestAudioFocus()
                         onStartCall(state.username, isIncoming = true)
                     }
 
                     is CallState.Outgoing -> {
-                        stopRinging()
+                        requestAudioFocus()
                         onStartCall(state.username, isIncoming = false)
                         launchCallActivity()
                     }
 
                     CallState.Idle -> {
                         stopRinging()
+                        abandonAudioFocus()
                         startForegroundOperations()
                     }
 
-                    else -> {
+                    is CallState.Disconnected -> {
+                        stopRinging()
+                        abandonAudioFocus()
+                        startForegroundOperations()
+                    }
+
+                    is CallState.Connected -> {
                         stopRinging()
                     }
                 }
@@ -96,18 +104,25 @@ class ForegroundService: Service() {
     private fun onStartCall(username: String, isIncoming: Boolean) {
         val notification = notificationHandler.getCallNotification(username, isIncoming)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            startForeground(
-                NotificationHandler.CALL_NOTIFICATION_ID,
-                notification,
-                ServiceInfo.FOREGROUND_SERVICE_TYPE_PHONE_CALL
-            )
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                startForeground(
+                    NotificationHandler.CALL_NOTIFICATION_ID,
+                    notification,
+                    ServiceInfo.FOREGROUND_SERVICE_TYPE_PHONE_CALL or ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE
+                )
+            } else {
+                startForeground(
+                    NotificationHandler.CALL_NOTIFICATION_ID,
+                    notification,
+                    ServiceInfo.FOREGROUND_SERVICE_TYPE_PHONE_CALL
+                )
+            }
         } else {
             startForeground(NotificationHandler.CALL_NOTIFICATION_ID, notification)
         }
     }
 
     private fun startRinging() {
-        requestAudioFocus()
         startVibration()
         startRingtone()
     }
@@ -159,6 +174,7 @@ class ForegroundService: Service() {
         val vibratorManager = getSystemService(VIBRATOR_MANAGER_SERVICE) as VibratorManager
         vibratorManager.defaultVibrator
     } else {
+        @Suppress("Deprecation")
         getSystemService(VIBRATOR_SERVICE) as Vibrator
     }
 
@@ -166,8 +182,10 @@ class ForegroundService: Service() {
         getVibrator().cancel()
     }
 
+    var audioFocusRequest: AudioFocusRequest? = null
+    val audioManager by lazy { getSystemService(AUDIO_SERVICE) as AudioManager }
+
     private fun requestAudioFocus() {
-        val audioManager = getSystemService(AUDIO_SERVICE) as AudioManager
         val focusRequest =
             AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK)
                 .setAudioAttributes(
@@ -177,7 +195,15 @@ class ForegroundService: Service() {
                         .build()
                 )
                 .build()
+        audioFocusRequest = focusRequest
         audioManager.requestAudioFocus(focusRequest)
+    }
+
+    private fun abandonAudioFocus() {
+        audioFocusRequest?.let { request ->
+            audioManager.abandonAudioFocusRequest(request)
+            audioFocusRequest = null
+        }
     }
 
     private fun launchCallActivity() {
@@ -232,6 +258,8 @@ class ForegroundService: Service() {
 
     override fun onDestroy() {
         super.onDestroy()
+        abandonAudioFocus()
+        stopRinging()
         scope.cancel()
         stop()
     }
