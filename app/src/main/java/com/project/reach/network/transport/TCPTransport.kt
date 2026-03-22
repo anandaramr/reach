@@ -78,8 +78,8 @@ class TCPTransport: NetworkTransport {
         val clientIp = clientSocket.inetAddress
 
         try {
-            val input = DataInputStream(clientSocket.inputStream)
             clientSocket.soTimeout = IDLE_TIMEOUT
+            val input = DataInputStream(clientSocket.inputStream)
             while (isActive && !clientSocket.isClosed) {
                 try {
                     handleIncomingBytes(clientIp, input)
@@ -143,7 +143,6 @@ class TCPTransport: NetworkTransport {
      */
     private suspend fun getOrCreateSocket(ip: InetAddress, network: Network): Socket {
         val lock = connectionLocks.getOrPut(ip) { Mutex() }
-        // TODO: return existing connection immediately and double check inside the CS
 
         lock.withLock {
             connections[ip]?.let { if (!it.isClosed && it.isConnected) return it }
