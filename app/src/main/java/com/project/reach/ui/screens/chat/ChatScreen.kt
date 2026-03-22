@@ -31,6 +31,8 @@ import androidx.compose.ui.Modifier
 import com.project.reach.ui.navigation.NavigationDestination
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBackIosNew
+import androidx.compose.material.icons.filled.Cake
+import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.outlined.WavingHand
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -38,7 +40,6 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
@@ -52,22 +53,20 @@ import com.project.reach.ui.screens.chat.components.MessageDisplay
 import com.project.reach.ui.screens.chat.components.MessageTextField
 import com.project.reach.ui.screens.chat.components.TypingBubble
 
-object ChatScreenDestination : NavigationDestination {
+object ChatScreenDestination: NavigationDestination {
     override val route: String = "chat/{peerId}"
     fun createRoute(peerId: String) = "chat/$peerId"
 }
-
 
 @Composable
 fun ChatScreen(
     modifier: Modifier = Modifier,
     viewModel: ChatScreenViewModel = hiltViewModel(),
     navigateBack: () -> Unit,
-    navigateToViewContact: (String,String,String) -> Unit,
+    navigateToViewContact: (String, String, String) -> Unit,
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val scrollState = rememberLazyListState()
-    val scope = rememberCoroutineScope()
     val messages = viewModel.message.collectAsLazyPagingItems();
 
     LaunchedEffect(Unit) {
@@ -82,11 +81,26 @@ fun ChatScreen(
                         Text(
                             text = uiState.peerName,
                             modifier = Modifier.clickable(
-                                onClick = { navigateToViewContact(uiState.peerId, uiState.username, uiState.peerName) }
+                                onClick = {
+                                    navigateToViewContact(
+                                        uiState.peerId,
+                                        uiState.username,
+                                        uiState.peerName
+                                    )
+                                }
                             )
                         )
                     },
-
+                    actions = {
+                        IconButton(
+                            onClick = viewModel::startCall
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.Call,
+                                contentDescription = "Call",
+                            )
+                        }
+                    },
                     navigationIcon = {
                         IconButton(
                             onClick = navigateBack,
@@ -142,29 +156,42 @@ fun ChatScreen(
                         }
                     }
                 }
-                items(count = messages.itemCount,key = { index ->
+                items(count = messages.itemCount, key = { index ->
                     messages[index]?.messageId ?: "placeholder-$index"
                 }) { idx ->
                     messages[idx]?.let { message ->
-                        when(message) {
+                        when (message) {
                             is Message.FileMessage -> {
-                                FileDisplay(message = message, getFileUri = viewModel::getFileUri, getTransferState = viewModel::getTransferState, deleteMessage = viewModel::deleteMessage, deleteOption = uiState.deleteOption, showDeleteOption = viewModel::showDeleteOption)
+                                FileDisplay(
+                                    message = message,
+                                    getFileUri = viewModel::getFileUri,
+                                    getTransferState = viewModel::getTransferState,
+                                    deleteMessage = viewModel::deleteMessage,
+                                    deleteOption = uiState.deleteOption,
+                                    showDeleteOption = viewModel::showDeleteOption
+                                )
                             }
-                            is Message.TextMessage -> MessageDisplay(message = message, viewModel::deleteMessage, deleteOption = uiState.deleteOption, showDeleteOption = viewModel::showDeleteOption)
+
+                            is Message.TextMessage -> MessageDisplay(
+                                message = message,
+                                viewModel::deleteMessage,
+                                deleteOption = uiState.deleteOption,
+                                showDeleteOption = viewModel::showDeleteOption
+                            )
                         }
                     }
                 }
                 item { Spacer(modifier = Modifier.size(30.dp)) }
             }
 
-            if(messages.itemCount == 0){
-                Column (
+            if (messages.itemCount == 0) {
+                Column(
                     modifier = Modifier
                         .fillMaxWidth()
                         .fillMaxHeight(0.8f),
                     verticalArrangement = Arrangement.Center,
                     horizontalAlignment = Alignment.CenterHorizontally
-                ){
+                ) {
                     Box(
                         modifier = Modifier
                             .background(
@@ -230,7 +257,7 @@ fun ChatScreen(
                 imageCaption = uiState.imageCaption,
                 fileCaption = uiState.fileCaption,
                 imageName = uiState.imageName,
-                isFileAttached = uiState.file!=null,
+                isFileAttached = uiState.file != null,
                 sendMessage = viewModel::sendMessage,
                 sendFile = viewModel::sendFile,
                 onMediaSelected = viewModel::onMediaSelected,

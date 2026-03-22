@@ -5,12 +5,14 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.paging.cachedIn
+import com.project.reach.domain.contracts.ICallRepository
 import com.project.reach.domain.contracts.IContactRepository
 import com.project.reach.domain.contracts.IFileRepository
 import com.project.reach.domain.contracts.IMessageRepository
 import com.project.reach.domain.models.MessageState
 import com.project.reach.domain.models.TransferState
 import com.project.reach.util.debug
+import com.project.reach.util.toUUID
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -27,7 +29,8 @@ class ChatScreenViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val messageRepository: IMessageRepository,
     private val contactRepository: IContactRepository,
-    private val fileRepository: IFileRepository
+    private val fileRepository: IFileRepository,
+    private val callRepository: ICallRepository
 
 ): ViewModel() {
     private val _uiState = MutableStateFlow(ChatScreenState())
@@ -45,6 +48,12 @@ class ChatScreenViewModel @Inject constructor(
     fun onInputChange(text: String) {
         updateMessageText(text)
         messageRepository.emitTyping(_uiState.value.peerId)
+    }
+
+    fun startCall(){
+        viewModelScope.launch {
+            callRepository.startCall(peerId.toUUID())
+        }
     }
 
     fun onFileInputChange(text: String) {

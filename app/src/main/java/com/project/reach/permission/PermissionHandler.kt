@@ -15,7 +15,7 @@ class PermissionHandler(
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             onGrantedCallback = onGranted
             onFailureCallback = onFailure
-            notificationLauncher.launch(arrayOf(Manifest.permission.POST_NOTIFICATIONS))
+            notificationLauncher.launch(arrayOf(Manifest.permission.POST_NOTIFICATIONS, Manifest.permission.RECORD_AUDIO))
         } else {
             onGranted()
         }
@@ -39,7 +39,7 @@ class PermissionHandler(
         activity.registerForActivityResult(
             contract = ActivityResultContracts.RequestMultiplePermissions()
         ) { permissions ->
-            if (permissions[Manifest.permission.POST_NOTIFICATIONS] == true) {
+            if (permissions[Manifest.permission.POST_NOTIFICATIONS] == true && permissions[Manifest.permission.RECORD_AUDIO] == true) {
                 onGrantedCallback?.invoke()
             } else {
                 onFailureCallback?.invoke()
