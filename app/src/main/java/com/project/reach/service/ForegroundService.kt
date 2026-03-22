@@ -71,21 +71,29 @@ class ForegroundService: Service() {
                 when (state) {
                     is CallState.Incoming -> {
                         startRinging()
+                        requestAudioFocus()
                         onStartCall(state.username, isIncoming = true)
                     }
 
                     is CallState.Outgoing -> {
-                        stopRinging()
+                        requestAudioFocus()
                         onStartCall(state.username, isIncoming = false)
                         launchCallActivity()
                     }
 
                     CallState.Idle -> {
                         stopRinging()
+                        abandonAudioFocus()
                         startForegroundOperations()
                     }
 
-                    else -> {
+                    is CallState.Disconnected -> {
+                        stopRinging()
+                        abandonAudioFocus()
+                        startForegroundOperations()
+                    }
+
+                    is CallState.Connected -> {
                         stopRinging()
                     }
                 }
@@ -115,7 +123,6 @@ class ForegroundService: Service() {
     }
 
     private fun startRinging() {
-        requestAudioFocus()
         startVibration()
         startRingtone()
     }
@@ -175,8 +182,10 @@ class ForegroundService: Service() {
         getVibrator().cancel()
     }
 
+    var audioFocusRequest: AudioFocusRequest? = null
+    val audioManager by lazy { getSystemService(AUDIO_SERVICE) as AudioManager }
+
     private fun requestAudioFocus() {
-        val audioManager = getSystemService(AUDIO_SERVICE) as AudioManager
         val focusRequest =
             AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK)
                 .setAudioAttributes(
@@ -186,7 +195,15 @@ class ForegroundService: Service() {
                         .build()
                 )
                 .build()
+        audioFocusRequest = focusRequest
         audioManager.requestAudioFocus(focusRequest)
+    }
+
+    private fun abandonAudioFocus() {
+        audioFocusRequest?.let { request ->
+            audioManager.abandonAudioFocusRequest(request)
+            audioFocusRequest = null
+        }
     }
 
     private fun launchCallActivity() {
@@ -241,6 +258,8 @@ class ForegroundService: Service() {
 
     override fun onDestroy() {
         super.onDestroy()
+        abandonAudioFocus()
+        stopRinging()
         scope.cancel()
         stop()
     }

@@ -38,16 +38,12 @@ interface MessageDao {
 
     @Query(
         value = """
-            SELECT m.userId, c.username, m.messageType, m.content as "lastMessage", m.timeStamp, m.messageState, c.nickname
+            SELECT m.userId, c.username, m.messageType, m.content as "lastMessage",
+            MAX(m.timeStamp) as timeStamp, m.messageState, c.nickname
             FROM messages AS m
-            JOIN
-            contacts AS c ON c.userId = m.userId
-            WHERE m.timeStamp = (
-                SELECT MAX(m2.timeStamp)
-                FROM messages AS m2
-                WHERE m2.userId = m.userId
-            )
-            order by m.timeStamp desc
+            JOIN contacts AS c ON c.userId = m.userId
+            GROUP BY m.userId
+            ORDER BY timeStamp DESC
         """
     )
     fun getMessagesPreviewPaged(): PagingSource<Int, MessagePreview>
