@@ -57,6 +57,8 @@ import com.project.reach.ui.screens.chat.components.TypingBubble
 
 object ChatScreenDestination: NavigationDestination {
     override val route: String = "chat/{peerId}"
+    val deepLinkPattern: String = "chat/{peerId}"
+    fun createDeepLinkUri(peerId: String) = "chat/$peerId"
     fun createRoute(peerId: String) = "chat/$peerId"
 }
 

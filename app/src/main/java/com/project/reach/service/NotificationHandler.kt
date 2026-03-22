@@ -4,14 +4,19 @@ import android.annotation.SuppressLint
 import android.app.Notification
 import android.app.NotificationManager
 import android.app.PendingIntent
+import android.app.TaskStackBuilder
 import android.content.Context
 import android.content.Intent
 import android.os.Build
 import androidx.core.app.NotificationCompat
 import androidx.core.app.Person
+import androidx.core.net.toUri
 import com.project.reach.domain.models.MessageNotification
 import com.project.reach.ui.app.CallActivity
+import com.project.reach.ui.app.MainActivity
+import com.project.reach.ui.screens.chat.ChatScreenDestination
 import com.project.reach.util.debug
+import com.project.reach.R
 
 class NotificationHandler(
     private val context: Context
@@ -21,10 +26,17 @@ class NotificationHandler(
     }
 
     fun getForegroundNotification(onStopService: PendingIntent): Notification {
+        val openAppIntent = Intent(context, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+        }
+        val pendingIntent =
+            PendingIntent.getActivity(context, 0, openAppIntent, PendingIntent.FLAG_IMMUTABLE)
+
         return NotificationCompat.Builder(context, FOREGROUND_CHANNEL_ID)
             .setContentTitle("REACH is running")
             .setContentText("Listening for incoming messages")
-            .setSmallIcon(android.R.drawable.ic_media_play)
+            .setSmallIcon(R.mipmap.ic_launcher)
+            .setContentIntent(pendingIntent)
             .setOngoing(true)
             .setGroup(null)
             .addAction(
@@ -69,7 +81,7 @@ class NotificationHandler(
         }
 
         val builder = NotificationCompat.Builder(context, CALL_CHANNEL_ID)
-            .setSmallIcon(android.R.drawable.sym_action_call)
+            .setSmallIcon(R.mipmap.ic_launcher)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setCategory(NotificationCompat.CATEGORY_CALL)
             .setOngoing(true)
@@ -98,13 +110,28 @@ class NotificationHandler(
         if (messages.isEmpty()) return
         val notificationId = userId.hashCode()
 
+        val openChatScreenIntent = Intent(
+            Intent.ACTION_VIEW,
+            "reach://${ChatScreenDestination.createDeepLinkUri(userId)}".toUri(),
+            context,
+            MainActivity::class.java
+        )
+        val pendingIntent = TaskStackBuilder.create(context).run {
+            addNextIntentWithParentStack(openChatScreenIntent)
+            getPendingIntent(
+                userId.hashCode(),
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
+        }
+
         val notification = NotificationCompat.Builder(
             context,
             MESSAGE_NOTIFICATION_CHANNEL
         )
-            .setSmallIcon(android.R.drawable.stat_notify_chat)
+            .setSmallIcon(R.mipmap.ic_launcher)
             .setContentTitle(username)
             .setStyle(getNotificationStyle(username, messages))
+            .setContentIntent(pendingIntent)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setAutoCancel(true)
             .setGroup("message")

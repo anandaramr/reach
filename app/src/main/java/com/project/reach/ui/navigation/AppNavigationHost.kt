@@ -18,6 +18,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import androidx.navigation.navDeepLink
 import com.project.reach.ui.components.BottomBar
 import com.project.reach.ui.components.BottomNavBarItem
 import com.project.reach.ui.screens.chat.ChatScreen
@@ -103,7 +104,10 @@ fun AppNavigationHost(
             }
             composable(
                 route = ChatScreenDestination.route,
-                arguments = listOf(navArgument("peerId") { type = NavType.StringType })
+                arguments = listOf(navArgument("peerId") { type = NavType.StringType }),
+                deepLinks = listOf(
+                    navDeepLink { uriPattern = "reach://${ChatScreenDestination.deepLinkPattern}" }
+                )
             ) {
                 ChatScreen(
                     navigateBack = { navController.popBackStack(route = HomeScreenDestination.route, inclusive = false) },
