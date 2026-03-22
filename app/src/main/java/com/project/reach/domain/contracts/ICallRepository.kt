@@ -23,5 +23,5 @@ interface ICallRepository {
     fun onPeerDecline(callId: UUID)
     fun onPeerDisconnect(callId: UUID)
     suspend fun onPeerAccept(callId: UUID, peerId: UUID, sdpAnswer: String)
-    fun cancelCall()
+    fun resetCall()
 }

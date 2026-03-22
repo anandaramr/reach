@@ -20,12 +20,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.project.reach.domain.models.CallState
 import com.project.reach.ui.components.AvatarIcon
 import com.project.reach.ui.components.AvatarIconSize
-import java.util.UUID
 
 @Composable
 fun CallScreen(
@@ -48,15 +46,15 @@ fun CallScreen(
                 else -> ' '
             }
 
-            if(letter!=' ')
+            if (letter != ' ')
                 AvatarIcon(
-                letter = letter,
-                size = AvatarIconSize.LARGE
-            )
+                    letter = letter,
+                    size = AvatarIconSize.LARGE
+                )
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            if( state is CallState.Disconnected){
+            if (state is CallState.Disconnected) {
                 Text(
                     text = state.reason,
                     style = MaterialTheme.typography.headlineSmall,
@@ -81,9 +79,9 @@ fun CallScreen(
 
             Text(
                 text = when (state) {
-                    is CallState.Incoming -> state.nickname?:"Unknown"
-                    is CallState.Outgoing -> state.nickname?:"Unknown"
-                    is CallState.Connected -> state.nickname?:"Unknown"
+                    is CallState.Incoming -> state.nickname ?: "Unknown"
+                    is CallState.Outgoing -> state.nickname ?: "Unknown"
+                    is CallState.Connected -> state.nickname ?: "Unknown"
                     else -> ""
                 },
                 style = MaterialTheme.typography.labelLarge,
@@ -113,14 +111,19 @@ fun CallScreen(
                     }
                 }
 
-                else -> {
-                    FloatingActionButton(onClick = onCancel , containerColor = MaterialTheme.colorScheme.secondary) {
-                        Icon(Icons.Default.Close, contentDescription = "Hang Up")
+                is CallState.Disconnected -> {
+                    FloatingActionButton(
+                        onClick = onCancel,
+                        containerColor = MaterialTheme.colorScheme.secondary
+                    ) {
+                        Icon(Icons.Default.Close, contentDescription = "Exit")
                     }
                     FloatingActionButton(onClick = onAccept, containerColor = Color.Green) {
                         Icon(Icons.Default.Call, contentDescription = "Answer")
                     }
                 }
+
+                is CallState.Idle -> {}
             }
         }
     }
