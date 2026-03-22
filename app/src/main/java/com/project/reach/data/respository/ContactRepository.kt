@@ -4,6 +4,7 @@ import com.project.reach.data.local.dao.ContactDao
 import com.project.reach.data.local.entity.ContactEntity
 import com.project.reach.data.model.ContactUser
 import com.project.reach.domain.contracts.IContactRepository
+import com.project.reach.util.debug
 import com.project.reach.util.toUUID
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -54,6 +55,7 @@ class ContactRepository(
         val userExists = contactDao.isUserEntryExists(userUuid)
 
         if (userExists){
+            debug(nickname)
             contactDao.setContactAsSaved(userId.toUUID(), nickname)
         } else {
             contactDao.insertContactEntity(

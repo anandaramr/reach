@@ -10,6 +10,8 @@ import com.project.reach.data.local.dao.MessageDao
 import com.project.reach.data.local.entity.ContactEntity
 import com.project.reach.data.local.entity.MediaEntity
 import com.project.reach.data.local.entity.MessageEntity
+import com.project.reach.util.debug
+import java.util.concurrent.Executors
 
 @Database(
     version = 8,
@@ -30,6 +32,10 @@ abstract class ReachDatabase: RoomDatabase() {
             return Instance ?: synchronized(this) {
                 Room
                     .databaseBuilder(context, ReachDatabase::class.java, "reach_database")
+                    .setQueryCallback({query,arg ->
+                        debug("query: $query")
+                        debug("arg: $arg")
+                    }, executor = Executors.newSingleThreadExecutor())
                     .fallbackToDestructiveMigration(dropAllTables = true)
                     .build()
                     .also { Instance = it }

@@ -1,17 +1,8 @@
 package com.project.reach.ui.screens.contacts
 
-import com.project.reach.ui.screens.discover.DiscoveryState
-import com.project.reach.ui.screens.discover.Peer
-
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.project.reach.data.respository.ContactRepository
-import com.project.reach.data.respository.MessageRepository
 import com.project.reach.domain.contracts.IContactRepository
-import com.project.reach.domain.contracts.IMessageRepository
-import com.project.reach.domain.contracts.INetworkRepository
-import com.project.reach.network.model.DeviceInfo
-import com.project.reach.util.debug
 import com.project.reach.util.toUUID
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow

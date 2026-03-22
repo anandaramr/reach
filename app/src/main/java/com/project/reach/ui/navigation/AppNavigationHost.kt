@@ -68,7 +68,11 @@ fun AppNavigationHost(
         ) {
             composable(route = DiscoverScreenDestination.route) {
                 DiscoveryScreen(
-                    navigateToChat = { peerId -> navController.navigate(ChatScreenDestination.createRoute(peerId)); }
+                    navigateToChat = { peerId -> navController.navigate(ChatScreenDestination.createRoute(peerId)){
+                        popUpTo(DiscoverScreenDestination.route){
+                            inclusive = true
+                        }
+                    } },
                 )
             }
             composable(route = ContactScreenDestination.route) {
@@ -135,8 +139,12 @@ fun AppNavigationHost(
                 val username = backStackEntry.arguments?.getString("username")?:""
 
                 NewContactScreen(
-                    navigateToChat = { peerId -> navController.navigate(ChatScreenDestination.createRoute(peerId)); },
-                    navigateBack = { navController.popBackStack(route = HomeScreenDestination.route, inclusive = false) },
+                    navigateToChat = { peerId -> navController.navigate(ChatScreenDestination.createRoute(peerId)){
+                        popUpTo(NewContactScreenDestination.route){
+                            inclusive = true
+                        }
+                    } },
+                    navigateBack = { navController.popBackStack() },
                     userId = userId,
                     username = username,
                 )
@@ -156,7 +164,7 @@ fun AppNavigationHost(
 
                 ViewContactScreen(
                     navigateToChat = { peerId -> navController.navigate(ChatScreenDestination.createRoute(peerId)); },
-                    navigateBack = { navController.popBackStack(route = HomeScreenDestination.route, inclusive = false) },
+                    navigateBack = { navController.popBackStack() },
                     userId = userId,
                     username = username,
                     nickname =  nickname

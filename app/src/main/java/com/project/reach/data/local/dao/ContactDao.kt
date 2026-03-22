@@ -13,7 +13,7 @@ interface ContactDao {
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertContactEntity(contact: ContactEntity)
 
-    @Query("update contacts set nickname = :nickname and isSaved = 1 where userId = :userId")
+    @Query("update contacts set nickname = :nickname, isSaved = 1 where userId = :userId")
     suspend fun setContactAsSaved(userId: UUID, nickname: String)
 
     @Query("select username from contacts where userId = :userId")
@@ -34,6 +34,6 @@ interface ContactDao {
     @Query("select exists(select 1 from contacts where userId = :userId)")
     suspend fun isUserEntryExists(userId: UUID): Boolean
 
-    @Query("select exists(select userId from contacts where userId = :userId and not isSaved)")
+    @Query("select exists(select userId from contacts where userId = :userId and isSaved)")
     suspend fun isUserSavedAsContact(userId: UUID): Boolean
 }

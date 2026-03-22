@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
@@ -20,10 +21,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.project.reach.domain.models.CallState
 import com.project.reach.ui.components.AvatarIcon
 import com.project.reach.ui.components.AvatarIconSize
+import java.util.UUID
 
 @Composable
 fun CallScreen(
@@ -35,9 +39,26 @@ fun CallScreen(
 ) {
     Box(modifier = Modifier.fillMaxSize()) {
         Column(
-            modifier = Modifier.align(Alignment.Center),
+            modifier = Modifier.fillMaxWidth(),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
+
+            Spacer(modifier = Modifier.height(56.dp))
+
+            Text(
+                text = when (state) {
+                    is CallState.Incoming -> "Incoming Call..."
+                    is CallState.Outgoing -> "Calling..."
+                    is CallState.Connected -> "Ongoing Call"
+                    is CallState.Disconnected -> state.reason
+                    CallState.Idle -> ""
+                },
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.secondary
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
             val letter: Char = when (state) {
                 is CallState.Incoming -> state.nickname?.firstOrNull() ?: 'U'
                 is CallState.Outgoing -> state.nickname?.firstOrNull() ?: 'U'
@@ -54,38 +75,17 @@ fun CallScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            if (state is CallState.Disconnected) {
-                Text(
-                    text = state.reason,
-                    style = MaterialTheme.typography.headlineSmall,
-                    color = MaterialTheme.colorScheme.primary
-                )
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            Text(
-                text = when (state) {
-                    is CallState.Incoming -> "Incoming Call..."
-                    is CallState.Outgoing -> "Calling..."
-                    is CallState.Connected -> "Ongoing Call"
-                    is CallState.Disconnected -> "Call Ended"
-                    else -> ""
-                },
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.secondary
-            )
-            Spacer(modifier = Modifier.height(16.dp))
-
             Text(
                 text = when (state) {
                     is CallState.Incoming -> state.nickname ?: "Unknown"
                     is CallState.Outgoing -> state.nickname ?: "Unknown"
                     is CallState.Connected -> state.nickname ?: "Unknown"
-                    else -> ""
+                    is CallState.Disconnected -> state.nickname ?: "Unknown"
+                    CallState.Idle -> ""
                 },
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.primary
+                style = MaterialTheme.typography.displayMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.secondary
             )
         }
 
@@ -129,20 +129,20 @@ fun CallScreen(
     }
 }
 
-//@Preview
-//@Composable
-//fun CallPreview() {
-//    CallScreen(
-//        state = CallState.Disconnected(
-//            callId = UUID.randomUUID(),
-//            peerId = UUID.randomUUID(),
-//            username = "Devika",
-//            nickname = "Devu",
-//            reason = "Callee is busy"
-//        ),
-//        onAccept = {},
-//        onReject = {},
-//        onHangUp = {},
-//        onCancel = {}
-//    )
-//}
+@Preview
+@Composable
+fun CallPreview() {
+    CallScreen(
+        state = CallState.Disconnected(
+            callId = UUID.randomUUID(),
+            peerId = UUID.randomUUID(),
+            username = "Devika",
+            nickname = "Devu",
+            reason = "Callee is busy"
+        ),
+        onAccept = {},
+        onReject = {},
+        onHangUp = {},
+        onCancel = {}
+    )
+}
