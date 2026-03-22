@@ -75,7 +75,10 @@ class CallRepository(
             webRtcSessionManager.disconnect()
             _callState.value = CallState.Disconnected(
                 callId,
-                reason = "Could not reach user ${contact.nickname ?: contact.username}"
+                reason = "Could not reach user ${contact.nickname ?: contact.username}",
+                peerId = peerId,
+                username = contact.username,
+                nickname = contact.nickname,
             )
         }
     }
@@ -132,6 +135,20 @@ class CallRepository(
         webRtcSessionManager.disconnect()
     }
 
+    override fun cancelCall() {
+        val prevState = _callState.getAndUpdate { state ->
+            if (state is CallState.Outgoing) {
+                CallState.Idle
+            } else {
+                debug("Invalid end call [state: ${_callState.value}]")
+                state
+            }
+        }
+        if (prevState !is CallState.Outgoing) return
+        scope.launch { networkController.endCall(prevState.peerId, prevState.callId) }
+        webRtcSessionManager.disconnect()
+    }
+
     override suspend fun onCallReceive(
         callId: UUID,
         peerId: UUID,
@@ -169,7 +186,13 @@ class CallRepository(
         _callState.update { state ->
             if (state is CallState.Outgoing && state.callId == callId) {
                 webRtcSessionManager.disconnect()
-                CallState.Disconnected(callId, reason = "Call declined")
+                CallState.Disconnected(
+                    callId,
+                    reason = "Call declined",
+                    peerId = state.peerId,
+                    username = state.username,
+                    nickname = state.nickname
+                )
             } else {
                 debug("Decline received for invalid call")
                 state
@@ -179,22 +202,15 @@ class CallRepository(
 
     override fun onPeerDisconnect(callId: UUID) {
         _callState.update { state ->
-            if (state is CallState.Connected && state.callId == callId) {
+            if (state is CallState.Connected && state.callId == callId ||
+                state is CallState.Incoming && state.callId == callId
+            ) {
                 webRtcSessionManager.disconnect()
                 CallState.Idle
             } else {
                 debug("Disconnect received for invalid call")
                 state
             }
-        }
-    }
-
-    override fun onPeerCancel(callId: UUID) {
-        val state = _callState.value
-        if (state is CallState.Incoming && state.callId == callId || state is CallState.Connected && state.callId == callId) {
-            _callState.value = CallState.Idle
-        } else {
-            debug("Cancel received for invalid call")
         }
     }
 
@@ -220,16 +236,6 @@ class CallRepository(
 
         val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
         audioManager.mode = AudioManager.MODE_IN_COMMUNICATION
-//        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-//            val devices = audioManager.availableCommunicationDevices
-//            val earpiece = devices.firstOrNull { it.type == AudioDeviceInfo.TYPE_BUILTIN_EARPIECE }
-//            earpiece?.let {
-//                audioManager.setCommunicationDevice(it)
-//            }
-//        } else {
-//            @Suppress("DEPRECATION")
-//            audioManager.isSpeakerphoneOn = false
-//        }
     }
 
     private fun onCandidateFound(candidate: IceCandidate) {
@@ -242,15 +248,6 @@ class CallRepository(
                 candidate = candidate
             )
         }
-    }
-
-    private fun onCallEnd() {
-        _callState.value = CallState.Idle
-//        val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
-//        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-//            audioManager.clearCommunicationDevice()
-//        }
-//        audioManager.mode = AudioManager.MODE_NORMAL
     }
 
     private fun getPeerAndCallIdIfCallActive(): Pair<UUID, UUID>? {
