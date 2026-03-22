@@ -17,6 +17,7 @@ import com.project.reach.ui.app.MainActivity
 import com.project.reach.ui.screens.chat.ChatScreenDestination
 import com.project.reach.util.debug
 import com.project.reach.R
+import com.project.reach.domain.models.CallState
 
 class NotificationHandler(
     private val context: Context
@@ -47,7 +48,7 @@ class NotificationHandler(
             .build()
     }
 
-    fun getCallNotification(username: String, isIncoming: Boolean): Notification {
+    fun getCallNotification(username: String, callState: CallState): Notification {
         val person = Person.Builder()
             .setName(username)
             .setImportant(true)
@@ -67,7 +68,7 @@ class NotificationHandler(
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        val style = if (isIncoming) {
+        val style = if (callState is CallState.Incoming) {
             NotificationCompat.CallStyle.forIncomingCall(
                 person,
                 declineIntent,
@@ -89,7 +90,7 @@ class NotificationHandler(
             .setStyle(style)
 
         @SuppressLint("FullScreenIntentPolicy")
-        if (isIncoming) {
+        if (callState is CallState.Incoming) {
             val canUseFullScreen =
                 Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE || notificationManager.canUseFullScreenIntent()
             if (canUseFullScreen) {
@@ -98,6 +99,8 @@ class NotificationHandler(
                 debug("[Notification] Unable to use setFullScreenIntent during call")
                 builder.setContentIntent(fullScreenPendingIntent)
             }
+        } else {
+            builder.setContentIntent(fullScreenPendingIntent)
         }
         return builder.build()
     }

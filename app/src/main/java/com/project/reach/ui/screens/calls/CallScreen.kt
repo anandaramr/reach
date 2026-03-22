@@ -87,6 +87,19 @@ fun CallScreen(
                 fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.secondary
             )
+
+            Text(
+                text = when (state) {
+                    is CallState.Incoming -> state.username
+                    is CallState.Outgoing -> state.username
+                    is CallState.Connected -> state.username
+                    is CallState.Disconnected -> state.username
+                    CallState.Idle -> ""
+                },
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Light,
+                color = MaterialTheme.colorScheme.primary
+            )
         }
 
         Row(

@@ -72,12 +72,12 @@ class ForegroundService: Service() {
                     is CallState.Incoming -> {
                         startRinging()
                         requestAudioFocus()
-                        onStartCall(state.username, isIncoming = true)
+                        onStartCall(state.username, state)
                     }
 
                     is CallState.Outgoing -> {
                         requestAudioFocus()
-                        onStartCall(state.username, isIncoming = false)
+                        onStartCall(state.username, state)
                         launchCallActivity()
                     }
 
@@ -95,14 +95,15 @@ class ForegroundService: Service() {
 
                     is CallState.Connected -> {
                         stopRinging()
+                        onStartCall(state.username, state)
                     }
                 }
             }
         }
     }
 
-    private fun onStartCall(username: String, isIncoming: Boolean) {
-        val notification = notificationHandler.getCallNotification(username, isIncoming)
+    private fun onStartCall(username: String, callState: CallState) {
+        val notification = notificationHandler.getCallNotification(username, callState)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
                 startForeground(

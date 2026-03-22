@@ -1,7 +1,6 @@
 package com.project.reach.data.respository
 
 import android.content.Context
-import android.media.AudioManager
 import com.project.reach.data.network.WebRtcSessionManager
 import com.project.reach.domain.contracts.ICallRepository
 import com.project.reach.domain.contracts.IContactRepository
@@ -235,9 +234,6 @@ class CallRepository(
         debug("Audio track received")
         audioTrack.setEnabled(true)
         audioTrack.setVolume(1.0)
-
-        val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
-        audioManager.mode = AudioManager.MODE_IN_COMMUNICATION
     }
 
     private fun onCandidateFound(candidate: IceCandidate) {
