@@ -2,7 +2,6 @@ package com.project.reach.data.local.dao
 
 import androidx.paging.PagingSource
 import androidx.room.Dao
-import androidx.room.Delete
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
@@ -38,12 +37,18 @@ interface MessageDao {
 
     @Query(
         value = """
-            SELECT m.userId, c.username, m.messageType, m.content as "lastMessage",
-            MAX(m.timeStamp) as timeStamp, m.messageState, c.nickname
+            SELECT m.userId, c.username, m.messageType, m.content as "lastMessage", m.timeStamp, m.messageState, c.nickname
             FROM messages AS m
-            JOIN contacts AS c ON c.userId = m.userId
-            GROUP BY m.userId
-            ORDER BY timeStamp DESC
+            JOIN
+            contacts AS c ON c.userId = m.userId
+            WHERE m.messageId = (
+                SELECT messageId
+                FROM messages AS m2
+                WHERE m2.userId = m.userId
+                order by m2.timeStamp desc, m2.messageId desc
+                limit 1
+            )
+            order by m.timeStamp desc
         """
     )
     fun getMessagesPreviewPaged(): PagingSource<Int, MessagePreview>
