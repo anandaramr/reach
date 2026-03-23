@@ -91,7 +91,6 @@ class HeartBeatDiscoveryHandler(
             }
 
             is CallSignal.CallAccept -> {}
-            is CallSignal.CallCancel -> {}
             is CallSignal.CallDecline -> {}
             is CallSignal.CallEnd -> {}
             is CallSignal.IceCandidate -> {}

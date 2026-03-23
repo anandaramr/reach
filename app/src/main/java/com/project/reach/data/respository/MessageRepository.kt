@@ -354,7 +354,6 @@ class MessageRepository(
                     sdpAnswer = packet.answerSdp
                 )
 
-                is Packet.CallSignal.CallCancel -> TODO()
                 is Packet.CallSignal.CallEnd -> callRepository.onPeerDisconnect(packet.callId.toUUID())
                 is Packet.CallSignal.IceCandidate -> callRepository.onIceCandidateReceived(
                     callId = packet.callId.toUUID(),

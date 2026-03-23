@@ -4,7 +4,6 @@ import com.google.protobuf.InvalidProtocolBufferException
 import com.project.reach.util.toHexString
 import com.project.reach.util.toProtoBytes
 import com.reach.project.core.serialization.CallAccept
-import com.reach.project.core.serialization.CallCancel
 import com.reach.project.core.serialization.CallDecline
 import com.reach.project.core.serialization.CallEnd
 import com.reach.project.core.serialization.CallInit
@@ -87,13 +86,6 @@ internal object PacketSerializer {
                             callAccept = CallAccept.newBuilder().apply {
                                 answerSdp = packet.answerSdp
                             }.build()
-                        }.build()
-                    }
-
-                    is Packet.CallSignal.CallCancel -> {
-                        callSignal = CallSignal.newBuilder().apply {
-                            callId = packet.callId
-                            callCancel = CallCancel.newBuilder().build()
                         }.build()
                     }
 
@@ -223,13 +215,6 @@ internal object PacketSerializer {
                             callId = callId,
                             senderId = senderId,
                             answerSdp = proto.callSignal.callAccept.answerSdp,
-                        )
-                    }
-
-                    CallSignal.PayloadCase.CALL_CANCEL -> {
-                        Packet.CallSignal.CallCancel(
-                            callId = callId,
-                            senderId = senderId,
                         )
                     }
 
