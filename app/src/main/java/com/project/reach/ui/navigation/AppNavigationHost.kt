@@ -86,7 +86,11 @@ fun AppNavigationHost(
 
             composable(route = OnboardingScreen.route, exitTransition = { ExitTransition.None }) {
                 OnboardingScreen(
-                    onOnboardingComplete = { navController.navigate(route = HomeScreenDestination.route) }
+                    onOnboardingComplete = { navController.navigate(route = HomeScreenDestination.route) {
+                        popUpTo(OnboardingScreen.route) {
+                            inclusive = true
+                        }
+                    } }
                 )
             }
             composable(route = SettingsScreenDestination.route) {
