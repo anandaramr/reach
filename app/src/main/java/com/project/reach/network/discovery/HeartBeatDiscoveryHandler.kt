@@ -2,6 +2,14 @@ package com.project.reach.network.discovery
 
 import com.project.reach.network.contracts.DiscoveryHandler
 import com.project.reach.network.model.Packet
+import com.project.reach.network.model.Packet.CallSignal
+import com.project.reach.network.model.Packet.FileAccept
+import com.project.reach.network.model.Packet.FileComplete
+import com.project.reach.network.model.Packet.GoodBye
+import com.project.reach.network.model.Packet.Heartbeat
+import com.project.reach.network.model.Packet.Hello
+import com.project.reach.network.model.Packet.Message
+import com.project.reach.network.model.Packet.Typing
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -42,7 +50,7 @@ class HeartBeatDiscoveryHandler(
         if (!isDiscovering) return
         isDiscovering = false
 
-        sendPacket(InetAddress.getByName(BROADCAST_ADDR), Packet.GoodBye(myUserId))
+        sendPacket(InetAddress.getByName(BROADCAST_ADDR), GoodBye(myUserId))
         advertiseJob?.cancel()
         timeoutJob?.cancel()
         clear()
@@ -58,27 +66,38 @@ class HeartBeatDiscoveryHandler(
 
     fun handleIncomingPacket(ip: InetAddress, packet: Packet) {
         when (packet) {
-            is Packet.Hello -> {
+            is Hello -> {
                 handleDeviceFound(ip, packet.senderId, packet.senderUsername)
-                sendPacket(ip, Packet.Heartbeat(myUserId, myUsername.value))
+                sendPacket(ip, Heartbeat(myUserId, myUsername.value))
             }
 
-            is Packet.Heartbeat -> {
+            is Heartbeat -> {
                 handleDeviceFound(ip, packet.senderId, packet.senderUsername)
             }
 
-            is Packet.GoodBye -> {
+            is GoodBye -> {
                 handleDeviceLost(packet.senderId)
             }
 
-            is Packet.Message -> {
+            is Message -> {
                 // add device to discovered list if the user receives a message from it
                 // temporarily handles cases where peer can discover user
                 // but not vice versa, useful during bad network conditions
                 handleDeviceFound(ip, packet.senderId, packet.senderUsername)
             }
 
-            else -> {}
+            is CallSignal.CallInit -> {
+                handleDeviceFound(ip, packet.senderId, packet.senderUsername)
+            }
+
+            is CallSignal.CallAccept -> {}
+            is CallSignal.CallCancel -> {}
+            is CallSignal.CallDecline -> {}
+            is CallSignal.CallEnd -> {}
+            is CallSignal.IceCandidate -> {}
+            is FileAccept -> {}
+            is FileComplete -> {}
+            is Typing -> {}
         }
     }
 
@@ -103,11 +122,11 @@ class HeartBeatDiscoveryHandler(
 
     private suspend fun advertise() {
         val broadcastAddr = InetAddress.getByName(BROADCAST_ADDR)
-        sendPacket(broadcastAddr, Packet.Hello(myUserId, myUsername.value))
+        sendPacket(broadcastAddr, Hello(myUserId, myUsername.value))
 
         while (isDiscovering) {
             delay(HEARTBEAT_INTERVAL)
-            sendPacket(broadcastAddr, Packet.Heartbeat(myUserId, myUsername.value))
+            sendPacket(broadcastAddr, Heartbeat(myUserId, myUsername.value))
         }
     }
 
