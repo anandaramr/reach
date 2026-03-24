@@ -101,6 +101,7 @@ class NotificationHandler(
             }
         } else {
             builder.setContentIntent(fullScreenPendingIntent)
+            builder.setSilent(true)
         }
         return builder.build()
     }
