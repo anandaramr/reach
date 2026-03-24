@@ -36,7 +36,7 @@ class NotificationHandler(
         return NotificationCompat.Builder(context, FOREGROUND_CHANNEL_ID)
             .setContentTitle("REACH is running")
             .setContentText("Listening for incoming messages")
-            .setSmallIcon(R.mipmap.ic_launcher)
+            .setSmallIcon(R.drawable.ic_notification_icon)
             .setContentIntent(pendingIntent)
             .setOngoing(true)
             .setGroup(null)
@@ -82,7 +82,7 @@ class NotificationHandler(
         }
 
         val builder = NotificationCompat.Builder(context, CALL_CHANNEL_ID)
-            .setSmallIcon(R.mipmap.ic_launcher)
+            .setSmallIcon(R.drawable.ic_notification_icon)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setCategory(NotificationCompat.CATEGORY_CALL)
             .setOngoing(true)
@@ -131,7 +131,7 @@ class NotificationHandler(
             context,
             MESSAGE_NOTIFICATION_CHANNEL
         )
-            .setSmallIcon(R.mipmap.ic_launcher)
+            .setSmallIcon(R.drawable.ic_notification_icon)
             .setContentTitle(username)
             .setStyle(getNotificationStyle(username, messages))
             .setContentIntent(pendingIntent)
