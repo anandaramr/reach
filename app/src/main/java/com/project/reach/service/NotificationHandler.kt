@@ -39,7 +39,7 @@ class NotificationHandler(
             .setSmallIcon(R.drawable.ic_notification_icon)
             .setContentIntent(pendingIntent)
             .setOngoing(true)
-            .setGroup(null)
+            .setGroup("service")
             .addAction(
                 android.R.drawable.ic_media_pause,
                 "Stop Listening",
@@ -136,6 +136,7 @@ class NotificationHandler(
             .setStyle(getNotificationStyle(username, messages))
             .setContentIntent(pendingIntent)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setCategory(NotificationCompat.CATEGORY_MESSAGE)
             .setAutoCancel(true)
             .setGroup("message")
             .setWhen(messages.last().timeStamp)
