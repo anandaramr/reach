@@ -1,5 +1,6 @@
 package com.project.reach.ui.screens.chat
 
+import android.net.Uri
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -16,6 +17,7 @@ import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -46,14 +48,20 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.paging.LoadState
+import androidx.paging.compose.LazyPagingItems
 import androidx.paging.compose.collectAsLazyPagingItems
 import com.project.reach.domain.models.Message
+import com.project.reach.domain.models.MessageState
+import com.project.reach.domain.models.TransferState
 import com.project.reach.ui.app.LocalPermissionHandler
 import com.project.reach.ui.navigation.NavigationDestination
 import com.project.reach.ui.screens.chat.components.FileDisplay
 import com.project.reach.ui.screens.chat.components.MessageDisplay
 import com.project.reach.ui.screens.chat.components.MessageTextField
 import com.project.reach.ui.screens.chat.components.TypingBubble
+import kotlinx.coroutines.flow.StateFlow
+import kotlin.reflect.KFunction1
+import kotlin.reflect.KFunction2
 
 object ChatScreenDestination: NavigationDestination {
     override val route: String = "chat/{peerId}"
@@ -79,48 +87,15 @@ fun ChatScreen(
     }
     Scaffold(
         modifier = modifier.imePadding(), topBar = {
-            Column {
-                CenterAlignedTopAppBar(
-                    modifier = Modifier.height(80.dp),
-                    title = {
-                        Text(
-                            text = uiState.peerName,
-                            modifier = Modifier.clickable(
-                                onClick = {
-                                    navigateToViewContact(
-                                        uiState.peerId,
-                                        uiState.username,
-                                        uiState.peerName
-                                    )
-                                }
-                            )
-                        )
-                    },
-                    actions = {
-                        IconButton(
-                            onClick = {
-                                permissionHandler.onMicrophonePermissionGranted(viewModel::startCall)
-                            }
-                        ) {
-                            Icon(
-                                imageVector = Icons.Filled.Call,
-                                contentDescription = "Call",
-                            )
-                        }
-                    },
-                    navigationIcon = {
-                        IconButton(
-                            onClick = navigateBack,
-                        ) {
-                            Icon(
-                                imageVector = Icons.Filled.ArrowBackIosNew,
-                                contentDescription = "Back",
-                            )
-                        }
-                    },
-                )
-                HorizontalDivider(thickness = 0.5.dp, color = MaterialTheme.colorScheme.outline)
-            }
+            TopBar(
+                peerId = uiState.peerId,
+                username = uiState.username,
+                peerName = uiState.peerName,
+                navigateToViewContact = navigateToViewContact,
+                requestMicrophonePermission = { onGranted -> permissionHandler.onMicrophonePermissionGranted(onGranted) },
+                startCall = viewModel::startCall,
+                navigateBack = navigateBack,
+            )
         }) { innerPadding ->
         Box(
             modifier = Modifier
@@ -137,8 +112,8 @@ fun ChatScreen(
                     }
                 }
         ) {
-            when(messages.loadState.refresh) {
-                LoadState.Loading -> Box(
+            if (messages.itemCount == 0 && messages.loadState.refresh == LoadState.Loading) {
+                Box(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(16.dp),
@@ -149,124 +124,22 @@ fun ChatScreen(
                         strokeWidth = 2.dp
                     )
                 }
-                else -> {
-                    LazyColumn(
-                        reverseLayout = true,
-                        state = scrollState,
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(bottom = 72.dp)
-                    ) {
-                        item { Spacer(modifier = Modifier.size(10.dp)) }
-                        item {
-                            if (uiState.isTyping) {
-                                Card(
-                                    shape = RoundedCornerShape(30.dp),
-                                    border = BorderStroke(
-                                        2.dp, MaterialTheme.colorScheme.outline
-                                    ),
-                                    modifier = Modifier
-                                        .padding(top = 10.dp, bottom = 6.dp),
-                                    colors = CardDefaults.cardColors(
-                                        containerColor = Color.Transparent,
-                                        contentColor = MaterialTheme.colorScheme.outline
-                                    ),
-                                ) {
-                                    TypingBubble()
-                                }
-                            }
-                        }
-                        items(count = messages.itemCount, key = { index ->
-                            messages[index]?.messageId ?: "placeholder-$index"
-                        }) { idx ->
-                            messages[idx]?.let { message ->
-                                when (message) {
-                                    is Message.FileMessage -> {
-                                        FileDisplay(
-                                            message = message,
-                                            getFileUri = viewModel::getFileUri,
-                                            getTransferState = viewModel::getTransferState,
-                                            deleteMessage = viewModel::deleteMessage,
-                                            deleteOption = uiState.deleteOption,
-                                            showDeleteOption = viewModel::showDeleteOption
-                                        )
-                                    }
-
-                                    is Message.TextMessage -> MessageDisplay(
-                                        message = message,
-                                        viewModel::deleteMessage,
-                                        deleteOption = uiState.deleteOption,
-                                        showDeleteOption = viewModel::showDeleteOption
-                                    )
-                                }
-                            }
-                        }
-                        item { Spacer(modifier = Modifier.size(30.dp)) }
-                    }
-                    if (messages.itemCount == 0) {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .fillMaxHeight(0.8f),
-                            verticalArrangement = Arrangement.Center,
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .background(
-                                        MaterialTheme.colorScheme.outlineVariant,
-                                        shape = CircleShape
-                                    )
-                                    .size(120.dp)
-                                    .padding(20.dp),
-
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Outlined.WavingHand,
-                                    contentDescription = null,
-                                    modifier = Modifier
-                                        .size(60.dp)
-                                )
-                            }
-
-                            Spacer(modifier = Modifier.size(25.dp))
-                            Text(
-                                text = "Start the conversation",
-                                style = MaterialTheme.typography.titleMedium,
-                                textAlign = TextAlign.Center,
-                                fontSize = 25.sp
-                            )
-
-                            Spacer(modifier = Modifier.height(6.dp))
-
-                            Text(
-                                text = "Say hi to ${uiState.peerName}.",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                textAlign = TextAlign.Center,
-                            )
-                        }
-                    }
+            } else {
+                if (messages.itemCount == 0) {
+                    EmptyChatScreen(uiState.peerName)
+                } else {
+                    ChatList(
+                        scrollState = scrollState,
+                        isTyping = uiState.isTyping,
+                        messages = messages,
+                        getFileUri = viewModel::getFileUri,
+                        getTransferState = viewModel::getTransferState,
+                        deleteMessage = viewModel::deleteMessage,
+                        deleteOption = uiState.deleteOption,
+                        showDeleteOption = viewModel::showDeleteOption
+                    )
                 }
             }
-//            IconButton(
-//                onClick = {
-//                    scope.launch {
-//                        scrollState.animateScrollToItem(0)
-//                    }
-//                },
-//                modifier = Modifier
-//                    .align(Alignment.BottomEnd)
-//                    .padding(bottom = 88.dp, end = 16.dp)
-//                    .zIndex(1f)
-//                    .background(color = MaterialTheme.colorScheme.outlineVariant, shape = CircleShape)
-//            ) {
-//                Icon(
-//                    imageVector = Icons.Default.KeyboardArrowDown,
-//                    contentDescription = "Scroll to bottom"
-//                )
-//            }
             MessageTextField(
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
@@ -291,6 +164,173 @@ fun ChatScreen(
                 onImageInputChange = viewModel::onImageInputChange,
             )
         }
+    }
+}
+
+@Composable
+private fun TopBar(
+    peerId: String,
+    username: String,
+    peerName: String,
+    navigateToViewContact: (String, String, String) -> Unit,
+    requestMicrophonePermission: (onGranted: () -> Unit) -> Unit,
+    startCall: () -> Unit,
+    navigateBack: () -> Unit
+) {
+    Column {
+        CenterAlignedTopAppBar(
+            modifier = Modifier.height(80.dp),
+            title = {
+                Text(
+                    text = peerName,
+                    modifier = Modifier.clickable(
+                        onClick = {
+                            navigateToViewContact(
+                                peerId,
+                                username,
+                                peerName
+                            )
+                        }
+                    )
+                )
+            },
+            actions = {
+                IconButton(
+                    onClick = {
+                        requestMicrophonePermission(startCall)
+                    }
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.Call,
+                        contentDescription = "Call",
+                    )
+                }
+            },
+            navigationIcon = {
+                IconButton(
+                    onClick = navigateBack,
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.ArrowBackIosNew,
+                        contentDescription = "Back",
+                    )
+                }
+            },
+        )
+        HorizontalDivider(thickness = 0.5.dp, color = MaterialTheme.colorScheme.outline)
+    }
+}
+
+@Composable
+private fun ChatList(
+    scrollState: LazyListState,
+    isTyping: Boolean,
+    messages: LazyPagingItems<Message>,
+    getFileUri: KFunction1<String, Uri>,
+    getTransferState: KFunction2<String, MessageState, StateFlow<TransferState>>,
+    deleteMessage: KFunction1<String, Unit>,
+    deleteOption: String?,
+    showDeleteOption: KFunction1<String?, Unit>
+) {
+    LazyColumn(
+        reverseLayout = true,
+        state = scrollState,
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(bottom = 72.dp)
+    ) {
+        item { Spacer(modifier = Modifier.size(10.dp)) }
+        item {
+            if (isTyping) {
+                Card(
+                    shape = RoundedCornerShape(30.dp),
+                    border = BorderStroke(
+                        2.dp, MaterialTheme.colorScheme.outline
+                    ),
+                    modifier = Modifier
+                        .padding(top = 10.dp, bottom = 6.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = Color.Transparent,
+                        contentColor = MaterialTheme.colorScheme.outline
+                    ),
+                ) {
+                    TypingBubble()
+                }
+            }
+        }
+        items(count = messages.itemCount, key = { index ->
+            messages[index]?.messageId ?: "placeholder-$index"
+        }) { idx ->
+            messages[idx]?.let { message ->
+                when (message) {
+                    is Message.FileMessage -> {
+                        FileDisplay(
+                            message = message,
+                            getFileUri = getFileUri,
+                            getTransferState = getTransferState,
+                            deleteMessage = deleteMessage,
+                            deleteOption = deleteOption,
+                            showDeleteOption = showDeleteOption
+                        )
+                    }
+
+                    is Message.TextMessage -> MessageDisplay(
+                        message = message,
+                        deleteMessage = deleteMessage,
+                        deleteOption = deleteOption,
+                        showDeleteOption = showDeleteOption
+                    )
+                }
+            }
+        }
+        item { Spacer(modifier = Modifier.size(30.dp)) }
+    }
+}
+
+@Composable
+private fun EmptyChatScreen(peerName: String) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .fillMaxHeight(0.8f),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Box(
+            modifier = Modifier
+                .background(
+                    MaterialTheme.colorScheme.outlineVariant,
+                    shape = CircleShape
+                )
+                .size(120.dp)
+                .padding(20.dp),
+
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = Icons.Outlined.WavingHand,
+                contentDescription = null,
+                modifier = Modifier
+                    .size(60.dp)
+            )
+        }
+
+        Spacer(modifier = Modifier.size(25.dp))
+        Text(
+            text = "Start the conversation",
+            style = MaterialTheme.typography.titleMedium,
+            textAlign = TextAlign.Center,
+            fontSize = 25.sp
+        )
+
+        Spacer(modifier = Modifier.height(6.dp))
+
+        Text(
+            text = "Say hi to ${peerName}.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
+        )
     }
 }
 

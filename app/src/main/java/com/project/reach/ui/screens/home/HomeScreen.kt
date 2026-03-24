@@ -38,7 +38,6 @@ import androidx.paging.LoadState
 import androidx.paging.compose.collectAsLazyPagingItems
 import com.project.reach.ui.navigation.NavigationDestination
 import com.project.reach.ui.screens.home.components.ChatPreview
-import com.project.reach.util.debug
 
 object HomeScreenDestination: NavigationDestination {
     override val route: String
@@ -63,14 +62,14 @@ fun HomeScreen(
 
     Scaffold(
         topBar = { TopBar(navigateToContact) }, floatingActionButton = {
-        FloatingActionButton(
-            onClick = { navigateToContact() }) {
-            Icon(Icons.Default.Contacts, contentDescription = "Contact")
-        }
-    }, modifier = Modifier.fillMaxSize()
+            FloatingActionButton(
+                onClick = { navigateToContact() }) {
+                Icon(Icons.Default.Contacts, contentDescription = "Contact")
+            }
+        }, modifier = Modifier.fillMaxSize()
     ) { innerPadding ->
-        when (preview.loadState.refresh) {
-            LoadState.Loading -> Box(
+        if (preview.itemCount == 0 && preview.loadState.refresh == LoadState.Loading) {
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(16.dp),
@@ -80,8 +79,8 @@ fun HomeScreen(
                     modifier = Modifier.size(24.dp), strokeWidth = 2.dp
                 )
             }
-
-            else -> Box(
+        } else {
+            Box(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(innerPadding),
@@ -96,7 +95,8 @@ fun HomeScreen(
                         Box(
                             modifier = Modifier
                                 .background(
-                                    MaterialTheme.colorScheme.outlineVariant, shape = CircleShape
+                                    MaterialTheme.colorScheme.outlineVariant,
+                                    shape = CircleShape
                                 )
                                 .clickable(onClick = { navigateToDiscover() })
                                 .size(120.dp)
