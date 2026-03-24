@@ -82,11 +82,12 @@ class HeartBeatDiscoveryHandler(
             is Message -> {
                 // add device to discovered list if the user receives a message from it
                 // temporarily handles cases where peer can discover user
-                // but not vice versa, useful during bad network conditions
+                // but not vice versa; useful during bad network conditions
                 handleDeviceFound(ip, packet.senderId, packet.senderUsername)
             }
 
             is CallSignal.CallInit -> {
+                // see Message branch
                 handleDeviceFound(ip, packet.senderId, packet.senderUsername)
             }
 
@@ -158,7 +159,7 @@ class HeartBeatDiscoveryHandler(
 
     companion object {
         private const val BROADCAST_ADDR = "255.255.255.255"
-        private const val HEARTBEAT_INTERVAL = 10 * 1000L
-        private const val TIMEOUT_INTERVAL = HEARTBEAT_INTERVAL + 5000L
+        private const val HEARTBEAT_INTERVAL = 2 * 1000L
+        private const val TIMEOUT_INTERVAL = HEARTBEAT_INTERVAL * 3
     }
 }
