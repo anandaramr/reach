@@ -17,6 +17,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.getAndUpdate
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.flow.updateAndGet
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.webrtc.AudioTrack
@@ -172,9 +173,8 @@ class CallRepository(
     override suspend fun onPeerAccept(callId: UUID, peerId: UUID, sdpAnswer: String) {
         _callState.update { state ->
             if (state is CallState.Outgoing && state.callId == callId) {
-                val contact = contactRepository.getContact(peerId.toString()).first()
                 webRtcSessionManager.onAnswerReceived(sdpAnswer)
-                CallState.Connected(callId, peerId, contact.username, contact.nickname)
+                CallState.Connected(callId, peerId, state.username, state.nickname)
             } else {
                 debug("Accept received for invalid call")
                 state
@@ -183,9 +183,8 @@ class CallRepository(
     }
 
     override fun onPeerDecline(callId: UUID) {
-        _callState.update { state ->
+        val currentState = _callState.updateAndGet { state ->
             if (state is CallState.Outgoing && state.callId == callId) {
-                webRtcSessionManager.disconnect()
                 CallState.Disconnected(
                     callId,
                     reason = "Call declined",
@@ -198,20 +197,21 @@ class CallRepository(
                 state
             }
         }
+        if (currentState is CallState.Disconnected) webRtcSessionManager.disconnect()
     }
 
     override fun onPeerDisconnect(callId: UUID) {
-        _callState.update { state ->
+        val currentState = _callState.updateAndGet { state ->
             if (state is CallState.Connected && state.callId == callId ||
                 state is CallState.Incoming && state.callId == callId
             ) {
-                webRtcSessionManager.disconnect()
                 CallState.Idle
             } else {
                 debug("Disconnect received for invalid call")
                 state
             }
         }
+        if (currentState == CallState.Idle) webRtcSessionManager.disconnect()
     }
 
     override suspend fun onIceCandidateReceived(

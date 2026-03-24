@@ -1,5 +1,6 @@
 package com.project.reach.service
 
+import android.annotation.SuppressLint
 import android.app.PendingIntent
 import android.app.Service
 import android.content.Intent
@@ -11,6 +12,7 @@ import android.media.MediaPlayer
 import android.media.RingtoneManager
 import android.os.Build
 import android.os.IBinder
+import android.os.PowerManager
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
@@ -45,8 +47,25 @@ class ForegroundService: Service() {
 
     private val notificationHandler = NotificationHandler(this)
 
+    private var wakeLock: PowerManager.WakeLock? = null
+
     override fun onBind(intent: Intent?): IBinder? {
         return null
+    }
+
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        val action = intent?.action
+
+        if (action == null) {
+            start()
+        } else {
+            when (action) {
+                ACTION_START -> start()
+                ACTION_STOP -> stop()
+            }
+        }
+
+        return START_STICKY
     }
 
     override fun onCreate() {
@@ -65,6 +84,14 @@ class ForegroundService: Service() {
             }
         }
 
+        val powerManager = getSystemService(POWER_SERVICE) as PowerManager
+        if (powerManager.isWakeLockLevelSupported(PowerManager.PROXIMITY_SCREEN_OFF_WAKE_LOCK)) {
+            wakeLock = powerManager.newWakeLock(
+                PowerManager.PROXIMITY_SCREEN_OFF_WAKE_LOCK,
+                "Reach:ForegroundService"
+            )
+        }
+
         scope.launch {
             callRepository.callState.collect { state ->
                 debug("new state: $state")
@@ -77,6 +104,7 @@ class ForegroundService: Service() {
 
                     is CallState.Outgoing -> {
                         requestAudioFocus()
+                        startProximitySensor()
                         onStartCall(state.username, state)
                         launchCallActivity()
                     }
@@ -84,17 +112,20 @@ class ForegroundService: Service() {
                     CallState.Idle -> {
                         stopRinging()
                         abandonAudioFocus()
+                        stopProximitySensor()
                         startForegroundOperations()
                     }
 
                     is CallState.Disconnected -> {
                         stopRinging()
                         abandonAudioFocus()
+                        stopProximitySensor()
                         startForegroundOperations()
                     }
 
                     is CallState.Connected -> {
                         stopRinging()
+                        startProximitySensor()
                         onStartCall(state.username, state)
                     }
                 }
@@ -207,26 +238,24 @@ class ForegroundService: Service() {
         }
     }
 
+    @SuppressLint("WakelockTimeout")
+    private fun startProximitySensor() {
+        if (wakeLock?.isHeld == false) {
+            wakeLock?.acquire()
+        }
+    }
+
+    private fun stopProximitySensor() {
+        if (wakeLock?.isHeld == true) {
+            wakeLock?.release()
+        }
+    }
+
     private fun launchCallActivity() {
         val intent = Intent(this, CallActivity::class.java).apply {
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         }
         startActivity(intent)
-    }
-
-    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        val action = intent?.action
-
-        if (action == null) {
-            start()
-        } else {
-            when (action) {
-                ACTION_START -> start()
-                ACTION_STOP -> stop()
-            }
-        }
-
-        return START_STICKY
     }
 
     private fun start() {
@@ -258,11 +287,12 @@ class ForegroundService: Service() {
     }
 
     override fun onDestroy() {
-        super.onDestroy()
-        abandonAudioFocus()
         stopRinging()
+        abandonAudioFocus()
+        stopProximitySensor()
         scope.cancel()
         stop()
+        super.onDestroy()
     }
 
     companion object {
