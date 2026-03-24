@@ -1,7 +1,6 @@
 package com.project.reach.data.respository
 
 import android.content.Context
-import android.media.AudioManager
 import com.project.reach.data.network.WebRtcSessionManager
 import com.project.reach.domain.contracts.ICallRepository
 import com.project.reach.domain.contracts.IContactRepository
@@ -52,7 +51,7 @@ class CallRepository(
         val callId = UUID.randomUUID()
 
         val prevState = _callState.getAndUpdate { state ->
-            if (state == CallState.Idle) CallState.Outgoing(
+            if (canStartCall(state)) CallState.Outgoing(
                 callId = callId,
                 peerId = peerId,
                 username = contact.username,
@@ -62,7 +61,7 @@ class CallRepository(
                 state
             }
         }
-        if (prevState != CallState.Idle) return@withContext
+        if (!canStartCall(prevState)) return@withContext
 
         webRtcSessionManager.initPeerConnection()
         val sdp = suspendCoroutine { continuation ->
@@ -123,30 +122,31 @@ class CallRepository(
 
     override fun endCall() {
         val prevState = _callState.getAndUpdate { state ->
-            if (state is CallState.Connected) {
+            if (state is CallState.Connected || state is CallState.Outgoing) {
                 CallState.Idle
             } else {
                 debug("Invalid end call [state: ${_callState.value}]")
                 state
             }
         }
-        if (prevState !is CallState.Connected) return
-        scope.launch { networkController.endCall(prevState.peerId, prevState.callId) }
-        webRtcSessionManager.disconnect()
+        if (prevState is CallState.Connected) {
+            scope.launch { networkController.endCall(prevState.peerId, prevState.callId) }
+            webRtcSessionManager.disconnect()
+        } else if (prevState is CallState.Outgoing) {
+            scope.launch { networkController.endCall(prevState.peerId, prevState.callId) }
+            webRtcSessionManager.disconnect()
+        }
     }
 
-    override fun cancelCall() {
-        val prevState = _callState.getAndUpdate { state ->
-            if (state is CallState.Outgoing) {
+    override fun resetCall() {
+        _callState.update { state ->
+            if (state != CallState.Idle) {
                 CallState.Idle
             } else {
-                debug("Invalid end call [state: ${_callState.value}]")
+                debug("Call already in Idle state")
                 state
             }
         }
-        if (prevState !is CallState.Outgoing) return
-        scope.launch { networkController.endCall(prevState.peerId, prevState.callId) }
-        webRtcSessionManager.disconnect()
     }
 
     override suspend fun onCallReceive(
@@ -157,7 +157,7 @@ class CallRepository(
     ) {
         contactRepository.addToContactsIfNotExists(peerId.toString(), peerUsername)
         _callState.update { state ->
-            if (state == CallState.Idle) {
+            if (state == CallState.Idle || state is CallState.Disconnected) {
                 val contact = contactRepository.getContact(peerId.toString()).first()
                 webRtcSessionManager.initPeerConnection()
                 webRtcSessionManager.onOfferReceived(sdpOffer)
@@ -231,11 +231,9 @@ class CallRepository(
     }
 
     private fun onTrackReceived(audioTrack: AudioTrack) {
+        debug("Audio track received")
         audioTrack.setEnabled(true)
         audioTrack.setVolume(1.0)
-
-        val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
-        audioManager.mode = AudioManager.MODE_IN_COMMUNICATION
     }
 
     private fun onCandidateFound(candidate: IceCandidate) {
@@ -249,6 +247,9 @@ class CallRepository(
             )
         }
     }
+
+    private fun canStartCall(currentState: CallState): Boolean =
+        currentState == CallState.Idle || currentState is CallState.Disconnected
 
     private fun getPeerAndCallIdIfCallActive(): Pair<UUID, UUID>? {
         val state = _callState.value

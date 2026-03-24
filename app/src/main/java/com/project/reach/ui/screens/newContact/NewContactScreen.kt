@@ -55,7 +55,6 @@ fun NewContactScreen(
     navigateBack: () -> Unit,
     userId: String,
     username: String,
-
     ) {
     val uiState by viewModel.uiState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }

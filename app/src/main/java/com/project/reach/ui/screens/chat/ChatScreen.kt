@@ -19,35 +19,37 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.CenterAlignedTopAppBar
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.ui.Modifier
-import com.project.reach.ui.navigation.NavigationDestination
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBackIosNew
-import androidx.compose.material.icons.filled.Cake
 import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.outlined.WavingHand
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CenterAlignedTopAppBar
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.paging.LoadState
 import androidx.paging.compose.collectAsLazyPagingItems
 import com.project.reach.domain.models.Message
+import com.project.reach.ui.app.LocalPermissionHandler
+import com.project.reach.ui.navigation.NavigationDestination
 import com.project.reach.ui.screens.chat.components.FileDisplay
 import com.project.reach.ui.screens.chat.components.MessageDisplay
 import com.project.reach.ui.screens.chat.components.MessageTextField
@@ -55,6 +57,8 @@ import com.project.reach.ui.screens.chat.components.TypingBubble
 
 object ChatScreenDestination: NavigationDestination {
     override val route: String = "chat/{peerId}"
+    val deepLinkPattern: String = "chat/{peerId}"
+    fun createDeepLinkUri(peerId: String) = "chat/$peerId"
     fun createRoute(peerId: String) = "chat/$peerId"
 }
 
@@ -67,7 +71,8 @@ fun ChatScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val scrollState = rememberLazyListState()
-    val messages = viewModel.message.collectAsLazyPagingItems();
+    val messages = viewModel.message.collectAsLazyPagingItems()
+    val permissionHandler = LocalPermissionHandler.current
 
     LaunchedEffect(Unit) {
         viewModel.initializeChat()
@@ -93,7 +98,9 @@ fun ChatScreen(
                     },
                     actions = {
                         IconButton(
-                            onClick = viewModel::startCall
+                            onClick = {
+                                permissionHandler.onMicrophonePermissionGranted(viewModel::startCall)
+                            }
                         ) {
                             Icon(
                                 imageVector = Icons.Filled.Call,
@@ -130,103 +137,117 @@ fun ChatScreen(
                     }
                 }
         ) {
-            LazyColumn(
-                reverseLayout = true,
-                state = scrollState,
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(bottom = 72.dp)
-            ) {
-                item { Spacer(modifier = Modifier.size(10.dp)) }
-                item {
-                    if (uiState.isTyping) {
-                        Card(
-                            shape = RoundedCornerShape(30.dp),
-                            border = BorderStroke(
-                                2.dp, MaterialTheme.colorScheme.outline
-                            ),
-                            modifier = Modifier
-                                .padding(top = 10.dp, bottom = 6.dp),
-                            colors = CardDefaults.cardColors(
-                                containerColor = Color.Transparent,
-                                contentColor = MaterialTheme.colorScheme.outline
-                            ),
-                        ) {
-                            TypingBubble()
-                        }
-                    }
+            when(messages.loadState.refresh) {
+                LoadState.Loading -> Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(24.dp),
+                        strokeWidth = 2.dp
+                    )
                 }
-                items(count = messages.itemCount, key = { index ->
-                    messages[index]?.messageId ?: "placeholder-$index"
-                }) { idx ->
-                    messages[idx]?.let { message ->
-                        when (message) {
-                            is Message.FileMessage -> {
-                                FileDisplay(
-                                    message = message,
-                                    getFileUri = viewModel::getFileUri,
-                                    getTransferState = viewModel::getTransferState,
-                                    deleteMessage = viewModel::deleteMessage,
-                                    deleteOption = uiState.deleteOption,
-                                    showDeleteOption = viewModel::showDeleteOption
+                else -> {
+                    LazyColumn(
+                        reverseLayout = true,
+                        state = scrollState,
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(bottom = 72.dp)
+                    ) {
+                        item { Spacer(modifier = Modifier.size(10.dp)) }
+                        item {
+                            if (uiState.isTyping) {
+                                Card(
+                                    shape = RoundedCornerShape(30.dp),
+                                    border = BorderStroke(
+                                        2.dp, MaterialTheme.colorScheme.outline
+                                    ),
+                                    modifier = Modifier
+                                        .padding(top = 10.dp, bottom = 6.dp),
+                                    colors = CardDefaults.cardColors(
+                                        containerColor = Color.Transparent,
+                                        contentColor = MaterialTheme.colorScheme.outline
+                                    ),
+                                ) {
+                                    TypingBubble()
+                                }
+                            }
+                        }
+                        items(count = messages.itemCount, key = { index ->
+                            messages[index]?.messageId ?: "placeholder-$index"
+                        }) { idx ->
+                            messages[idx]?.let { message ->
+                                when (message) {
+                                    is Message.FileMessage -> {
+                                        FileDisplay(
+                                            message = message,
+                                            getFileUri = viewModel::getFileUri,
+                                            getTransferState = viewModel::getTransferState,
+                                            deleteMessage = viewModel::deleteMessage,
+                                            deleteOption = uiState.deleteOption,
+                                            showDeleteOption = viewModel::showDeleteOption
+                                        )
+                                    }
+
+                                    is Message.TextMessage -> MessageDisplay(
+                                        message = message,
+                                        viewModel::deleteMessage,
+                                        deleteOption = uiState.deleteOption,
+                                        showDeleteOption = viewModel::showDeleteOption
+                                    )
+                                }
+                            }
+                        }
+                        item { Spacer(modifier = Modifier.size(30.dp)) }
+                    }
+                    if (messages.itemCount == 0) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .fillMaxHeight(0.8f),
+                            verticalArrangement = Arrangement.Center,
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .background(
+                                        MaterialTheme.colorScheme.outlineVariant,
+                                        shape = CircleShape
+                                    )
+                                    .size(120.dp)
+                                    .padding(20.dp),
+
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Outlined.WavingHand,
+                                    contentDescription = null,
+                                    modifier = Modifier
+                                        .size(60.dp)
                                 )
                             }
 
-                            is Message.TextMessage -> MessageDisplay(
-                                message = message,
-                                viewModel::deleteMessage,
-                                deleteOption = uiState.deleteOption,
-                                showDeleteOption = viewModel::showDeleteOption
+                            Spacer(modifier = Modifier.size(25.dp))
+                            Text(
+                                text = "Start the conversation",
+                                style = MaterialTheme.typography.titleMedium,
+                                textAlign = TextAlign.Center,
+                                fontSize = 25.sp
+                            )
+
+                            Spacer(modifier = Modifier.height(6.dp))
+
+                            Text(
+                                text = "Say hi to ${uiState.peerName}.",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                textAlign = TextAlign.Center,
                             )
                         }
                     }
-                }
-                item { Spacer(modifier = Modifier.size(30.dp)) }
-            }
-
-            if (messages.itemCount == 0) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .fillMaxHeight(0.8f),
-                    verticalArrangement = Arrangement.Center,
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .background(
-                                MaterialTheme.colorScheme.outlineVariant,
-                                shape = CircleShape
-                            )
-                            .size(120.dp)
-                            .padding(20.dp),
-
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Outlined.WavingHand,
-                            contentDescription = null,
-                            modifier = Modifier
-                                .size(60.dp)
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.size(25.dp))
-                    Text(
-                        text = "Start the conversation",
-                        style = MaterialTheme.typography.titleMedium,
-                        textAlign = TextAlign.Center,
-                        fontSize = 25.sp
-                    )
-
-                    Spacer(modifier = Modifier.height(6.dp))
-
-                    Text(
-                        text = "Say hi to ${uiState.peerName}.",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        textAlign = TextAlign.Center,
-                    )
                 }
             }
 //            IconButton(

@@ -8,12 +8,9 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Card
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -21,7 +18,6 @@ import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.project.reach.domain.models.MessagePreview
 import com.project.reach.ui.components.AvatarIcon
 import com.project.reach.ui.components.AvatarIconSize
 import com.project.reach.util.truncate
@@ -62,7 +58,7 @@ fun ChatPreview(
                         text = "Typing...",
                         fontStyle = FontStyle.Italic,
                         fontSize = 12.sp,
-                        color = MaterialTheme.colorScheme.outline
+                        color = MaterialTheme.colorScheme.secondary
                     )
                 else
                     Text(

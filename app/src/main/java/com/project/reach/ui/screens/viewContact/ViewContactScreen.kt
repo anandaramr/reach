@@ -139,25 +139,6 @@ fun ViewContactScreen(
                     .align(Alignment.CenterHorizontally),
                 color = MaterialTheme.colorScheme.outlineVariant
             )
-
-            Button(
-                modifier = Modifier.padding(10.dp),
-                onClick = {
-                    navigateToChat(uiState.userId)
-                },
-                border = BorderStroke(
-                    2.dp,
-                    MaterialTheme.colorScheme.secondary
-                ),
-                colors = ButtonColors(
-                    containerColor = Color.Transparent,
-                    contentColor = MaterialTheme.colorScheme.primary,
-                    disabledContainerColor = MaterialTheme.colorScheme.primary,
-                    disabledContentColor = MaterialTheme.colorScheme.primary,
-                )
-            ) {
-                Text(text = "Message")
-            }
         }
     }
 }

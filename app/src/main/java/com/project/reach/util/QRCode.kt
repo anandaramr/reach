@@ -52,6 +52,7 @@ class QRCode(activity: ComponentActivity) {
     private val qrScanLauncher =
         activity.registerForActivityResult(ScanContract()) { result ->
             val scanResult = result.contents
+            if (result?.contents == null) return@registerForActivityResult
             onScanResultCallback?.invoke(scanResult)
         }
 
@@ -71,6 +72,7 @@ class QRCode(activity: ComponentActivity) {
         onScanResultCallback = onScanResult
         val scanOptions = ScanOptions().apply {
             setDesiredBarcodeFormats(ScanOptions.QR_CODE)
+            setPrompt("Scan QR code")
         }
         qrScanLauncher.launch(scanOptions)
     }

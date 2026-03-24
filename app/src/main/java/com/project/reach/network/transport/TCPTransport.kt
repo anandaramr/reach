@@ -117,21 +117,27 @@ class TCPTransport: NetworkTransport {
         )
     }
 
+    val sendLocks = ConcurrentHashMap<InetAddress, Mutex>()
     override suspend fun send(bytes: ByteArray, ip: InetAddress): Boolean {
-        try {
-            currentNetwork?.let { network ->
-                val socket = getOrCreateSocket(ip, network)
-                val output = DataOutputStream(socket.outputStream)
-                output.writeInt(bytes.size)
-                output.write(bytes)
-                output.flush()
-                return true
+        val sendLock = sendLocks.computeIfAbsent(ip) { Mutex() }
+
+        sendLock.withLock {
+            try {
+                currentNetwork?.let { network ->
+                    val socket = getOrCreateSocket(ip, network)
+                    val output = DataOutputStream(socket.outputStream)
+                    output.writeInt(bytes.size)
+                    output.write(bytes)
+                    output.flush()
+                    return true
+                }
+                return false
+            } catch (e: Exception) {
+                debug("TCP error: couldn't send(): $e")
+                e.printStackTrace()
+                sendLocks.remove(ip)
+                return false
             }
-            return false
-        } catch (e: Exception) {
-            debug("TCP error: couldn't send(): $e")
-            e.printStackTrace()
-            return false
         }
     }
 

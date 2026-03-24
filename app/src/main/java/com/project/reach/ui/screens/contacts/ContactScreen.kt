@@ -142,7 +142,9 @@ fun TopBar(
                                 return@startScanning
                             }
                             onResult(parts[0]) { saved ->
-                                if (saved) navigateToChat(parts[0])
+                                if (saved) {
+                                    navigateToChat(parts[0])
+                                }
                                 else navigateToNewContact(parts[0], parts[1])
                             }
                         }

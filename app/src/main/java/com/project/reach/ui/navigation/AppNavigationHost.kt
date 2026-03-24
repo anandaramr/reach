@@ -18,6 +18,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import androidx.navigation.navDeepLink
 import com.project.reach.ui.components.BottomBar
 import com.project.reach.ui.components.BottomNavBarItem
 import com.project.reach.ui.screens.chat.ChatScreen
@@ -68,7 +69,11 @@ fun AppNavigationHost(
         ) {
             composable(route = DiscoverScreenDestination.route) {
                 DiscoveryScreen(
-                    navigateToChat = { peerId -> navController.navigate(ChatScreenDestination.createRoute(peerId)); }
+                    navigateToChat = { peerId -> navController.navigate(ChatScreenDestination.createRoute(peerId)){
+                        popUpTo(DiscoverScreenDestination.route){
+                            inclusive = true
+                        }
+                    } },
                 )
             }
             composable(route = ContactScreenDestination.route) {
@@ -81,7 +86,11 @@ fun AppNavigationHost(
 
             composable(route = OnboardingScreen.route, exitTransition = { ExitTransition.None }) {
                 OnboardingScreen(
-                    onOnboardingComplete = { navController.navigate(route = HomeScreenDestination.route) }
+                    onOnboardingComplete = { navController.navigate(route = HomeScreenDestination.route) {
+                        popUpTo(OnboardingScreen.route) {
+                            inclusive = true
+                        }
+                    } }
                 )
             }
             composable(route = SettingsScreenDestination.route) {
@@ -99,7 +108,10 @@ fun AppNavigationHost(
             }
             composable(
                 route = ChatScreenDestination.route,
-                arguments = listOf(navArgument("peerId") { type = NavType.StringType })
+                arguments = listOf(navArgument("peerId") { type = NavType.StringType }),
+                deepLinks = listOf(
+                    navDeepLink { uriPattern = "reach://${ChatScreenDestination.deepLinkPattern}" }
+                )
             ) {
                 ChatScreen(
                     navigateBack = { navController.popBackStack(route = HomeScreenDestination.route, inclusive = false) },
@@ -135,8 +147,12 @@ fun AppNavigationHost(
                 val username = backStackEntry.arguments?.getString("username")?:""
 
                 NewContactScreen(
-                    navigateToChat = { peerId -> navController.navigate(ChatScreenDestination.createRoute(peerId)); },
-                    navigateBack = { navController.popBackStack(route = HomeScreenDestination.route, inclusive = false) },
+                    navigateToChat = { peerId -> navController.navigate(ChatScreenDestination.createRoute(peerId)){
+                        popUpTo(NewContactScreenDestination.route){
+                            inclusive = true
+                        }
+                    } },
+                    navigateBack = { navController.popBackStack() },
                     userId = userId,
                     username = username,
                 )
@@ -156,7 +172,7 @@ fun AppNavigationHost(
 
                 ViewContactScreen(
                     navigateToChat = { peerId -> navController.navigate(ChatScreenDestination.createRoute(peerId)); },
-                    navigateBack = { navController.popBackStack(route = HomeScreenDestination.route, inclusive = false) },
+                    navigateBack = { navController.popBackStack() },
                     userId = userId,
                     username = username,
                     nickname =  nickname

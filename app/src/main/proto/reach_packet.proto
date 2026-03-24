@@ -26,7 +26,7 @@ message Message {
     FileHeader file_header = 6;
 }
 
-message TypingIndicator { }
+message TypingIndicator {}
 
 message Hello {
     string sender_username = 1;
@@ -36,7 +36,7 @@ message Heartbeat {
     string sender_username = 1;
 }
 
-message Goodbye { }
+message Goodbye {}
 
 message FileHeader {
     bytes file_hash = 1;
@@ -60,11 +60,10 @@ message CallSignal {
 
     oneof payload {
         CallAccept call_accept = 2;
-        CallCancel call_cancel = 3;
-        CallDecline call_decline = 4;
-        CallEnd call_end = 5;
-        CallInit call_init = 6;
-        IceCandidate ice_candidate = 7;
+        CallDecline call_decline = 3;
+        CallEnd call_end = 4;
+        CallInit call_init = 5;
+        IceCandidate ice_candidate = 6;
     }
 }
 
@@ -76,8 +75,6 @@ message CallInit {
 message CallAccept {
     string answer_sdp = 1;
 }
-
-message CallCancel {}
 
 message CallDecline {}
 

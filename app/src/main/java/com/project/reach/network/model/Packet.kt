@@ -70,11 +70,6 @@ sealed class Packet {
             override val senderId: String
         ): CallSignal()
 
-        data class CallCancel(
-            override val callId: String,
-            override val senderId: String
-        ): CallSignal()
-
         data class CallEnd(
             override val callId: String,
             override val senderId: String
