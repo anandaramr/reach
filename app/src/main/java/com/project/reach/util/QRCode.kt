@@ -2,11 +2,18 @@ package com.project.reach.util
 
 import android.graphics.Bitmap
 import android.graphics.Color
+import android.net.Uri
 import androidx.activity.ComponentActivity
 import androidx.core.graphics.createBitmap
 import androidx.core.graphics.set
 import com.google.zxing.BarcodeFormat
+import com.google.zxing.BinaryBitmap
+import com.google.zxing.DecodeHintType
 import com.google.zxing.EncodeHintType
+import com.google.zxing.MultiFormatReader
+import com.google.zxing.NotFoundException
+import com.google.zxing.RGBLuminanceSource
+import com.google.zxing.common.HybridBinarizer
 import com.google.zxing.qrcode.QRCodeWriter
 import com.google.zxing.qrcode.decoder.ErrorCorrectionLevel
 import com.journeyapps.barcodescanner.ScanContract
@@ -47,7 +54,7 @@ import com.journeyapps.barcodescanner.ScanOptions
  * @see com.project.reach.ui.app.CoreProvider
  * @see com.project.reach.ui.app.LocalQRCode
  */
-class QRCode(activity: ComponentActivity) {
+class QRCode(val activity: ComponentActivity) {
     private var onScanResultCallback: ((scanResult: String) -> Unit)? = null
     private val qrScanLauncher =
         activity.registerForActivityResult(ScanContract()) { result ->
@@ -75,6 +82,30 @@ class QRCode(activity: ComponentActivity) {
             setPrompt("Scan QR code")
         }
         qrScanLauncher.launch(scanOptions)
+    }
+
+    fun scanFromImage(contentUri: Uri): String {
+        val bitmap = getBitmapFromUri(activity, contentUri) ?: return ""
+        val width = bitmap.width
+        val height = bitmap.height
+        val pixels = IntArray(width * height)
+        bitmap.getPixels(pixels, 0, width, 0, 0, width, height)
+
+        val source = RGBLuminanceSource(width, height, pixels)
+        val binaryBitmap = BinaryBitmap(HybridBinarizer(source))
+        return try {
+            val reader = MultiFormatReader()
+            val hints = mutableMapOf<DecodeHintType, Any>()
+            hints[DecodeHintType.TRY_HARDER] = true
+            hints[DecodeHintType.POSSIBLE_FORMATS] = listOf(BarcodeFormat.QR_CODE)
+            val result = reader.decode(binaryBitmap, hints)
+            result.text
+        } catch (e: NotFoundException) {
+            ""
+        } catch (e: Exception) {
+            e.printStackTrace()
+            ""
+        }
     }
 
     companion object {
