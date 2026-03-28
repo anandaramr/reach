@@ -52,7 +52,6 @@ fun HomeScreen(
     navigateToContact: () -> Unit,
     startService: () -> Unit
 ) {
-    val uiState by viewModel.uiState.collectAsState()
     val preview = viewModel.messagePreview.collectAsLazyPagingItems()
     val typingUsers by viewModel.typingUsers.collectAsState()
 
@@ -61,12 +60,8 @@ fun HomeScreen(
     }
 
     Scaffold(
-        topBar = { TopBar(navigateToContact) }, floatingActionButton = {
-            FloatingActionButton(
-                onClick = { navigateToContact() }) {
-                Icon(Icons.Default.Contacts, contentDescription = "Contact")
-            }
-        }, modifier = Modifier.fillMaxSize()
+        topBar = { TopBar(navigateToContact) },
+        modifier = Modifier.fillMaxSize()
     ) { innerPadding ->
         if (preview.itemCount == 0 && preview.loadState.refresh == LoadState.Loading) {
             Box(
