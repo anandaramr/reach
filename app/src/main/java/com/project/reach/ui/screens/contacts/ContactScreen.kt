@@ -1,9 +1,13 @@
 package com.project.reach.ui.screens.contacts
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
@@ -13,6 +17,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBackIosNew
 import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material.icons.outlined.NoAccounts
@@ -118,6 +123,25 @@ fun TopBar(
     navigateToChat: (String) -> Unit
 ) {
     val qr = LocalQRCode.current
+    val qrImagePickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.PickVisualMedia()
+    ) { uri ->
+        if (uri == null) return@rememberLauncherForActivityResult
+        val result = qr.scanFromImage(uri)
+
+        val parts = result.split(';')
+        if (parts.size != 2) {
+            debug(parts.toString())
+            return@rememberLauncherForActivityResult
+        }
+
+        onResult(parts[0]) { saved ->
+            if (saved) {
+                navigateToChat(parts[0])
+            } else navigateToNewContact(parts[0], parts[1])
+        }
+    }
+
     CenterAlignedTopAppBar(
         modifier = Modifier.padding(horizontal = 20.dp),
         title = { Text(text = "Contacts") },
@@ -132,29 +156,41 @@ fun TopBar(
             }
         },
         actions = {
-            IconButton(
-                onClick = {
-                    qr.startScanning(
-                        onScanResult = { scanResult ->
-                            val parts = scanResult.split(';')
-                            if (parts.size != 2) {
-                                debug(parts.toString())
-                                return@startScanning
-                            }
-                            onResult(parts[0]) { saved ->
-                                if (saved) {
-                                    navigateToChat(parts[0])
-                                }
-                                else navigateToNewContact(parts[0], parts[1])
-                            }
-                        }
+            Row {
+                IconButton(
+                    onClick = {
+                        qrImagePickerLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+                    }
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.Add,
+                        contentDescription = "Scan from image",
                     )
                 }
-            ) {
-                Icon(
-                    imageVector = Icons.Filled.QrCodeScanner,
-                    contentDescription = "Scanner",
-                )
+
+                IconButton(
+                    onClick = {
+                        qr.startScanning(
+                            onScanResult = { scanResult ->
+                                val parts = scanResult.split(';')
+                                if (parts.size != 2) {
+                                    debug(parts.toString())
+                                    return@startScanning
+                                }
+                                onResult(parts[0]) { saved ->
+                                    if (saved) {
+                                        navigateToChat(parts[0])
+                                    } else navigateToNewContact(parts[0], parts[1])
+                                }
+                            }
+                        )
+                    }
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.QrCodeScanner,
+                        contentDescription = "Scanner",
+                    )
+                }
             }
         },
     )
