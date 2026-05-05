@@ -6,6 +6,8 @@ import android.view.WindowManager
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
+import androidx.compose.material3.Surface
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
@@ -33,6 +35,7 @@ class CallActivity: ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         configureLockScreenFlags()
+        enableEdgeToEdge()
 
         setContent {
             val currentState by callRepository.callState.collectAsState()
@@ -42,39 +45,41 @@ class CallActivity: ComponentActivity() {
             val context = LocalContext.current
 
             REACHTheme {
-                CallScreen(
-                    state = currentState,
-                    onAccept = {
-                        permissionHandler.onMicrophonePermissionGranted(
-                            onGranted = {
-                                scope.launch {
-                                    callRepository.acceptCall()
+                Surface {
+                    CallScreen(
+                        state = currentState,
+                        onAccept = {
+                            permissionHandler.onMicrophonePermissionGranted(
+                                onGranted = {
+                                    scope.launch {
+                                        callRepository.acceptCall()
+                                    }
+                                },
+                                onFailure = {
+                                    Toast.makeText(
+                                        context,
+                                        "Enable mic to start call",
+                                        Toast.LENGTH_LONG
+                                    ).show()
                                 }
-                            },
-                            onFailure = {
-                                Toast.makeText(
-                                    context,
-                                    "Enable mic to start call",
-                                    Toast.LENGTH_LONG
-                                ).show()
+                            )
+                        },
+                        onReject = {
+                            scope.launch {
+                                callRepository.rejectCall()
+                                finish()
                             }
-                        )
-                    },
-                    onReject = {
-                        scope.launch {
-                            callRepository.rejectCall()
+                        },
+                        onHangUp = {
+                            callRepository.endCall()
+                            finish()
+                        },
+                        onCancel = {
+                            callRepository.resetCall()
                             finish()
                         }
-                    },
-                    onHangUp = {
-                        callRepository.endCall()
-                        finish()
-                    },
-                    onCancel = {
-                        callRepository.resetCall()
-                        finish()
-                    }
-                )
+                    )
+                }
             }
         }
     }
