@@ -18,7 +18,19 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.InsertDriveFile
+import androidx.compose.material.icons.automirrored.filled.TextSnippet
+import androidx.compose.material.icons.filled.Android
+import androidx.compose.material.icons.filled.Audiotrack
+import androidx.compose.material.icons.filled.Code
+import androidx.compose.material.icons.filled.Description
+import androidx.compose.material.icons.filled.FolderZip
+import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.Pause
+import androidx.compose.material.icons.filled.PictureAsPdf
+import androidx.compose.material.icons.filled.Slideshow
+import androidx.compose.material.icons.filled.TableChart
+import androidx.compose.material.icons.filled.TextSnippet
+import androidx.compose.material.icons.filled.Videocam
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -36,6 +48,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.toClipEntry
@@ -132,7 +145,7 @@ fun FileDisplay(
                     when (fileTransferState) {
                         TransferState.Complete -> {
                             Icon(
-                                imageVector = Icons.AutoMirrored.Filled.InsertDriveFile,
+                                imageVector = getFileIcon(message.mimeType),
                                 contentDescription = "file",
                                 modifier = Modifier.size(20.dp)
                             )
@@ -257,4 +270,47 @@ fun openFile(context: Context, uri: Uri, message: Message.FileMessage) {
     val chooser = Intent.createChooser(intent, "Open with")
 
     context.startActivity(chooser)
+}
+
+fun getFileIcon(mimeType: String): ImageVector {
+    return when {
+        mimeType.startsWith("image/") -> Icons.Filled.Image
+        mimeType.startsWith("video/") -> Icons.Filled.Videocam
+        mimeType.startsWith("audio/") -> Icons.Filled.Audiotrack
+        mimeType == "application/pdf" -> Icons.Filled.PictureAsPdf
+
+        mimeType in listOf(
+            "application/msword",
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        ) -> Icons.Filled.Description
+
+        mimeType in listOf(
+            "application/vnd.ms-excel",
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        ) -> Icons.Filled.TableChart
+
+        mimeType in listOf(
+            "application/vnd.ms-powerpoint",
+            "application/vnd.openxmlformats-officedocument.presentationml.presentation"
+        ) -> Icons.Filled.Slideshow
+
+        mimeType in listOf(
+            "application/zip",
+            "application/x-rar-compressed",
+            "application/x-7z-compressed"
+        ) -> Icons.Filled.FolderZip
+
+        mimeType.startsWith("text/") ->
+            Icons.AutoMirrored.Filled.TextSnippet
+
+        mimeType == "application/vnd.android.package-archive" ->
+            Icons.Filled.Android
+
+        mimeType in listOf(
+            "application/json",
+            "application/xml"
+        ) -> Icons.Filled.Code
+
+        else -> Icons.AutoMirrored.Filled.InsertDriveFile
+    }
 }
