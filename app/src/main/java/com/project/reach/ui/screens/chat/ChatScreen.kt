@@ -1,6 +1,14 @@
 package com.project.reach.ui.screens.chat
 
 import android.net.Uri
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -245,7 +253,22 @@ private fun ChatList(
     ) {
         item { Spacer(modifier = Modifier.size(10.dp)) }
         item {
-            if (isTyping) {
+            AnimatedVisibility(
+                visible = isTyping,
+                enter = fadeIn(
+                    animationSpec = tween(250)
+                ) + slideInVertically(
+                    initialOffsetY = { it / 2 },
+                    animationSpec = tween(250)
+                ) + expandVertically(),
+
+                exit = fadeOut(
+                    animationSpec = tween(250)
+                ) + slideOutVertically(
+                    targetOffsetY = { it / 2 },
+                    animationSpec = tween(250)
+                ) + shrinkVertically()
+            ) {
                 Card(
                     shape = RoundedCornerShape(30.dp),
                     border = BorderStroke(
