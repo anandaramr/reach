@@ -43,6 +43,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -60,8 +61,6 @@ import com.project.reach.ui.screens.chat.components.MessageDisplay
 import com.project.reach.ui.screens.chat.components.MessageTextField
 import com.project.reach.ui.screens.chat.components.TypingBubble
 import kotlinx.coroutines.flow.StateFlow
-import kotlin.reflect.KFunction1
-import kotlin.reflect.KFunction2
 
 object ChatScreenDestination: NavigationDestination {
     override val route: String = "chat/{peerId}"
@@ -81,6 +80,7 @@ fun ChatScreen(
     val scrollState = rememberLazyListState()
     val messages = viewModel.message.collectAsLazyPagingItems()
     val permissionHandler = LocalPermissionHandler.current
+    val context = LocalContext.current
 
     LaunchedEffect(Unit) {
         viewModel.initializeChat()
@@ -107,8 +107,8 @@ fun ChatScreen(
                     interactionSource = remember { MutableInteractionSource() },
                     indication = null
                 ) {
-                    if (uiState.deleteOption != null) {
-                        viewModel.showDeleteOption(null)
+                    if (uiState.selectedMessage != null) {
+                        viewModel.hideMessageActions()
                     }
                 }
         ) {
@@ -135,8 +135,10 @@ fun ChatScreen(
                         getFileUri = viewModel::getFileUri,
                         getTransferState = viewModel::getTransferState,
                         deleteMessage = viewModel::deleteMessage,
-                        deleteOption = uiState.deleteOption,
-                        showDeleteOption = viewModel::showDeleteOption
+                        selectedMessage = uiState.selectedMessage,
+                        showMessageActions = viewModel::showMessageActions,
+                        hideMessageActions = viewModel::hideMessageActions,
+                        downloadFile = { viewModel.downloadFile(context) }
                     )
                 }
             }
@@ -226,11 +228,13 @@ private fun ChatList(
     scrollState: LazyListState,
     isTyping: Boolean,
     messages: LazyPagingItems<Message>,
-    getFileUri: KFunction1<String, Uri>,
-    getTransferState: KFunction2<String, MessageState, StateFlow<TransferState>>,
-    deleteMessage: KFunction1<String, Unit>,
-    deleteOption: String?,
-    showDeleteOption: KFunction1<String?, Unit>
+    getFileUri: (String) -> Uri,
+    getTransferState: (String, MessageState) -> StateFlow<TransferState>,
+    deleteMessage: (String) -> Unit,
+    selectedMessage: Message?,
+    showMessageActions: (Message) -> Unit,
+    hideMessageActions: () -> Unit,
+    downloadFile: () -> Unit
 ) {
     LazyColumn(
         reverseLayout = true,
@@ -269,16 +273,19 @@ private fun ChatList(
                             getFileUri = getFileUri,
                             getTransferState = getTransferState,
                             deleteMessage = deleteMessage,
-                            deleteOption = deleteOption,
-                            showDeleteOption = showDeleteOption
+                            selectedMessage = selectedMessage,
+                            showMessageActions = showMessageActions,
+                            hideMessageActions = hideMessageActions,
+                            downloadFile = downloadFile
                         )
                     }
 
                     is Message.TextMessage -> MessageDisplay(
                         message = message,
                         deleteMessage = deleteMessage,
-                        deleteOption = deleteOption,
-                        showDeleteOption = showDeleteOption
+                        selectedMessage = selectedMessage,
+                        showMessageActions = showMessageActions,
+                        hideMessageActions = hideMessageActions
                     )
                 }
             }
