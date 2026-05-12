@@ -62,9 +62,10 @@ fun ChatPreview(
                     )
                 else
                     Text(
-                        lastMessage.truncate(35),
+                        lastMessage.truncate(35).ifBlank { "Sent a file" },
                         fontSize = 12.sp,
-                        modifier = Modifier.alpha(0.7f)
+                        modifier = Modifier.alpha(0.7f),
+                        fontStyle = if (lastMessage.isBlank()) FontStyle.Italic else FontStyle.Normal
                     )
             }
         }
