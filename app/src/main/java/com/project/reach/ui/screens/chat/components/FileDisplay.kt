@@ -34,6 +34,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
@@ -100,65 +101,10 @@ fun FileDisplay(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(vertical = 8.dp),
-            horizontalAlignment = if (message.isFromSelf) Alignment.End
-            else Alignment.Start,
-
-            ) {
-            if (selectedMessage == message)
-                ModalBottomSheet(
-                    onDismissRequest = hideMessageActions,
-                    sheetState = sheetState
-                ) {
-                    Column(
-                        modifier = Modifier
-                            .padding(20.dp)
-                    ) {
-                        Text(
-                            "Delete for me",
-                            modifier = Modifier
-                                .clickable(
-                                    onClick = { deleteMessage(message.messageId) },
-                                    onClickLabel = "Delete for me"
-                                )
-                                .fillMaxWidth()
-                                .padding(5.dp, 15.dp),
-                            fontSize = 16.sp
-                        )
-                        if (message.text.isNotBlank()) {
-                            Text(
-                                "Copy",
-                                modifier = Modifier
-                                    .clickable(
-                                        onClick = {
-                                            val clipData = ClipData.newPlainText("message", message.text)
-                                            scope.launch {
-                                                clipboard.setClipEntry(clipData.toClipEntry())
-                                            }
-                                            hideMessageActions()
-                                        },
-                                        onClickLabel = "Copy message"
-                                    )
-                                    .fillMaxWidth()
-                                    .padding(5.dp, 15.dp),
-                                fontSize = 16.sp
-                            )
-                        }
-                        Text(
-                            "Download",
-                            modifier = Modifier
-                                .clickable(
-                                    onClick = {
-                                        downloadFile()
-                                        hideMessageActions()
-                                    },
-                                    onClickLabel = "Download file"
-                                )
-                                .fillMaxWidth()
-                                .padding(5.dp, 15.dp),
-                            fontSize = 16.sp
-                        )
-                    }
-                }
+            horizontalAlignment =
+                if (message.isFromSelf) Alignment.End
+                else Alignment.Start
+        ) {
             val context = LocalContext.current
             Card(
                 modifier = Modifier
@@ -236,11 +182,67 @@ fun FileDisplay(
                     messageState = message.messageState,
                     timeStamp = message.timeStamp,
                     messageId = message.messageId,
-                ),
-                hideMessageActions = hideMessageActions,
-                selectedMessage = selectedMessage,
-                showMessageActions = showMessageActions
+                )
             )
+        }
+    }
+
+    if (selectedMessage == message) {
+        ModalBottomSheet(
+            onDismissRequest = hideMessageActions,
+            sheetState = sheetState
+        ) {
+            Column(
+                modifier = Modifier
+                    .padding(vertical = 10.dp, horizontal = 30.dp)
+            ) {
+                Text(
+                    "Delete for me",
+                    modifier = Modifier
+                        .clickable(
+                            onClick = { deleteMessage(message.messageId) },
+                            onClickLabel = "Delete for me"
+                        )
+                        .fillMaxWidth()
+                        .padding(5.dp, 15.dp),
+                    fontSize = 16.sp,
+                    color = Color.Red
+                )
+                if (message.text.isNotBlank()) {
+                    Text(
+                        "Copy",
+                        modifier = Modifier
+                            .clickable(
+                                onClick = {
+                                    val clipData =
+                                        ClipData.newPlainText("message", message.text)
+                                    scope.launch {
+                                        clipboard.setClipEntry(clipData.toClipEntry())
+                                    }
+                                    hideMessageActions()
+                                },
+                                onClickLabel = "Copy message"
+                            )
+                            .fillMaxWidth()
+                            .padding(5.dp, 15.dp),
+                        fontSize = 16.sp,
+                    )
+                }
+                Text(
+                    "Download",
+                    modifier = Modifier
+                        .clickable(
+                            onClick = {
+                                downloadFile()
+                                hideMessageActions()
+                            },
+                            onClickLabel = "Download file"
+                        )
+                        .fillMaxWidth()
+                        .padding(5.dp, 15.dp),
+                    fontSize = 16.sp
+                )
+            }
         }
     }
 }
