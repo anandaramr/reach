@@ -1,7 +1,10 @@
 package com.project.reach.ui.navigation
 
 import android.annotation.SuppressLint
+import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
@@ -66,6 +69,33 @@ fun AppNavigationHost(
         NavHost(
             navController = navController,
             startDestination = if (isOnboardingRequired) OnboardingScreen.route else HomeScreenDestination.route,
+            enterTransition = {
+                slideIntoContainer(
+                    AnimatedContentTransitionScope.SlideDirection.Left,
+                    animationSpec = tween(270, easing = FastOutSlowInEasing)
+                )
+            },
+
+            exitTransition = {
+                slideOutOfContainer(
+                    AnimatedContentTransitionScope.SlideDirection.Left,
+                    animationSpec = tween(270, easing = FastOutSlowInEasing)
+                )
+            },
+
+            popEnterTransition = {
+                slideIntoContainer(
+                    AnimatedContentTransitionScope.SlideDirection.Right,
+                    animationSpec = tween(270, easing = FastOutSlowInEasing)
+                )
+            },
+
+            popExitTransition = {
+                slideOutOfContainer(
+                    AnimatedContentTransitionScope.SlideDirection.Right,
+                    animationSpec = tween(270, easing = FastOutSlowInEasing)
+                )
+            }
         ) {
             composable(route = DiscoverScreenDestination.route) {
                 DiscoveryScreen(

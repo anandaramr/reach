@@ -3,7 +3,7 @@ package com.project.reach.ui.screens.chat
 
 import android.net.Uri
 import com.project.reach.data.utils.PrivateFile
-import com.project.reach.domain.models.TransferState
+import com.project.reach.domain.models.Message
 
 data class ChatScreenState(
     val messageText: String = "",
@@ -18,6 +18,6 @@ data class ChatScreenState(
     val fileUri : Uri? = null,
     val imageName: String = "",
     val imageCaption: String = "",
-    val deleteOption: String? = null
+    val selectedMessage: Message? = null
 )
 

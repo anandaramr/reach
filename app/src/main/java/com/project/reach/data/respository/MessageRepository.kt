@@ -505,7 +505,7 @@ class MessageRepository(
     private fun MessageEntity.toMessageNotification(): MessageNotification {
         return MessageNotification(
             text = content
-                .ifBlank { "${if (isFromPeer) "sent a" else "You sent a"} file" }
+                .ifBlank { "Sent a file" }
                 .truncate(60),
             timeStamp = timeStamp
         )

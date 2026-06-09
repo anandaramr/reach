@@ -1,5 +1,6 @@
 package com.project.reach.ui.screens.chat
 
+import android.content.Context
 import android.net.Uri
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
@@ -9,8 +10,10 @@ import com.project.reach.domain.contracts.ICallRepository
 import com.project.reach.domain.contracts.IContactRepository
 import com.project.reach.domain.contracts.IFileRepository
 import com.project.reach.domain.contracts.IMessageRepository
+import com.project.reach.domain.models.Message
 import com.project.reach.domain.models.MessageState
 import com.project.reach.domain.models.TransferState
+import com.project.reach.ui.utils.saveFileToStorage
 import com.project.reach.util.debug
 import com.project.reach.util.toUUID
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -50,7 +53,7 @@ class ChatScreenViewModel @Inject constructor(
         messageRepository.emitTyping(_uiState.value.peerId)
     }
 
-    fun startCall(){
+    fun startCall() {
         viewModelScope.launch {
             callRepository.startCall(peerId.toUUID())
         }
@@ -69,8 +72,12 @@ class ChatScreenViewModel @Inject constructor(
         }
     }
 
-    fun showDeleteOption(show: String?) {
-        displayDeleteOption(show)
+    fun showMessageActions(message: Message) {
+        setMessageActionState(message)
+    }
+
+    fun hideMessageActions() {
+        setMessageActionState(null)
     }
 
     fun onImageInputChange(text: String) {
@@ -82,6 +89,23 @@ class ChatScreenViewModel @Inject constructor(
         removeMessage(messageId)
     }
 
+    fun downloadFile(context: Context) {
+        val message = _uiState.value.selectedMessage as? Message.FileMessage
+        if (message == null) {
+            debug("Can't save file: no file selected")
+            return
+        }
+
+        viewModelScope.launch {
+            saveFileToStorage(
+                context = context,
+                sourceUri = fileRepository.getContentUri(relativePath = message.relativePath),
+                fileName = message.filename,
+                mimeType = message.mimeType,
+            )
+        }
+    }
+
     private fun updateImageCaption(text: String) {
         _uiState.update {
             it.copy(
@@ -90,10 +114,10 @@ class ChatScreenViewModel @Inject constructor(
         }
     }
 
-    private fun displayDeleteOption(show: String?) {
+    private fun setMessageActionState(message: Message?) {
         _uiState.update {
             it.copy(
-                deleteOption = show
+                selectedMessage = message
             )
         }
     }
@@ -172,7 +196,7 @@ class ChatScreenViewModel @Inject constructor(
         changeFileUri(null)
         viewModelScope.launch {
             messageRepository.sendMessage(_uiState.value.peerId, caption, _uiState.value.file)
-            _uiState.update{
+            _uiState.update {
                 it.copy(
                     file = null
                 )
